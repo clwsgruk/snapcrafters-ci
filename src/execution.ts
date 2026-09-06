@@ -60,6 +60,7 @@ export async function script(
     .sort((a, b) => b.length - a.length);
   const redact = (s: string) =>
     secrets.reduce((v, secret) => v.replaceAll(secret, "***"), s).replaceAll("\u001b", "");
+  const hold = secrets.reduce((n, secret) => Math.max(n, secret.length), 0);
   const first: string[] = [],
     last: string[] = [];
   let live = 128 * 1024;
@@ -96,7 +97,7 @@ export async function script(
         pending = pending.slice(end + 1);
       }
       // Bound long unterminated lines while retaining any secret crossing the cut.
-      if (pending.length > 65536) {
+      if (pending.length > 65536 + hold) {
         let cut = 32768;
         for (const secret of secrets) {
           const pos = pending.lastIndexOf(secret, cut);
@@ -153,7 +154,11 @@ export async function script(
   }
   const summary =
     short(first.join("")) + (last.length ? "\n…\n" + short(last.join(""), true) : "") + extra;
-  writeFileSync(join(dir, "summary.txt"), summary, { mode: 0o600 });
+  try {
+    writeFileSync(join(dir, "summary.txt"), summary, { mode: 0o600, flag: "wx" });
+  } catch {
+    console.warn("Could not save private test summary");
+  }
   if (env.GITHUB_STEP_SUMMARY) {
     try {
       appendFileSync(env.GITHUB_STEP_SUMMARY, summary);
@@ -194,9 +199,14 @@ export async function syncVersion(
   const result = await script(source, cwd);
   rmSync(dirname(result.script), { recursive: true });
   if (result.code) throw Error(`Update script failed with status ${result.code}`);
-  const untracked = command("git", ["ls-files", "--others", "-z"], cwd).split("\0").filter(Boolean);
+  const untracked = (
+    command("git", ["ls-files", "--others", "-z"], cwd) +
+    command("git", ["diff", "--name-only", "--no-renames", "--diff-filter=A", "HEAD", "-z"], cwd)
+  )
+    .split("\0")
+    .filter(Boolean);
   if (untracked.length)
-    throw Error(`Untracked paths must be resolved before committing:\n${untracked.join("\n")}`);
+    throw Error(`New paths must be resolved before committing:\n${untracked.join("\n")}`);
   if (!command("git", ["status", "--porcelain", "--untracked-files=no"], cwd).trim()) return;
   const after = project(root, cwd);
   const detail =

@@ -126,3 +126,13 @@ with its state in /tmp and unrelated global tool configuration excluded.
   identities. Added exact per-action step routing snapshots while green and rendered existing
   multiline shell bodies as readable YAML blocks without changing their values. Removed the
   obsolete unused template; issue rendering lives with its parser.
+- Upstream diff audit found trailing spaces in bundled dependency licenses. Normalize that
+  whitespace in the generator; preserve snapshot EOF blank lines with a narrow Git attribute
+  because those bytes belong to the exact public metadata contract. Full upstream diff check passes.
+- `mise run test -- test/execution.test.ts` — RED: a script-staged new file was committed.
+  GREEN: reject additions against HEAD (with rename detection disabled) as well as untracked paths.
+- `mise run test -- test/execution.test.ts -t 'private summary filesystem'` — RED: EISDIR
+  replaced exit 7 when private summary persistence failed. GREEN: preserve status and report warning.
+- `mise run test -- test/execution.test.ts -t 'credential longer'` — RED: a synthetic credential
+  spanning stream chunks leaked fragments into live output. GREEN: retain enough trailing input
+  to identify the longest known credential before emitting a bounded chunk; raw output stays exact.

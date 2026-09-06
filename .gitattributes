@@ -1,1 +1,3 @@
 */dist/** linguist-generated=true
+# Frozen metadata includes the exact blank line before runs:.
+test/fixtures/contracts/*.txt whitespace=-blank-at-eof

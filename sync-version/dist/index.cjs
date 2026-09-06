@@ -7402,6 +7402,7 @@ async function script(source, directory, env = process.env, storage = (0, import
   (0, import_node_fs2.writeFileSync)(file, source, { mode: 384 });
   const secrets = Object.entries(env).filter(([k, v]) => /token|secret|password|credential/i.test(k) && v).flatMap(([, v]) => [v, ...v.split(/\r?\n/)].filter(Boolean)).sort((a, b) => b.length - a.length);
   const redact = (s) => secrets.reduce((v, secret) => v.replaceAll(secret, "***"), s).replaceAll("\x1B", "");
+  const hold = secrets.reduce((n, secret) => Math.max(n, secret.length), 0);
   const first = [], last = [];
   let live = 128 * 1024;
   const child = (0, import_node_child_process.spawn)("bash", ["--noprofile", "--norc", "-e", "-o", "pipefail", file], {
@@ -7435,7 +7436,7 @@ async function script(source, directory, env = process.env, storage = (0, import
         emit(pending.slice(0, end + 1));
         pending = pending.slice(end + 1);
       }
-      if (pending.length > 65536) {
+      if (pending.length > 65536 + hold) {
         let cut = 32768;
         for (const secret of secrets) {
           const pos = pending.lastIndexOf(secret, cut);
@@ -7483,7 +7484,11 @@ async function script(source, directory, env = process.env, storage = (0, import
     }
   }
   const summary = short(first.join("")) + (last.length ? "\n\u2026\n" + short(last.join(""), true) : "") + extra;
-  (0, import_node_fs2.writeFileSync)((0, import_node_path2.join)(dir, "summary.txt"), summary, { mode: 384 });
+  try {
+    (0, import_node_fs2.writeFileSync)((0, import_node_path2.join)(dir, "summary.txt"), summary, { mode: 384, flag: "wx" });
+  } catch {
+    console.warn("Could not save private test summary");
+  }
   if (env.GITHUB_STEP_SUMMARY) {
     try {
       (0, import_node_fs2.appendFileSync)(env.GITHUB_STEP_SUMMARY, summary);
@@ -7516,9 +7521,9 @@ async function syncVersion(source, root, name, email, cwd = process.cwd()) {
   const result = await script(source, cwd);
   (0, import_node_fs2.rmSync)((0, import_node_path2.dirname)(result.script), { recursive: true });
   if (result.code) throw Error(`Update script failed with status ${result.code}`);
-  const untracked = command("git", ["ls-files", "--others", "-z"], cwd).split("\0").filter(Boolean);
+  const untracked = (command("git", ["ls-files", "--others", "-z"], cwd) + command("git", ["diff", "--name-only", "--no-renames", "--diff-filter=A", "HEAD", "-z"], cwd)).split("\0").filter(Boolean);
   if (untracked.length)
-    throw Error(`Untracked paths must be resolved before committing:
+    throw Error(`New paths must be resolved before committing:
 ${untracked.join("\n")}`);
   if (!command("git", ["status", "--porcelain", "--untracked-files=no"], cwd).trim()) return;
   const after = project(root, cwd);

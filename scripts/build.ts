@@ -41,7 +41,7 @@ for (const action of actions) {
           const dir = `node_modules/${p}`;
           const file = readdirSync(dir).find((f) => /^licen[cs]e(\.|$)/i.test(f));
           if (!file) throw Error(`Missing license: ${p}`);
-          return `\n${p}\n${readFileSync(`${dir}/${file}`, "utf8")}`;
+          return `\n${p}\n${readFileSync(`${dir}/${file}`, "utf8").replace(/[ \t]+$/gm, "")}`;
         })
         .join("\n"),
   );

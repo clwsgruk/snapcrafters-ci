@@ -62,6 +62,18 @@ test("sync rejects every untracked path before commit, and derives version after
     ).rejects.toThrow(/ignored-output/);
     expect(git(["rev-parse", "HEAD"], work)).toBe(head);
     rmSync(join(work, "ignored-output"));
+    await expect(
+      syncVersion(
+        "printf staged > staged-file; git add staged-file",
+        "",
+        "Bot",
+        "bot@example.org",
+        work,
+      ),
+    ).rejects.toThrow(/staged-file/);
+    expect(git(["rev-parse", "HEAD"], work)).toBe(head);
+    git(["reset", "--", "staged-file"], work);
+    rmSync(join(work, "staged-file"));
     await syncVersion("sed -i \"s/'1'/'2'/\" snapcraft.yaml", "", "Bot", "bot@example.org", work);
     expect(git(["log", "-1", "--format=%s"], work).trim()).toBe("chore: bump sample to version 2");
     expect(git(["rev-parse", "HEAD"], work)).toBe(
@@ -118,6 +130,47 @@ test("a signalled Bash script retains the conventional signal exit status", asyn
   try {
     expect((await script("kill -TERM $$", dir, { PATH: process.env.PATH })).code).toBe(143);
   } finally {
+    rmSync(dir, { recursive: true });
+  }
+});
+
+test("private summary filesystem failure cannot replace the test exit status", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "private-summary-"));
+  try {
+    const result = await script(
+      'mkdir "${0%/*}/summary.txt"; exit 7',
+      dir,
+      { PATH: process.env.PATH },
+      dir,
+    );
+    expect(result.code).toBe(7);
+  } finally {
+    rmSync(dir, { recursive: true });
+  }
+});
+
+test("a credential longer than one stream chunk is redacted before any fragment is emitted", async () => {
+  const { vi } = await import("vitest");
+  const output: string[] = [];
+  const spy = vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    output.push(String(chunk));
+    return true;
+  });
+  const dir = mkdtempSync(join(tmpdir(), "long-secret-")),
+    secret = "sensitive".repeat(15000),
+    raw = "prefix.".repeat(3000) + secret;
+  try {
+    const result = await script(
+      `printf '${raw}'`,
+      dir,
+      { PATH: process.env.PATH, INPUT_TOKEN: secret },
+      dir,
+    );
+    expect(output.join("").includes("sensitive")).toBe(false);
+    expect(result.summary.includes("sensitive")).toBe(false);
+    expect(readFileSync(result.stdout, "utf8")).toBe(raw);
+  } finally {
+    spy.mockRestore();
     rmSync(dir, { recursive: true });
   }
 });
