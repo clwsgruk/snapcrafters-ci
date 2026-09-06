@@ -106,6 +106,9 @@ mutable sibling references, and public metadata drift.
   modification/deletion sync, no-change behavior, local-commit preservation after rejected push,
   and untracked-only rejection. Controlled `snap`/`sudo`/review and `ghvmctl` executables prove
   hostile values remain argument data and verify success and subprocess-failure paths.
+- `mise run test:unit -- review` — GREEN: 15 files, 86 tests; local-build review parses the checked
+  out project and forwards classic confinement plus workspace-resolved plug/slot declarations
+  before its optional dangerous install.
 
 ## Phase 5 — Release and partial publication
 
