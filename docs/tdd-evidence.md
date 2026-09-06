@@ -254,6 +254,13 @@ mutable sibling references, and public metadata drift.
 - Final `mise run ci` — PASS: formatting, type-aware lint/typecheck (95 source files), 151 tests in
   35 files with the coverage figures above, actionlint, ShellCheck for the standalone helper plus
   all 15 inline Bash steps, and the isolated deterministic 12-bundle check all passed.
+- Final authenticated read-only `gh api 'orgs/snapcrafters/repos?per_page=100&type=all'
+--paginate --slurp` aggregated with Python — PASS: 2 pages, 118 repositories, 87 active, zero
+  private. The committed inventory still covers all 87 and all 80 recursively discovered recipes.
+- `git diff --check` and `git diff --check upstream/main...HEAD` — PASS. A path-scoped
+  `.gitattributes` rule preserves intentional whitespace in immutable recipe blobs while every
+  implementation/generated file remains under normal checks. Source/generated secret-pattern and
+  production smoke-marker scans returned no findings; every local branch commit verified `%G?=G`.
 
 ## Independent-review closure
 
