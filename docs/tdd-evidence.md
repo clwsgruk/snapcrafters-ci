@@ -23,6 +23,10 @@ mutable sibling references, and public metadata drift.
 - `mise run check` — GREEN: 62 formatted files; 30 linted/type-checked files, zero warnings or
   errors.
 - `bun scripts/check-contracts.ts` under the pinned mise environment — GREEN: all 12 boundaries.
+- `mise run test:unit -- inputs context` — context validation RED on a relative workspace, then
+  GREEN: 10 files, 45 tests. Scalar booleans, revisions/issues, repositories, Snapcraft channels
+  (including dotted tracks), architecture lists, absolute context paths, run IDs, SHAs, event
+  mappings, newlines, duplicates, and size limits are fail-closed.
 
 ## Phase 2 — Execution boundary
 
