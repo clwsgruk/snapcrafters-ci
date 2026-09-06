@@ -112,3 +112,15 @@ mutable sibling references, and public metadata drift.
 - `mise run test:unit -- promotion` — GREEN: 8 files, 41 tests; strict event/command grammar,
   permission checks, whole-set revision/channel validation before Store writes, ordered partial
   outcomes, and close-only-after-all-releases-and-report behavior passed.
+
+## Phase 8 — Deterministic packaging
+
+- `mise run build` using pinned Vite+ `vp pack` — deterministic CJS output, but inspection found
+  runtime `require()` calls for `@actions/core`, `@actions/github`, `yaml`, and `yauzl`; this failed
+  the self-contained consumer criterion and those bundles were not accepted.
+- Pinned Bun installed exact `esbuild@0.25.10`; the minimal build script bundles only the explicit
+  twelve-entry manifest and derives full dependency licence notices from the actual metafile.
+- `mise run build` — PASS for all 12 action-local `dist/index.cjs` plus `licenses.txt` pairs.
+- `mise run check-dist` — PASS: two isolated builds matched each other and committed files by SHA-256;
+  no non-builtin runtime requires remained; all 12 bundles ran with Node 24 from a disposable
+  consumer tree without development dependencies.
