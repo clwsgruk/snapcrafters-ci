@@ -6,7 +6,7 @@ import { parse } from "yaml";
 import { describe, expect, test } from "vite-plus/test";
 import { PartialPublicationError } from "../runtime/errors.js";
 import type { ProcessResult, ProcessSpec } from "../runtime/process.js";
-import { parseUploadRevision, runRelease } from "./run.js";
+import { parseUploadRevision, recordReleaseTag, runRelease } from "./run.js";
 import type { StoreRevision } from "./types.js";
 
 const ok: ProcessResult = {
@@ -52,6 +52,29 @@ function digest(contents: string): string {
 }
 
 describe("staged release", () => {
+  test("rejects malformed tag identity before running Git", async () => {
+    let runs = 0;
+    await expect(
+      recordReleaseTag(
+        {
+          cwd: process.cwd(),
+          name: "demo",
+          version: "1.0",
+          revision: "1",
+          architecture: "amd64",
+          multiSnap: false,
+          botName: "bot\nname",
+          botEmail: "bot@example.invalid",
+        },
+        async () => {
+          runs++;
+          return ok;
+        },
+      ),
+    ).rejects.toThrow(/identity|name/i);
+    expect(runs).toBe(0);
+  });
+
   test("builds an adopted version from nested core22 staging with exact readback binding", async () => {
     const input = await recipe(
       "name: demo\nbase: core22\nadopt-info: demo\narchitectures:\n  - build-on: amd64\n    run-on: [amd64, i386]\n",
@@ -330,5 +353,109 @@ describe("staged release", () => {
       ),
     ).rejects.toThrow(/symlink/i);
     expect(runs).toBe(0);
+  });
+
+  test("keeps a fresh remote-build failure before Store reads and uploads", async () => {
+    const input = await recipe("name: demo\nbase: core24\nversion: '1.2'\nplatforms:\n  amd64:\n");
+    let reads = 0;
+    let uploads = 0;
+    await expect(
+      runRelease(
+        {
+          ...input,
+          projectRoot: "nested",
+          architecture: "amd64",
+          channel: "latest/candidate",
+          snapcraftChannel: "latest/stable",
+          launchpadToken: "lp",
+          storeToken: "store",
+          sourceSha: "9".repeat(40),
+        },
+        {
+          run: async (spec) => {
+            if (spec.args[0] === "remote-build") return { ...ok, exitCode: 5 };
+            if (spec.args[0] === "upload") uploads++;
+            return ok;
+          },
+          inspectSnap: async () => ({ name: "demo", version: "1.2", architecture: "amd64" }),
+          review: async () => undefined,
+          readback: async () => {
+            reads++;
+            return [];
+          },
+          recordPublication: async () => undefined,
+          writeManifest: async () => undefined,
+        },
+      ),
+    ).rejects.toThrow(/remote build.*5/i);
+    expect({ reads, uploads }).toEqual({ reads: 0, uploads: 0 });
+  });
+
+  test("reports manifest failure after recording the exact publication", async () => {
+    const input = await recipe("name: demo\nbase: core24\nversion: '1.2'\nplatforms:\n  amd64:\n");
+    let read = 0;
+    let recorded = "";
+    const operation = runRelease(
+      {
+        ...input,
+        projectRoot: "nested",
+        architecture: "amd64",
+        channel: "latest/candidate",
+        snapcraftChannel: "latest/stable",
+        launchpadToken: "lp",
+        storeToken: "store",
+        sourceSha: "8".repeat(40),
+      },
+      {
+        run: async (spec) => {
+          if (spec.args[0] === "remote-build")
+            await writeFile(join(spec.cwd, "demo_1.2_amd64.snap"), "fresh snap");
+          if (spec.args[0] === "upload")
+            return { ...ok, stdout: "Revision 44 created for 'demo'\n" };
+          return ok;
+        },
+        inspectSnap: async () => ({ name: "demo", version: "1.2", architecture: "amd64" }),
+        review: async () => undefined,
+        readback: async () =>
+          read++
+            ? [
+                {
+                  revision: "44",
+                  architecture: "amd64",
+                  version: "1.2",
+                  digest: digest("fresh snap"),
+                },
+              ]
+            : [],
+        recordPublication: async ({ revision }) => {
+          recorded = revision;
+        },
+        writeManifest: async () => {
+          throw new Error("disk full");
+        },
+      },
+    );
+    await expect(operation).rejects.toBeInstanceOf(PartialPublicationError);
+    await expect(operation).rejects.toThrow(/published revision 44.*manifest/i);
+    expect(recorded).toBe("44");
+  });
+
+  test("reports tag push failure after publication and manifest stages", async () => {
+    let calls = 0;
+    const operation = recordReleaseTag(
+      {
+        cwd: process.cwd(),
+        name: "demo",
+        version: "1.0",
+        revision: "44",
+        architecture: "amd64",
+        multiSnap: false,
+        botName: "bot",
+        botEmail: "bot@example.invalid",
+      },
+      async () => (++calls === 1 ? ok : { ...ok, exitCode: 9 }),
+    );
+    await expect(operation).rejects.toBeInstanceOf(PartialPublicationError);
+    await expect(operation).rejects.toThrow(/published revision 44.*tagging/i);
   });
 });

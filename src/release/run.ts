@@ -407,6 +407,19 @@ export async function recordReleaseTag(
   },
   run: ReleaseDependencies["run"],
 ): Promise<void> {
+  if (
+    !/^[a-z0-9][a-z0-9-]{0,39}$/.test(input.name) ||
+    !input.version ||
+    input.version.includes("\n") ||
+    Buffer.byteLength(input.version) > 128 ||
+    !/^[1-9][0-9]*$/.test(input.revision) ||
+    !input.botName ||
+    input.botName.includes("\n") ||
+    Buffer.byteLength(input.botName) > 100 ||
+    !/^[^\s@]+@[^\s@]+$/.test(input.botEmail) ||
+    Buffer.byteLength(input.botEmail) > 254
+  )
+    throw new InputError("Invalid release tag identity");
   const tag = `${input.multiSnap ? `${input.name}-` : ""}${input.version}/rev${input.revision}/${input.architecture}`;
   const env = { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? input.cwd };
   const signal = input.signal ?? new AbortController().signal;

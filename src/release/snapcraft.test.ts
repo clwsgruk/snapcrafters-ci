@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "vite-plus/test";
-import { parseRevisions, parseSnapMetadata } from "./snapcraft.js";
+import { snapcraftRevisionReader, parseRevisions, parseSnapMetadata } from "./snapcraft.js";
 
 test("parses the immutable Snapcraft revisions table fixture", async () => {
   const fixture = JSON.parse(
@@ -26,4 +26,30 @@ test("parses and strictly binds built snap metadata", () => {
   expect(() =>
     parseSnapMetadata("name: demo\nversion: '1.2'\narchitectures: [amd64, arm64]\n"),
   ).toThrow(/one architecture/i);
+});
+
+test("does not treat a pre-existing off-channel revision as a new upload", async () => {
+  const header = "Rev.    Uploaded              Arches    Version    Channels\n";
+  const rows = [
+    `${header}2       2026-09-06T10:00:00Z  amd64     1.0        -\n`,
+    `${header}2       2026-09-06T10:00:00Z  amd64     1.0        latest/candidate*\n`,
+  ];
+  let downloads = 0;
+  const reader = snapcraftRevisionReader("token", process.cwd(), async (spec) => {
+    if (spec.args[0] === "download") downloads++;
+    return {
+      exitCode: 0,
+      stdout: rows.shift() ?? "",
+      stderr: "",
+      timedOut: false,
+      aborted: false,
+    };
+  });
+  expect(await reader("demo", "latest/candidate", "amd64", new AbortController().signal)).toEqual(
+    [],
+  );
+  expect(await reader("demo", "latest/candidate", "amd64", new AbortController().signal)).toEqual([
+    { revision: "2", architecture: "amd64", version: "1.0" },
+  ]);
+  expect(downloads).toBe(0);
 });

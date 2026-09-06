@@ -41,6 +41,17 @@ export function parseRevisions(
   channel: string,
   architecture: Architecture,
 ): StoreRevision[] {
+  return parseRevisionRows(output)
+    .filter((row) => row.architectures.includes(architecture) && row.channels.includes(channel))
+    .map((row) => ({ revision: row.revision, architecture, version: row.version }));
+}
+
+function parseRevisionRows(output: string): Array<{
+  revision: string;
+  architectures: Architecture[];
+  version: string;
+  channels: string[];
+}> {
   const lines = output.trim().split("\n");
   const header = lines
     .shift()
@@ -48,7 +59,12 @@ export function parseRevisions(
     .split(/\s{2,}/);
   if (!header || header.join("|") !== "Rev.|Uploaded|Arches|Version|Channels")
     throw new InputError("Unexpected Snapcraft revisions header");
-  const result: StoreRevision[] = [];
+  const result: Array<{
+    revision: string;
+    architectures: Architecture[];
+    version: string;
+    channels: string[];
+  }> = [];
   for (const line of lines) {
     if (!line.trim()) continue;
     const fields = line.trim().split(/\s{2,}/);
@@ -67,8 +83,12 @@ export function parseRevisions(
       throw new InputError("Invalid Snapcraft revision architecture");
     if (!version || version.includes("\n")) throw new InputError("Invalid Snapcraft version");
     const released = channels.split(",").map((item) => item.replace(/\*$/, ""));
-    if (rowArchitectures.includes(architecture) && released.includes(channel))
-      result.push({ revision, architecture, version });
+    result.push({
+      revision,
+      architectures: rowArchitectures as Architecture[],
+      version,
+      channels: released,
+    });
   }
   return result;
 }
@@ -121,9 +141,12 @@ export function snapcraftRevisionReader(
     });
     if (listed.exitCode !== 0)
       throw new Error(`Snapcraft revisions failed (${listed.exitCode}): ${listed.stderr}`);
-    const revisions = parseRevisions(listed.stdout, channel, architecture);
+    const rows = parseRevisionRows(listed.stdout);
+    const revisions: StoreRevision[] = rows
+      .filter((row) => row.architectures.includes(architecture) && row.channels.includes(channel))
+      .map((row) => ({ revision: row.revision, architecture, version: row.version }));
     if (!baseline) {
-      baseline = new Set(revisions.map(({ revision }) => revision));
+      baseline = new Set(rows.map(({ revision }) => revision));
       return revisions;
     }
     for (const revision of revisions) {

@@ -97,6 +97,13 @@ mutable sibling references, and public metadata drift.
 
 ## Phase 5 — Release and partial publication
 
+- `mise run test:unit -- release` — RED: a revision that existed before upload but was moved onto
+  the target channel was downloaded and could be misclassified as the new upload; malformed tag
+  identity also reached Git. GREEN: 13 files, 83 tests. Readback baselines every Store revision,
+  not only the target channel, and tag identity fails before subprocesses. Explicit regressions
+  cover remote-build zero-write failure, publication-before-manifest failure, and tag failure after
+  publication/manifest stages.
+
 - Read-only `gh run list`/`gh run view --log` for public run `33880420814` — PASS: immutable
   consumer SHA `8e68f1ac9fed2dd7accd582bf80b81e0b1486bd2`, observed revisions 943/944 and
   `Status: released`. Read-only GitHub code/API inspection of Snapcraft commit
