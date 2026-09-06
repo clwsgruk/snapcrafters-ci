@@ -201,6 +201,7 @@ export function promotionGitHub(
   token: string,
   repository: string,
   issueNumber: number,
+  commentId: number,
   signal: AbortSignal = new AbortController().signal,
 ) {
   const [owner, repo] = repository.split("/") as [string, string];
@@ -221,21 +222,37 @@ export function promotionGitHub(
         )
       ).data.permission;
     },
-    async issueBody(): Promise<string> {
-      return (
-        (
-          await retryRequest(
-            () =>
-              client.rest.issues.get({
-                owner,
-                repo,
-                issue_number: issueNumber,
-                request: { signal: requestSignal },
-              }),
-            { signal: requestSignal },
-          )
-        ).data.body ?? ""
-      );
+    async react(): Promise<void> {
+      await client.rest.reactions.createForIssueComment({
+        owner,
+        repo,
+        comment_id: commentId,
+        content: "eyes",
+        request: { signal: requestSignal },
+      });
+    },
+    async issue() {
+      const data = (
+        await retryRequest(
+          () =>
+            client.rest.issues.get({
+              owner,
+              repo,
+              issue_number: issueNumber,
+              request: { signal: requestSignal },
+            }),
+          { signal: requestSignal },
+        )
+      ).data;
+      return {
+        repository,
+        body: data.body ?? "",
+        state: data.state === "closed" ? ("closed" as const) : ("open" as const),
+        isPullRequest: Boolean(data.pull_request),
+        labels: data.labels.map((label) =>
+          typeof label === "string" ? label : (label.name ?? ""),
+        ),
+      };
     },
     async comment(body: string): Promise<void> {
       await client.rest.issues.createComment({

@@ -8,6 +8,16 @@ export interface PromotionInput {
   actor: string;
   comment: string;
   configuredChannel: string;
+  snap: string;
+  edited: boolean;
+}
+
+export interface PromotionIssue {
+  repository: string;
+  body: string;
+  state: "open" | "closed";
+  isPullRequest: boolean;
+  labels: string[];
 }
 
 export interface PromotionResult {
@@ -20,7 +30,8 @@ export async function promote(
   input: PromotionInput,
   deps: {
     permission(actor: string): Promise<string>;
-    issueBody(): Promise<string>;
+    react(): Promise<void>;
+    issue(): Promise<PromotionIssue>;
     release(revision: string, channel: string): Promise<void>;
     comment(body: string): Promise<void>;
     close(): Promise<void>;
@@ -28,13 +39,24 @@ export async function promote(
 ): Promise<PromotionResult> {
   if (input.eventName !== "issue_comment" || input.action !== "created")
     throw new InputError("Promotion requires a newly created issue comment");
+  if (input.edited) throw new InputError("Edited promotion comments are not accepted");
   const parsed = parsePromotionCommand(input.comment);
   if (parsed.channel !== input.configuredChannel)
     throw new InputError("Requested channel does not match configured channel");
   const permission = await deps.permission(input.actor);
   if (!new Set(["write", "maintain", "admin"]).has(permission))
     throw new AuthorizationError("Write permission is required for promotion");
-  const allowed = parseAllowedRevisions(await deps.issueBody(), parsed.channel);
+  await deps.react();
+  const issue = await deps.issue();
+  if (
+    issue.repository !== input.repository ||
+    issue.state !== "open" ||
+    issue.isPullRequest ||
+    !issue.labels.includes("testing")
+  )
+    throw new InputError("Promotion requires an open testing issue in the source repository");
+  validateIssueSnap(issue.body, input.snap);
+  const allowed = parseAllowedRevisions(issue.body, parsed.channel);
   const unrelated = parsed.revisions.filter((revision) => !allowed.has(revision));
   if (unrelated.length)
     throw new InputError(`Unrelated requested revisions: ${unrelated.join(",")}`);
@@ -73,6 +95,8 @@ export async function promote(
   if (parsed.done) {
     try {
       await deps.close();
+      if ((await deps.issue()).state !== "closed")
+        throw new Error("Issue close was not confirmed");
     } catch (error) {
       throw new PartialPublicationError(
         `Released revisions ${released.join(",")}; issue close failed`,
@@ -82,6 +106,13 @@ export async function promote(
     }
   }
   return { released, closed: parsed.done };
+}
+
+function validateIssueSnap(body: string, snap: string): void {
+  if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(snap)) throw new InputError("Invalid promotion snap");
+  const escaped = snap.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (!new RegExp("^A new version \\(.+\\) of `" + escaped + "` was just pushed", "m").test(body))
+    throw new InputError("Testing issue is not bound to the requested snap");
 }
 
 export function parsePromotionCommand(value: string): {
@@ -102,16 +133,14 @@ export function parsePromotionCommand(value: string): {
 
 export function parseAllowedRevisions(body: string, expectedChannel?: string): Set<string> {
   if (Buffer.byteLength(body) > 1024 * 1024) throw new InputError("Issue body exceeds size limit");
-  const allowed = new Set<string>();
-  let foundRecord = false;
+  const records: ReturnType<typeof parsePromotionCommand>[] = [];
   for (const line of body.split("\n")) {
     try {
-      const parsed = parsePromotionCommand(line.trim());
-      foundRecord = true;
-      if (!expectedChannel || parsed.channel === expectedChannel)
-        for (const revision of parsed.revisions) allowed.add(revision);
+      records.push(parsePromotionCommand(line.trim()));
     } catch {}
   }
-  if (!foundRecord) throw new InputError("Issue does not contain a valid testing revision record");
-  return allowed;
+  if (records.length !== 1)
+    throw new InputError("Issue must contain a single unambiguous testing revision record");
+  const record = records[0]!;
+  return new Set(!expectedChannel || record.channel === expectedChannel ? record.revisions : []);
 }

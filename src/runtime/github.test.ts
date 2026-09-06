@@ -73,7 +73,7 @@ test("routes artifact, issue, promotion, and screenshot calls through distinct s
   await issueCreator("issue-token", "owner/repo", signal)("title", "body", []);
   await issueCommenter("issue-token", "owner/repo", 1, signal)("body");
   await screenshotGitHub("screenshot-token", "shots/repo", signal).createBlob(Buffer.from("x"));
-  await promotionGitHub("promotion-token", "owner/repo", 1, signal).permission("actor");
+  await promotionGitHub("promotion-token", "owner/repo", 1, 2, signal).permission("actor");
   expect(observed).toEqual([
     "artifact-token:artifacts",
     "issue-token:issue",

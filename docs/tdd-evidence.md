@@ -136,6 +136,12 @@ mutable sibling references, and public metadata drift.
 
 ## Phase 7 — Promotion authorization
 
+- `mise run test:unit -- promotion` — RED: two valid `/promote` lines were unioned and an
+  unrelated record could authorize a write. GREEN with `github`: 12 files, 77 tests; the command
+  is bound to one open non-PR `testing` issue for the exact repository and snap, edited comments
+  and unauthorized actors fail before the eyes reaction, all revisions validate before Store
+  writes, Snapcraft uses the configured channel, and successful closure is read back.
+
 - `mise run test:unit -- promotion` — RED: 2 failures proved that issue revision records were not
   channel-bound and a post-release reporting failure erased the known released set.
 - `mise run test:unit -- promotion` — GREEN: 8 files, 41 tests; strict event/command grammar,
