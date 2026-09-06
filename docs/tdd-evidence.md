@@ -83,6 +83,12 @@ mutable sibling references, and public metadata drift.
   Git repositories covered untracked rejection, multiline early/stderr failure, bounded Markdown
   logs, report failure independence, missing summary no-op, cleanup, cancellation, and argument-array
   review construction.
+- `mise run test:integration -- workflows screenshots review` — RED: the controlled `snap` review
+  executable could not be found because the workflow discarded its scoped PATH. After wiring that
+  dependency, GREEN: 8 files, 31 tests. Real temporary bare Git remotes now prove tracked-only
+  modification/deletion sync, no-change behavior, local-commit preservation after rejected push,
+  and untracked-only rejection. Controlled `snap`/`sudo`/review and `ghvmctl` executables prove
+  hostile values remain argument data and verify success and subprocess-failure paths.
 
 ## Phase 5 — Release and partial publication
 

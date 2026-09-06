@@ -11,8 +11,13 @@ export async function captureScreenshots(input: {
   channel: string;
   manifests: Manifest[];
   signal: AbortSignal;
+  path?: string;
+  home?: string;
 }): Promise<{ screen: Buffer; window: Buffer }> {
-  const env = { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? input.cwd };
+  const env = {
+    PATH: input.path ?? process.env.PATH ?? "",
+    HOME: input.home ?? process.env.HOME ?? input.cwd,
+  };
   const amd64 = input.manifests.find((manifest) => manifest.architecture === "amd64");
   if (amd64 && amd64.name !== input.snap) throw new Error("Manifest snap does not match project");
   const commands: Array<[string, string[]]> = [

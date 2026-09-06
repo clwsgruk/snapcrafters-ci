@@ -5,6 +5,7 @@ export interface ReviewInput {
   plugs?: string;
   slots?: string;
   classic: boolean;
+  path?: string;
 }
 
 export function reviewArguments(input: ReviewInput): string[] {
@@ -21,7 +22,7 @@ export async function runReview(
   cwd: string,
   signal: AbortSignal,
 ): Promise<ProcessResult> {
-  const env = { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? cwd };
+  const env = { PATH: input.path ?? process.env.PATH ?? "", HOME: process.env.HOME ?? cwd };
   let result = await runProcess({
     file: "snap",
     args: ["list", "review-tools"],
