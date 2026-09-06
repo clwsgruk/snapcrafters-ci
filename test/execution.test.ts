@@ -29,7 +29,7 @@ test("one trusted Bash script preserves both streams, failure status, private lo
 test("sync rejects every untracked path before commit, and derives version after the script", async () => {
   const { syncVersion } = await import("../src/execution.ts");
   const { execFileSync } = await import("node:child_process");
-  const { writeFileSync, mkdirSync } = await import("node:fs");
+  const { writeFileSync, mkdirSync, chmodSync, unlinkSync } = await import("node:fs");
   const dir = mkdtempSync(join(tmpdir(), "sync-"));
   const git = (args: string[], cwd = dir) =>
     execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
@@ -76,8 +76,18 @@ test("sync rejects every untracked path before commit, and derives version after
     expect(git(["rev-parse", "HEAD"], work)).toBe(head);
     git(["reset", "--", "staged-file"], work);
     rmSync(join(work, "staged-file"));
-    await syncVersion("sed -i \"s/'1'/'2'/\" snapcraft.yaml", "", "Bot", "bot@example.org", work);
+    const hook = join(remote, "hooks/pre-receive");
+    writeFileSync(hook, "#!/bin/sh\nexit 1\n");
+    chmodSync(hook, 0o700);
+    await expect(
+      syncVersion("sed -i \"s/'1'/'2'/\" snapcraft.yaml", "", "Bot", "bot@example.org", work),
+    ).rejects.toThrow(/git push failed/);
     expect(git(["log", "-1", "--format=%s"], work).trim()).toBe("chore: bump sample to version 2");
+    expect(git(["rev-parse", "HEAD"], work)).not.toBe(
+      git(["rev-parse", "refs/heads/candidate"], remote),
+    );
+    unlinkSync(hook);
+    await syncVersion(":", "", "Bot", "bot@example.org", work);
     expect(git(["rev-parse", "HEAD"], work)).toBe(
       git(["rev-parse", "refs/heads/candidate"], remote),
     );
@@ -87,19 +97,23 @@ test("sync rejects every untracked path before commit, and derives version after
 });
 
 test("caller step-summary is included, bounded and redacted without changing the test status", async () => {
-  const { writeFileSync } = await import("node:fs");
   const dir = mkdtempSync(join(tmpdir(), "summary-")),
     file = join(dir, "summary");
-  writeFileSync(file, "caller detail secret-token");
   try {
-    const result = await script('printf "output\\n"; exit 7', dir, {
-      PATH: process.env.PATH,
-      GITHUB_STEP_SUMMARY: file,
-      INPUT_GITHUB_TOKEN: "secret-token",
-    });
+    const result = await script(
+      'printf "caller detail secret-token" > "$GITHUB_STEP_SUMMARY"; printf "output\\n"; exit 7',
+      dir,
+      {
+        PATH: process.env.PATH,
+        GITHUB_STEP_SUMMARY: file,
+        INPUT_GITHUB_TOKEN: "secret-token",
+      },
+    );
     expect(result.code).toBe(7);
     expect(result.summary).toContain("caller detail ***");
     expect(result.summary).not.toContain("secret-token");
+    expect(readFileSync(file, "utf8")).toContain("caller detail ***");
+    expect(readFileSync(file, "utf8")).not.toContain("secret-token");
   } finally {
     rmSync(dir, { recursive: true });
   }

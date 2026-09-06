@@ -9054,7 +9054,7 @@ async function fetchManifests(token, repository2, run, directory = process.cwd()
     );
   }
   if (new Set(manifests.map((m) => m.name)).size > 1) throw Error("Multiple snaps in manifest set");
-  if (expected && manifests.length && JSON.stringify(manifests.map((m) => m.architecture).sort()) !== JSON.stringify([...expected.architectures].sort()))
+  if (expected && expected.architectures && manifests.length && JSON.stringify(manifests.map((m) => m.architecture).sort()) !== JSON.stringify([...expected.architectures].sort()))
     throw Error("Manifest architecture set mismatch");
   if ((0, import_node_fs4.readdirSync)(directory).some((p) => /^manifest-.*\.yaml$/.test(p) && !names.has(p.slice(0, -5))))
     throw Error("Unexpected stale manifest outside this run's artifact set");
@@ -9080,13 +9080,6 @@ revision: '${m.revision}'
       { mode: 384 }
     );
   return manifests;
-}
-function localManifests(directory, snap) {
-  return (0, import_node_fs4.readdirSync)(directory).filter((p) => /^manifest-.*\.yaml$/.test(p)).map((p) => {
-    const file = (0, import_node_path2.resolve)(directory, p);
-    if (!(0, import_node_fs4.lstatSync)(file).isFile()) throw Error("Unsafe manifest file");
-    return manifest((0, import_node_fs4.readFileSync)(file, "utf8"), p.slice(0, -5), snap);
-  });
 }
 
 // src/validation.ts
@@ -9265,8 +9258,9 @@ async function screenshotAction() {
     if (Number(process.env.GITHUB_RUN_ATTEMPT || "1") > 1)
       urls = await recoverScreenshots(images, snap, issue, key, input("screenshots-token"));
     else {
-      await fetchManifests(token, repo, process.env.GITHUB_RUN_ID);
-      const rows = localManifests(process.cwd(), snap), selected = rows.find((r) => r.architecture === "amd64");
+      const rows = await fetchManifests(token, repo, process.env.GITHUB_RUN_ID, process.cwd(), {
+        snap
+      }), selected = rows.find((r) => r.architecture === "amd64");
       if (rows.length && !selected) throw Error("Missing amd64 screenshot manifest");
       const captures = await capture(
         snap,

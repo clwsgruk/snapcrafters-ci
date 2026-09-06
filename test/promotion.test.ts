@@ -77,8 +77,10 @@ test("promotion rejects any unrelated revision before all writes, then releases 
     if (req.url === "/repos/owner/repo/issues/comments/7") res.end(JSON.stringify(comment()));
     else if (req.url === "/repos/owner/repo/collaborators/maintainer/permission")
       res.end(JSON.stringify({ permission }));
-    else if (req.url === "/user") res.end('{"id":3}');
-    else if (req.url === "/repos/owner/repo/issues/1") {
+    else if (req.url === "/user") {
+      res.writeHead(403);
+      res.end("{}");
+    } else if (req.url === "/repos/owner/repo/issues/1") {
       if (req.method === "PATCH") closed = true;
       res.end(JSON.stringify({ ...issue, state: closed ? "closed" : "open" }));
     } else if (req.url?.startsWith("/repos/owner/repo/issues/1/comments")) {

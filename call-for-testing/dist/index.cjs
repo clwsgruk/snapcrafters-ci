@@ -8980,7 +8980,7 @@ async function fetchManifests(token, repository2, run, directory = process.cwd()
     );
   }
   if (new Set(manifests.map((m) => m.name)).size > 1) throw Error("Multiple snaps in manifest set");
-  if (expected && manifests.length && JSON.stringify(manifests.map((m) => m.architecture).sort()) !== JSON.stringify([...expected.architectures].sort()))
+  if (expected && expected.architectures && manifests.length && JSON.stringify(manifests.map((m) => m.architecture).sort()) !== JSON.stringify([...expected.architectures].sort()))
     throw Error("Manifest architecture set mismatch");
   if ((0, import_node_fs2.readdirSync)(directory).some((p) => /^manifest-.*\.yaml$/.test(p) && !names.has(p.slice(0, -5))))
     throw Error("Unexpected stale manifest outside this run's artifact set");
@@ -9006,13 +9006,6 @@ revision: '${m.revision}'
       { mode: 384 }
     );
   return manifests;
-}
-function localManifests(directory, snap) {
-  return (0, import_node_fs2.readdirSync)(directory).filter((p) => /^manifest-.*\.yaml$/.test(p)).map((p) => {
-    const file = (0, import_node_path2.resolve)(directory, p);
-    if (!(0, import_node_fs2.lstatSync)(file).isFile()) throw Error("Unsafe manifest file");
-    return manifest((0, import_node_fs2.readFileSync)(file, "utf8"), p.slice(0, -5), snap);
-  });
 }
 
 // src/validation.ts
@@ -9136,11 +9129,10 @@ async function callForTesting() {
     throw Error("ci-repo overrides are deprecated; pin a forked action SHA");
   const p = project(input("snapcraft-project-root")), snap = snapName(p.outputs["snap-name"]), repo = repository(process.env.GITHUB_REPOSITORY), token = input("github-token"), destination = channel(input("promotion-channel")), candidate = channel(input("channel"));
   const arches = [...new Set(input("architectures").trim().split(/\s+/).map(architecture))];
-  await fetchManifests(token, repo, process.env.GITHUB_RUN_ID, process.cwd(), {
+  let rows = await fetchManifests(token, repo, process.env.GITHUB_RUN_ID, process.cwd(), {
     snap,
     architectures: arches
   });
-  let rows = localManifests(process.cwd(), snap);
   if (!rows.length)
     rows = arches.map((arch) => {
       const matches = revisions(

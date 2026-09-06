@@ -49,6 +49,14 @@ test("artifact failure after publication reports the exact partial success", asy
   expect(result.commands.filter((s) => s.includes('"upload"'))).toHaveLength(1);
 });
 
+test("release rerun restores exact state without another build or upload", async () => {
+  const result = await smoke("release-to-candidate", {}, { attempt: 2 });
+  expect(result.code).toBe(0);
+  expect(result.outputs.revision).toBe("12");
+  expect(result.commands.filter((line) => line.includes('"remote-build"'))).toHaveLength(0);
+  expect(result.commands.filter((line) => line.includes('"upload"'))).toHaveLength(0);
+});
+
 test("adopted versions in testing issues come from the exact Store revision", async () => {
   const result = await smoke("call-for-testing", {}, { adopted: true });
   expect(JSON.stringify(result.messages)).toContain("A new version (1)");

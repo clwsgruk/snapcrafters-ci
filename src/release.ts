@@ -8,9 +8,10 @@ import {
   readdirSync,
   lstatSync,
   createReadStream,
+  realpathSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative, resolve, basename } from "node:path";
+import { join, relative, resolve, basename, sep } from "node:path";
 import { createHash } from "node:crypto";
 import { stringify } from "yaml";
 import { command, safeEnv, readBounded } from "./execution.ts";
@@ -126,12 +127,23 @@ export async function publish(options: ReleaseOptions): Promise<Published> {
     stage = join(temporary, "project"),
     home = join(temporary, "home");
   try {
+    const sourceRoot = realpathSync(p.root);
     cpSync(p.root, stage, {
       recursive: true,
-      filter: (path) =>
-        !lstatSync(path).isSymbolicLink() &&
-        ![".git", "node_modules"].includes(basename(path)) &&
-        !/\.(snap|comp)$|^\.ci-release-/.test(basename(path)),
+      dereference: true,
+      filter: (path) => {
+        const stat = lstatSync(path);
+        if (stat.isSymbolicLink()) {
+          const target = realpathSync(path);
+          if (!target.startsWith(`${sourceRoot}${sep}`) || !lstatSync(target).isFile())
+            throw Error("Project symlink must target an in-project regular file");
+          return true;
+        }
+        return (
+          ![".git", "node_modules"].includes(basename(path)) &&
+          !/\.(snap|comp)$|^\.ci-release-/.test(basename(path))
+        );
+      },
     });
     mkdirSync(join(home, ".local/share/snapcraft/provider/launchpad"), {
       recursive: true,

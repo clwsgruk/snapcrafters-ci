@@ -7416,16 +7416,19 @@ function command(file, args, cwd = process.cwd(), env = safeEnv(), timeout = 6e5
 }
 async function script(source, directory, env = process.env, storage = (0, import_node_os.tmpdir)()) {
   const dir = (0, import_node_fs2.mkdtempSync)((0, import_node_path2.join)(storage, "script-"));
-  const file = (0, import_node_path2.join)(dir, "caller.sh"), stdout = (0, import_node_path2.join)(dir, "stdout.log"), stderr = (0, import_node_path2.join)(dir, "stderr.log");
+  const file = (0, import_node_path2.join)(dir, "caller.sh"), stdout = (0, import_node_path2.join)(dir, "stdout.log"), stderr = (0, import_node_path2.join)(dir, "stderr.log"), callerSummary = (0, import_node_path2.join)(dir, "caller-summary.md");
   (0, import_node_fs2.writeFileSync)(file, source, { mode: 384 });
+  if (env.GITHUB_STEP_SUMMARY) (0, import_node_fs2.writeFileSync)(callerSummary, "", { mode: 384, flag: "wx" });
   const secrets = Object.entries(env).filter(([k, v]) => /token|secret|password|credential/i.test(k) && v).flatMap(([, v]) => [v, ...v.split(/\r?\n/)].filter(Boolean)).sort((a, b) => b.length - a.length);
   const redact = (s) => secrets.reduce((v, secret) => v.replaceAll(secret, "***"), s).replaceAll("\x1B", "");
   const hold = secrets.reduce((n, secret) => Math.max(n, secret.length), 0);
   const first = [], last = [];
   let live = 128 * 1024;
+  const childEnv = safeEnv(env);
+  if (env.GITHUB_STEP_SUMMARY) childEnv.GITHUB_STEP_SUMMARY = callerSummary;
   const child = (0, import_node_child_process.spawn)("bash", ["--noprofile", "--norc", "-e", "-o", "pipefail", file], {
     cwd: directory,
-    env: safeEnv(env),
+    env: childEnv,
     detached: true,
     stdio: ["ignore", "pipe", "pipe"]
   });
@@ -7497,7 +7500,7 @@ async function script(source, directory, env = process.env, storage = (0, import
   let extra = "";
   if (env.GITHUB_STEP_SUMMARY) {
     try {
-      extra = "\nWorkflow summary:\n" + redact(readBounded(env.GITHUB_STEP_SUMMARY, 16e3, true).toString("utf8")).split("\n").slice(0, 100).join("\n");
+      extra = "\nWorkflow summary:\n" + redact(readBounded(callerSummary, 16e3, true).toString("utf8")).split("\n").slice(0, 100).join("\n");
     } catch {
     }
   }
@@ -7554,7 +7557,11 @@ async function syncVersion(source, root, name, email, cwd = process.cwd()) {
   if (untracked.length)
     throw Error(`New paths must be resolved before committing:
 ${untracked.join("\n")}`);
-  if (!command("git", ["status", "--porcelain", "--untracked-files=no"], cwd).trim()) return;
+  if (!command("git", ["status", "--porcelain", "--untracked-files=no"], cwd).trim()) {
+    if (command("git", ["rev-list", "--count", "@{upstream}..HEAD"], cwd).trim() !== "0")
+      command("git", ["push"], cwd);
+    return;
+  }
   const after = project(root, cwd);
   const detail = before.outputs.version === after.outputs.version ? "dependencies" : `to version ${after.outputs.version}`;
   command(

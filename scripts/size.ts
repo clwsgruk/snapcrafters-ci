@@ -7,13 +7,19 @@ export function measure(texts: string[], lines: number, files: number) {
   if (texts.length > files) throw Error(`file cap exceeded: ${texts.length} > ${files}`);
   return { lines: count, files: texts.length };
 }
+export function productionSources(paths: string[]) {
+  const source = paths.filter((path) => path.startsWith("src/"));
+  const unsupported = source.filter((path) => !path.endsWith(".ts"));
+  if (unsupported.length) throw Error(`Unsupported production source: ${unsupported.join(", ")}`);
+  return source;
+}
 if (resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const paths = readdirSync(".", { recursive: true })
     .map(String)
     .filter(
       (p) => !p.startsWith("node_modules/") && !p.startsWith(".git/") && !p.includes("/dist/"),
     );
-  const source = paths.filter((p) => p.startsWith("src/") && p.endsWith(".ts"));
+  const source = productionSources(paths.filter((p) => !p.endsWith("/")));
   const adapters = paths.filter((p) => /^[^/]+\/main\.ts$/.test(p));
   const sourceFiles = paths.filter((p) => p.startsWith("src/") && statSync(p).isFile());
   if (sourceFiles.length > 15 || adapters.length !== 12)

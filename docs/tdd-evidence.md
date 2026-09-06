@@ -145,3 +145,22 @@ with its state in /tmp and unrelated global tool configuration excluded.
   and a recipe symlink was followed. GREEN: project roots remain inside the canonical checkout and
   project/declaration files use bounded regular no-follow reads. The combined focused review gate
   passed 29 tests across four files; size remained 1,883 production nonblank lines.
+- Independent security review at `3ec92a352362c7f22f15b69eddb3202faebf999d` produced three
+  reproducible RED cases: caller summary credentials remained in GitHub's actual summary sink;
+  installation tokens failed on `GET /user` after confirmed promotion; and valid in-project source
+  symlinks disappeared from release staging. GREEN: caller summaries use a private file and only
+  sanitized text reaches the runner summary, reaction creation relies on GitHub's installation-token
+  compatible idempotent endpoint, and bounded in-project file symlinks are materialized while
+  escaping/directory links fail. The focused gate passed 25 tests.
+- Independent verification found that `src/extra.js` escaped the executable-source line cap.
+  `mise run test -- test/budget.test.ts` was RED until the classifier rejected every unsupported
+  source extension; it then passed. Release fakes now require an existing snap and exact
+  `NAME=component` argument.
+- `mise run test -- test/execution.test.ts` — RED: a successful update commit followed by rejected
+  push could never be delivered on retry because a clean tree returned early. GREEN: a clean tree
+  pushes only when HEAD is ahead of its configured upstream.
+- `mise run test -- test/smoke.test.ts` — RED: attempt-two release simulation rebuilt and uploaded
+  instead of restoring exact state. GREEN: the copied wrapper executes its download-artifact route,
+  verifies Store/digest state and makes zero remote-build/upload calls. The smoke suite passed 30
+  tests. While green, testing/screenshots consume validated manifest rows directly, removing the
+  redundant write-rescan-reparse path.

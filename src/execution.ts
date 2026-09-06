@@ -52,8 +52,10 @@ export async function script(
   const dir = mkdtempSync(join(storage, "script-"));
   const file = join(dir, "caller.sh"),
     stdout = join(dir, "stdout.log"),
-    stderr = join(dir, "stderr.log");
+    stderr = join(dir, "stderr.log"),
+    callerSummary = join(dir, "caller-summary.md");
   writeFileSync(file, source, { mode: 0o600 });
+  if (env.GITHUB_STEP_SUMMARY) writeFileSync(callerSummary, "", { mode: 0o600, flag: "wx" });
   const secrets = Object.entries(env)
     .filter(([k, v]) => /token|secret|password|credential/i.test(k) && v)
     .flatMap(([, v]) => [v!, ...v!.split(/\r?\n/)].filter(Boolean))
@@ -64,9 +66,11 @@ export async function script(
   const first: string[] = [],
     last: string[] = [];
   let live = 128 * 1024;
+  const childEnv = safeEnv(env);
+  if (env.GITHUB_STEP_SUMMARY) childEnv.GITHUB_STEP_SUMMARY = callerSummary;
   const child = spawn("bash", ["--noprofile", "--norc", "-e", "-o", "pipefail", file], {
     cwd: directory,
-    env: safeEnv(env),
+    env: childEnv,
     detached: true,
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -144,7 +148,7 @@ export async function script(
     try {
       extra =
         "\nWorkflow summary:\n" +
-        redact(readBounded(env.GITHUB_STEP_SUMMARY, 16000, true).toString("utf8"))
+        redact(readBounded(callerSummary, 16000, true).toString("utf8"))
           .split("\n")
           .slice(0, 100)
           .join("\n");
@@ -218,7 +222,11 @@ export async function syncVersion(
     .filter(Boolean);
   if (untracked.length)
     throw Error(`New paths must be resolved before committing:\n${untracked.join("\n")}`);
-  if (!command("git", ["status", "--porcelain", "--untracked-files=no"], cwd).trim()) return;
+  if (!command("git", ["status", "--porcelain", "--untracked-files=no"], cwd).trim()) {
+    if (command("git", ["rev-list", "--count", "@{upstream}..HEAD"], cwd).trim() !== "0")
+      command("git", ["push"], cwd);
+    return;
+  }
   const after = project(root, cwd);
   const detail =
     before.outputs.version === after.outputs.version

@@ -9092,15 +9092,7 @@ async function promote(event, repo, snap, destination, token, storeToken, base =
   }
   if (failed) throw Error(outcome);
   const reactionsPath = `/repos/${repo}/issues/comments/${commentId}/reactions`;
-  const user = await request("GET", "/user", token, void 0, base);
-  const reacted = async () => (await pages(reactionsPath, token, void 0, base)).some((r) => r.content === "+1" && r.user.id === user.id);
-  if (!await reacted()) {
-    try {
-      await request("POST", reactionsPath, token, { content: "+1" }, base);
-    } catch (error) {
-      if (!await reacted()) throw error;
-    }
-  }
+  await request("POST", reactionsPath, token, { content: "+1" }, base);
   if (parsed.done) {
     try {
       await request("PATCH", issuePath, token, { state: "closed" }, base);

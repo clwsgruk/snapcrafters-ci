@@ -95,7 +95,7 @@ export async function fetchManifests(
   repository: string,
   run: string,
   directory = process.cwd(),
-  expected?: { snap: string; architectures: string[] },
+  expected?: { snap: string; architectures?: string[] },
   base = api,
 ) {
   if (!/^[\w.-]+\/[\w.-]+$/.test(repository) || !/^[1-9]\d*$/.test(run))
@@ -134,6 +134,7 @@ export async function fetchManifests(
   if (new Set(manifests.map((m) => m.name)).size > 1) throw Error("Multiple snaps in manifest set");
   if (
     expected &&
+    expected.architectures &&
     manifests.length &&
     JSON.stringify(manifests.map((m) => m.architecture).sort()) !==
       JSON.stringify([...expected.architectures].sort())
@@ -166,13 +167,4 @@ export async function fetchManifests(
       { mode: 0o600 },
     );
   return manifests;
-}
-export function localManifests(directory: string, snap: string): Manifest[] {
-  return readdirSync(directory)
-    .filter((p) => /^manifest-.*\.yaml$/.test(p))
-    .map((p) => {
-      const file = resolve(directory, p);
-      if (!lstatSync(file).isFile()) throw Error("Unsafe manifest file");
-      return manifest(readFileSync(file, "utf8"), p.slice(0, -5), snap);
-    });
 }

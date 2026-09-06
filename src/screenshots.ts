@@ -6,7 +6,7 @@ import { project } from "./project.ts";
 import { input, outputs } from "./runtime.ts";
 import { api, request, ApiError, marker, marked, pages } from "./github.ts";
 import { repository, snapName, channel } from "./validation.ts";
-import { revision, fetchManifests, localManifests } from "./manifests.ts";
+import { revision, fetchManifests } from "./manifests.ts";
 import {
   constants,
   openSync,
@@ -227,8 +227,9 @@ export async function screenshotAction() {
     if (Number(process.env.GITHUB_RUN_ATTEMPT || "1") > 1)
       urls = await recoverScreenshots(images, snap, issue, key, input("screenshots-token"));
     else {
-      await fetchManifests(token, repo, process.env.GITHUB_RUN_ID!);
-      const rows = localManifests(process.cwd(), snap),
+      const rows = await fetchManifests(token, repo, process.env.GITHUB_RUN_ID!, process.cwd(), {
+          snap,
+        }),
         selected = rows.find((r) => r.architecture === "amd64");
       if (rows.length && !selected) throw Error("Missing amd64 screenshot manifest");
       const captures = await capture(

@@ -8897,7 +8897,7 @@ async function fetchManifests(token, repository, run, directory = process.cwd(),
     );
   }
   if (new Set(manifests.map((m) => m.name)).size > 1) throw Error("Multiple snaps in manifest set");
-  if (expected && manifests.length && JSON.stringify(manifests.map((m) => m.architecture).sort()) !== JSON.stringify([...expected.architectures].sort()))
+  if (expected && expected.architectures && manifests.length && JSON.stringify(manifests.map((m) => m.architecture).sort()) !== JSON.stringify([...expected.architectures].sort()))
     throw Error("Manifest architecture set mismatch");
   if ((0, import_node_fs.readdirSync)(directory).some((p) => /^manifest-.*\.yaml$/.test(p) && !names.has(p.slice(0, -5))))
     throw Error("Unexpected stale manifest outside this run's artifact set");

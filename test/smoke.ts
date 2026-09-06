@@ -13,6 +13,7 @@ import { tmpdir } from "node:os";
 import { execFile, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
 import { createServer } from "node:http";
+import { createHash } from "node:crypto";
 import { parse } from "yaml";
 import { expectedUses, pins, type Action } from "./wrappers.ts";
 import { zip } from "./zip.ts";
@@ -29,6 +30,7 @@ export async function smoke(
     summaryFailure?: boolean;
     artifactFailure?: boolean;
     expectFailure?: boolean;
+    attempt?: number;
   } = {},
 ) {
   const artifacts: { id: number; name: string; expired: boolean; data: Buffer }[] = [];
@@ -276,7 +278,7 @@ else if(tool==='lxc'&&a.length===3&&a[0]==='delete'&&a[1]==='--force'&&a[2]===pr
     GITHUB_EVENT_PATH: join(dir, "event.json"),
     GITHUB_REPOSITORY: "owner/repo",
     GITHUB_RUN_ID: "1",
-    GITHUB_RUN_ATTEMPT: "1",
+    GITHUB_RUN_ATTEMPT: String(options.attempt ?? 1),
     GITHUB_SERVER_URL: "https://github.com",
     RUNNER_ENVIRONMENT: "github-hosted",
     RUNNER_OS: "Linux",
@@ -294,12 +296,18 @@ else if(tool==='lxc'&&a.length===3&&a[0]==='delete'&&a[1]==='--force'&&a[2]===pr
     String(text).replace(
       /\$\{\{\s*(inputs\.([\w-]+)|steps\.([\w-]+)\.outputs\.([\w-]+)|github\.(run_id|run_attempt))\s*}}/g,
       (_, _all: string, key: string, step: string, output: string, github: string) =>
-        key ? inputs[key] : step ? (steps[step]?.[output] ?? "") : github === "run_id" ? "1" : "1",
+        key
+          ? inputs[key]
+          : step
+            ? (steps[step]?.[output] ?? "")
+            : github === "run_id"
+              ? "1"
+              : env.GITHUB_RUN_ATTEMPT!,
     );
   try {
     for (const s of a.runs.steps) {
       if (s.if) {
-        if (s.if === "github.run_attempt != '1'") continue;
+        if (s.if === "github.run_attempt != '1'" && env.GITHUB_RUN_ATTEMPT === "1") continue;
         if (s.if.startsWith("failure()") && (!code || !steps.publish)) continue;
         if (s.if === "inputs.install == 'true'" && inputs.install !== "true") continue;
       }
@@ -316,6 +324,29 @@ else if(tool==='lxc'&&a.length===3&&a[0]==='delete'&&a[1]==='--force'&&a[2]===pr
           throw Error(
             `Node 24 required: ${process.version}, ${process.execPath}, ${s.with?.["node-version"]}`,
           );
+        if (tool === "actions/download-artifact") {
+          if (name !== "release-to-candidate" || env.GITHUB_RUN_ATTEMPT === "1")
+            throw Error("Unexpected release-state download");
+          const sourceSha = execFileSync("git", ["rev-parse", "HEAD"], {
+            cwd: work,
+            encoding: "utf8",
+          }).trim();
+          writeFileSync(
+            steps.prepare["state-path"],
+            JSON.stringify({
+              snap: "sample",
+              root: ".",
+              version: "1",
+              revision: "12",
+              channel: "latest/candidate",
+              architecture: "amd64",
+              digest: createHash("sha384").update("fresh").digest("hex"),
+              sourceSha,
+            }),
+            { mode: 0o600 },
+          );
+          writeFileSync(flag, "yes");
+        }
         if (tool === "actions/upload-artifact" && options.artifactFailure) {
           code = 1;
           continue;

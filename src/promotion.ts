@@ -2,7 +2,7 @@ import { readFileSync, statSync } from "node:fs";
 import { command, safeEnv } from "./execution.ts";
 import { project } from "./project.ts";
 import { input } from "./runtime.ts";
-import { api, request, pages, marked, marker } from "./github.ts";
+import { api, request, marked, marker } from "./github.ts";
 import { testingIssue } from "./testing.ts";
 import { channel, repository, snapName, revisions } from "./validation.ts";
 import { revision } from "./manifests.ts";
@@ -137,18 +137,8 @@ export async function promote(
   }
   if (failed) throw Error(outcome);
   const reactionsPath = `/repos/${repo}/issues/comments/${commentId}/reactions`;
-  const user = await request<{ id: number }>("GET", "/user", token, undefined, base);
-  const reacted = async () =>
-    (
-      await pages<{ content: string; user: { id: number } }>(reactionsPath, token, undefined, base)
-    ).some((r) => r.content === "+1" && r.user.id === user.id);
-  if (!(await reacted())) {
-    try {
-      await request("POST", reactionsPath, token, { content: "+1" }, base);
-    } catch (error) {
-      if (!(await reacted())) throw error;
-    }
-  }
+  // GitHub's reaction creation is idempotent for a user/content pair and works with installation tokens.
+  await request("POST", reactionsPath, token, { content: "+1" }, base);
   if (parsed.done) {
     try {
       await request("PATCH", issuePath, token, { state: "closed" }, base);

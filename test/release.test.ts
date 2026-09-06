@@ -35,6 +35,7 @@ test.each([
   "core18",
   "core20",
   "core24",
+  "symlink-source",
 ])("release publication boundary: %s", async (mode) => {
   const { publish } = await import("../src/release.ts");
   const { mkdtempSync, writeFileSync, mkdirSync, readFileSync, rmSync, existsSync, symlinkSync } =
@@ -55,6 +56,12 @@ test.each([
   );
   writeFileSync(path.join(work, "stale.snap"), "stale");
   writeFileSync(path.join(work, "requirements.txt"), "needed source");
+  if (mode === "symlink-source") {
+    mkdirSync(path.join(work, "assets"));
+    mkdirSync(path.join(work, "snap/gui"), { recursive: true });
+    writeFileSync(path.join(work, "assets/icon.png"), "icon");
+    symlinkSync("../../assets/icon.png", path.join(work, "snap/gui/icon.png"));
+  }
   execFileSync("git", ["init", work], { stdio: "ignore" });
   execFileSync("git", ["add", "snapcraft.yaml"], { cwd: work });
   execFileSync(
@@ -74,8 +81,8 @@ test.each([
   );
   const fake = `#!${process.execPath}\nconst fs=require('node:fs'),p=require('node:path'),a=process.argv.slice(2),tool=p.basename(process.argv[1]);fs.appendFileSync(${JSON.stringify(log)},JSON.stringify([tool,...a])+'\\n'); const store=${JSON.stringify(store)},mode=${JSON.stringify(mode)};
 if(tool==='snapcraft'&&a[0]==='revisions'&&a[1]==='sample'&&a[2]==='--arch'&&a[3]==='amd64'&&a.length===4){if(mode==='auth-after-upload'&&fs.existsSync(store))process.exit(93);console.log('Rev. Uploaded Arches Version Channels');if(fs.existsSync(store)) console.log('12 2026-09-06T12:00:00Z amd64 2.0 latest/candidate*');}
-else if(tool==='snapcraft'&&JSON.stringify(a)===JSON.stringify(['remote-build','--launchpad-accept-public-upload',...(mode==='core24'?['--build-for=amd64']:[])])){if(fs.existsSync('stale.snap')||!fs.existsSync('requirements.txt'))process.exit(91);if(mode!=='core24'&&!fs.readFileSync('snapcraft.yaml','utf8').includes('build-on'))process.exit(92);fs.writeFileSync('sample_2.0_amd64.snap','fresh');if(mode.startsWith('component-'))fs.writeFileSync('sample+extra_1.comp','component');if(mode==='extra-component')fs.writeFileSync('unrelated.comp','component');if(mode==='build-failure')process.exit(2);}
-else if(tool==='snapcraft'&&a[0]==='upload'&&a.length===(mode.startsWith('component-')?5:3)&&a.at(-1)==='--release=latest/candidate'&&(!mode.startsWith('component-')||(a[2]==='--component'&&a[3].endsWith('/sample+extra_1.comp')))){fs.writeFileSync(store,mode==='wrong-digest'?'unrelated':'fresh');if(mode==='upload-disconnect')process.exit(2);console.log("Revision 12 created for 'sample'");}
+else if(tool==='snapcraft'&&JSON.stringify(a)===JSON.stringify(['remote-build','--launchpad-accept-public-upload',...(mode==='core24'?['--build-for=amd64']:[])])){if(fs.existsSync('stale.snap')||!fs.existsSync('requirements.txt'))process.exit(91);if(mode!=='core24'&&!fs.readFileSync('snapcraft.yaml','utf8').includes('build-on'))process.exit(92);if(mode==='symlink-source'&&(!fs.existsSync('snap/gui/icon.png')||!fs.lstatSync('snap/gui/icon.png').isFile()))process.exit(94);fs.writeFileSync('sample_2.0_amd64.snap','fresh');if(mode.startsWith('component-'))fs.writeFileSync('sample+extra_1.comp','component');if(mode==='extra-component')fs.writeFileSync('unrelated.comp','component');if(mode==='build-failure')process.exit(2);}
+else if(tool==='snapcraft'&&a[0]==='upload'&&a.length===(mode.startsWith('component-')?5:3)&&a[1].endsWith('/sample_2.0_amd64.snap')&&fs.existsSync(a[1])&&a.at(-1)==='--release=latest/candidate'&&(!mode.startsWith('component-')||(a[2]==='--component'&&a[3].startsWith('extra=')&&a[3].endsWith('/sample+extra_1.comp')&&fs.existsSync(a[3].slice(a[3].indexOf('=')+1))))){fs.writeFileSync(store,mode==='wrong-digest'?'unrelated':'fresh');if(mode==='upload-disconnect')process.exit(2);console.log("Revision 12 created for 'sample'");}
 else if(tool==='unsquashfs'&&a[0]==='-cat'&&a[2]==='meta/snap.yaml'&&a.length===3){console.log('name: sample\\nversion: "2.0"\\narchitectures: [amd64]');}
 else if(tool==='unsquashfs'&&a[0]==='-cat'&&a[2]==='meta/component.yaml'&&a.length===3)console.log('component: '+(mode==='component-mismatch'?'other':'sample')+'+extra\\nversion: 1');
 else if(tool==='snap'&&JSON.stringify(a)===JSON.stringify(['download','sample','--revision=12'])){if(fs.readFileSync(store,'utf8')!=='missing-download')fs.writeFileSync('sample_12.snap',fs.readFileSync(store));}
@@ -83,6 +90,7 @@ else if(tool==='review-tools.snap-review'&&a.length===1&&a[0].endsWith('.snap'))
 else {console.error('unsupported',tool,a);process.exit(90);}`;
   for (const tool of ["snapcraft", "snap", "unsquashfs", "review-tools.snap-review"])
     writeFileSync(path.join(bin, tool), fake, { mode: 0o700 });
+  execFileSync(process.execPath, ["--check", path.join(bin, "snapcraft")]);
   const old = process.env.PATH,
     oldAttempt = process.env.GITHUB_RUN_ATTEMPT;
   symlinkSync("/usr/bin/git", path.join(bin, "git"));

@@ -1,6 +1,6 @@
 import { architecture, project } from "./project.ts";
 import { channel, repository, snapName, revisions } from "./validation.ts";
-import { revision, fetchManifests, localManifests, type Manifest } from "./manifests.ts";
+import { revision, fetchManifests, type Manifest } from "./manifests.ts";
 import { marked, marker } from "./github.ts";
 import { command, script, safeEnv } from "./execution.ts";
 import { input, outputs } from "./runtime.ts";
@@ -94,11 +94,10 @@ export async function callForTesting() {
     destination = channel(input("promotion-channel")),
     candidate = channel(input("channel"));
   const arches = [...new Set(input("architectures").trim().split(/\s+/).map(architecture))];
-  await fetchManifests(token, repo, process.env.GITHUB_RUN_ID!, process.cwd(), {
+  let rows = await fetchManifests(token, repo, process.env.GITHUB_RUN_ID!, process.cwd(), {
     snap,
     architectures: arches,
   });
-  let rows = localManifests(process.cwd(), snap);
   if (!rows.length)
     rows = arches.map((arch) => {
       const matches = revisions(
@@ -157,8 +156,9 @@ export async function runTests() {
     token = input("github-token"),
     issue = revision(input("issue-number"));
   const arch = architecture(command("dpkg", ["--print-architecture"]).trim());
-  await fetchManifests(token, repo, process.env.GITHUB_RUN_ID!);
-  const rows = localManifests(process.cwd(), snap),
+  const rows = await fetchManifests(token, repo, process.env.GITHUB_RUN_ID!, process.cwd(), {
+      snap,
+    }),
     selected = rows.find((r) => r.architecture === arch);
   if (rows.length && !selected) throw Error("Missing test architecture manifest");
   command("sudo", [

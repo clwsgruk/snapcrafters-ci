@@ -8980,7 +8980,7 @@ async function fetchManifests(token, repository2, run, directory = process.cwd()
     );
   }
   if (new Set(manifests.map((m) => m.name)).size > 1) throw Error("Multiple snaps in manifest set");
-  if (expected && manifests.length && JSON.stringify(manifests.map((m) => m.architecture).sort()) !== JSON.stringify([...expected.architectures].sort()))
+  if (expected && expected.architectures && manifests.length && JSON.stringify(manifests.map((m) => m.architecture).sort()) !== JSON.stringify([...expected.architectures].sort()))
     throw Error("Manifest architecture set mismatch");
   if ((0, import_node_fs2.readdirSync)(directory).some((p) => /^manifest-.*\.yaml$/.test(p) && !names.has(p.slice(0, -5))))
     throw Error("Unexpected stale manifest outside this run's artifact set");
@@ -9006,13 +9006,6 @@ revision: '${m.revision}'
       { mode: 384 }
     );
   return manifests;
-}
-function localManifests(directory, snap) {
-  return (0, import_node_fs2.readdirSync)(directory).filter((p) => /^manifest-.*\.yaml$/.test(p)).map((p) => {
-    const file = (0, import_node_path2.resolve)(directory, p);
-    if (!(0, import_node_fs2.lstatSync)(file).isFile()) throw Error("Unsafe manifest file");
-    return manifest((0, import_node_fs2.readFileSync)(file, "utf8"), p.slice(0, -5), snap);
-  });
 }
 
 // src/validation.ts
@@ -9062,16 +9055,19 @@ function command(file, args, cwd = process.cwd(), env = safeEnv(), timeout = 6e5
 }
 async function script(source, directory, env = process.env, storage = (0, import_node_os.tmpdir)()) {
   const dir = (0, import_node_fs3.mkdtempSync)((0, import_node_path3.join)(storage, "script-"));
-  const file = (0, import_node_path3.join)(dir, "caller.sh"), stdout = (0, import_node_path3.join)(dir, "stdout.log"), stderr = (0, import_node_path3.join)(dir, "stderr.log");
+  const file = (0, import_node_path3.join)(dir, "caller.sh"), stdout = (0, import_node_path3.join)(dir, "stdout.log"), stderr = (0, import_node_path3.join)(dir, "stderr.log"), callerSummary = (0, import_node_path3.join)(dir, "caller-summary.md");
   (0, import_node_fs3.writeFileSync)(file, source, { mode: 384 });
+  if (env.GITHUB_STEP_SUMMARY) (0, import_node_fs3.writeFileSync)(callerSummary, "", { mode: 384, flag: "wx" });
   const secrets = Object.entries(env).filter(([k, v]) => /token|secret|password|credential/i.test(k) && v).flatMap(([, v]) => [v, ...v.split(/\r?\n/)].filter(Boolean)).sort((a, b) => b.length - a.length);
   const redact = (s) => secrets.reduce((v, secret) => v.replaceAll(secret, "***"), s).replaceAll("\x1B", "");
   const hold = secrets.reduce((n, secret) => Math.max(n, secret.length), 0);
   const first = [], last = [];
   let live = 128 * 1024;
+  const childEnv = safeEnv(env);
+  if (env.GITHUB_STEP_SUMMARY) childEnv.GITHUB_STEP_SUMMARY = callerSummary;
   const child = (0, import_node_child_process.spawn)("bash", ["--noprofile", "--norc", "-e", "-o", "pipefail", file], {
     cwd: directory,
-    env: safeEnv(env),
+    env: childEnv,
     detached: true,
     stdio: ["ignore", "pipe", "pipe"]
   });
@@ -9143,7 +9139,7 @@ async function script(source, directory, env = process.env, storage = (0, import
   let extra = "";
   if (env.GITHUB_STEP_SUMMARY) {
     try {
-      extra = "\nWorkflow summary:\n" + redact(readBounded(env.GITHUB_STEP_SUMMARY, 16e3, true).toString("utf8")).split("\n").slice(0, 100).join("\n");
+      extra = "\nWorkflow summary:\n" + redact(readBounded(callerSummary, 16e3, true).toString("utf8")).split("\n").slice(0, 100).join("\n");
     } catch {
     }
   }
@@ -9208,8 +9204,9 @@ async function main(action) {
 async function runTests() {
   const p = project(input("snapcraft-project-root")), snap = snapName(p.outputs["snap-name"]), repo = repository(process.env.GITHUB_REPOSITORY), token = input("github-token"), issue = revision(input("issue-number"));
   const arch = architecture(command("dpkg", ["--print-architecture"]).trim());
-  await fetchManifests(token, repo, process.env.GITHUB_RUN_ID);
-  const rows = localManifests(process.cwd(), snap), selected = rows.find((r) => r.architecture === arch);
+  const rows = await fetchManifests(token, repo, process.env.GITHUB_RUN_ID, process.cwd(), {
+    snap
+  }), selected = rows.find((r) => r.architecture === arch);
   if (rows.length && !selected) throw Error("Missing test architecture manifest");
   command("sudo", [
     "snap",
