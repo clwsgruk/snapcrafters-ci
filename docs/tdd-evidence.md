@@ -288,6 +288,15 @@ mutable sibling references, and public metadata drift.
   bundle; `mise run test:smoke` passed both tests. Parent `mise run ci` then passed all 151 tests in
   35 files, the 96.21% pure-parser branch gate, all lint checks and both isolated bundle rebuilds.
 
+## Parent cross-snap resume regression
+
+- `mise run test:unit -- release/action.test.ts` — RED: same-source/channel/architecture state for
+  `other-snap` resolved successfully while the selected recipe was `demo`. This could resume the
+  wrong invocation in a multi-snap repository.
+- Bind resumed state to the selected project's parsed snap name before writing a manifest or
+  accepting its revision. GREEN: 114 unit tests; full `mise run ci` passed 175 tests in 38 files,
+  all per-parser 90% gates, and the deterministic 12-bundle checks.
+
 ## Intentionally unrun external acceptance
 
 No Launchpad remote build, Snap Store upload/release/promotion, GitHub issue/comment/tag/ref write,

@@ -27273,16 +27273,162 @@ ${manifest.version ? `version: ${JSON.stringify(manifest.version)}
 ` : ""}`;
 }
 
+// src/project/parse.ts
+var import_node_fs = require("node:fs");
+var import_promises3 = require("node:fs/promises");
+var import_node_path3 = require("node:path");
+
+// src/runtime/files.ts
+var import_promises2 = require("node:fs/promises");
+var import_node_path2 = require("node:path");
+async function resolveProjectRoot(workspace, input) {
+  const workspaceReal = await (0, import_promises2.realpath)(workspace);
+  const requested = (0, import_node_path2.resolve)(workspaceReal, input || ".");
+  const requestedReal = await (0, import_promises2.realpath)(requested);
+  const rel = (0, import_node_path2.relative)(workspaceReal, requestedReal);
+  if (rel === ".." || rel.startsWith(`..${import_node_path2.sep}`))
+    throw new Error("Project root escapes workspace");
+  return requestedReal;
+}
+async function ownedTemp(parent, prefix, owner) {
+  const { writeFile: writeFile3 } = await import("node:fs/promises");
+  const directory = await (0, import_promises2.mkdtemp)((0, import_node_path2.join)(parent, prefix));
+  await writeFile3((0, import_node_path2.join)(directory, ".owner"), owner, { mode: 384 });
+  return directory;
+}
+async function removeOwned(directory, owner) {
+  const marker = await (0, import_promises2.readFile)((0, import_node_path2.join)(directory, ".owner"), "utf8");
+  if (marker !== owner) throw new Error("Refusing to remove resource not owned by this run");
+  await (0, import_promises2.rm)(directory, { recursive: true });
+}
+
+// src/project/schema.ts
+var import_yaml2 = __toESM(require_dist(), 1);
+function parseProjectDocument(source) {
+  const parsed = (0, import_yaml2.parseDocument)(source.toString("utf8"), { uniqueKeys: true });
+  if (parsed.errors.length)
+    throw new InputError(`Invalid snapcraft YAML: ${parsed.errors[0].message}`);
+  const document = parsed.toJS();
+  if (!document || typeof document !== "object" || Array.isArray(document))
+    throw new InputError("snapcraft.yaml must be a mapping");
+  const mapping = document;
+  if (typeof mapping.name !== "string" || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(mapping.name))
+    throw new InputError("Invalid snap name");
+  return {
+    document: mapping,
+    name: mapping.name,
+    ...typeof mapping.version === "string" || typeof mapping.version === "number" ? { version: String(mapping.version) } : {},
+    ...typeof mapping["adopt-info"] === "string" ? { adoptInfo: mapping["adopt-info"] } : {},
+    classic: mapping.confinement === "classic",
+    ...typeof mapping.base === "string" ? { base: mapping.base } : {},
+    components: parseComponents(mapping.components)
+  };
+}
+function parseComponents(value) {
+  if (value === void 0 || value === null) return [];
+  if (typeof value !== "object" || Array.isArray(value))
+    throw new InputError("components must be a mapping");
+  return Object.entries(value).map(([name, raw]) => {
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(name) || !raw || typeof raw !== "object")
+      throw new InputError(`Invalid component ${name}`);
+    const version = raw.version;
+    if (version !== void 0 && version !== null && typeof version !== "string" && typeof version !== "number")
+      throw new InputError(`Invalid component version for ${name}`);
+    return {
+      name,
+      ...version === void 0 || version === null ? {} : { version: String(version) }
+    };
+  });
+}
+
+// src/project/parse.ts
+var candidates = [
+  ".snapcraft.yaml",
+  "build-aux/snap/snapcraft.yaml",
+  "snap/snapcraft.yaml",
+  "snapcraft.yaml"
+];
+async function regularFile(path, label) {
+  try {
+    const metadata = await (0, import_promises3.lstat)(path);
+    if (metadata.isSymbolicLink()) throw new InputError(`${label} must not be a symlink`);
+    if (!metadata.isFile()) throw new InputError(`${label} must be a regular file`);
+    return true;
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+    return false;
+  }
+}
+async function parseProject(workspace, inputRoot = "") {
+  const publicRoot = inputRoot || ".";
+  const root = await resolveProjectRoot(workspace, publicRoot);
+  const matches = [];
+  for (const candidate of candidates)
+    if (await regularFile((0, import_node_path3.resolve)(root, candidate), "snapcraft.yaml")) matches.push(candidate);
+  const selected = matches.at(-1);
+  if (!selected) throw new InputError("No snapcraft.yaml found");
+  const yamlPath = (0, import_node_path3.resolve)(root, selected);
+  const bytes = await readBoundedRegular(yamlPath, 2 * 1024 * 1024, "snapcraft.yaml");
+  const parsed = parseProjectDocument(bytes);
+  const plugsFile = await declaration(workspace, [
+    "plug-declaration.json",
+    ".github/plug-declaration.json"
+  ]);
+  const slotsFile = await declaration(workspace, [
+    "slot-declaration.json",
+    ".github/slot-declaration.json"
+  ]);
+  return {
+    root,
+    yamlPath,
+    publicRoot,
+    publicYamlPath: `${publicRoot.replace(/\/$/, "")}/${selected}`,
+    ...parsed,
+    ...plugsFile ? { plugsFile } : {},
+    ...slotsFile ? { slotsFile } : {}
+  };
+}
+async function declaration(workspace, paths) {
+  let found;
+  for (const path of paths)
+    if (await regularFile((0, import_node_path3.resolve)(workspace, path), "declaration file")) {
+      const metadata = await (0, import_promises3.lstat)((0, import_node_path3.resolve)(workspace, path));
+      if (metadata.size > 1024 * 1024)
+        throw new InputError("Declaration file exceeds 1 MiB limit");
+      found = path;
+    }
+  return found;
+}
+async function readBoundedRegular(path, limit, label) {
+  const handle = await (0, import_promises3.open)(path, import_node_fs.constants.O_RDONLY | import_node_fs.constants.O_NOFOLLOW);
+  try {
+    const metadata = await handle.stat();
+    if (!metadata.isFile()) throw new InputError(`${label} must be a regular file`);
+    if (metadata.size > limit) throw new InputError(`${label} exceeds 2 MiB limit`);
+    const buffer = Buffer.alloc(Math.min(metadata.size + 1, limit + 1));
+    let offset = 0;
+    while (offset < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
+      if (!bytesRead) break;
+      offset += bytesRead;
+    }
+    if (offset > limit) throw new InputError(`${label} exceeds 2 MiB limit`);
+    return buffer.subarray(0, offset);
+  } finally {
+    await handle.close();
+  }
+}
+
 // src/runtime/process.ts
 var import_node_child_process = require("node:child_process");
-var import_promises2 = require("node:fs/promises");
+var import_promises4 = require("node:fs/promises");
 var import_node_string_decoder = require("node:string_decoder");
 async function runProcess(spec) {
   if (!spec.file || spec.file.includes("\n")) throw new Error("Invalid executable");
   if (spec.signal.aborted) throw new Error("Process aborted before spawn");
   let log;
   if (spec.logPath) {
-    log = await (0, import_promises2.open)(spec.logPath, "w", 384);
+    log = await (0, import_promises4.open)(spec.logPath, "w", 384);
     await log.chmod(384);
   }
   if (spec.signal.aborted) {
@@ -27588,152 +27734,6 @@ function deduplicate(targets) {
     seen.add(target.buildFor);
     return true;
   });
-}
-
-// src/project/parse.ts
-var import_node_fs = require("node:fs");
-var import_promises4 = require("node:fs/promises");
-var import_node_path3 = require("node:path");
-
-// src/runtime/files.ts
-var import_promises3 = require("node:fs/promises");
-var import_node_path2 = require("node:path");
-async function resolveProjectRoot(workspace, input) {
-  const workspaceReal = await (0, import_promises3.realpath)(workspace);
-  const requested = (0, import_node_path2.resolve)(workspaceReal, input || ".");
-  const requestedReal = await (0, import_promises3.realpath)(requested);
-  const rel = (0, import_node_path2.relative)(workspaceReal, requestedReal);
-  if (rel === ".." || rel.startsWith(`..${import_node_path2.sep}`))
-    throw new Error("Project root escapes workspace");
-  return requestedReal;
-}
-async function ownedTemp(parent, prefix, owner) {
-  const { writeFile: writeFile3 } = await import("node:fs/promises");
-  const directory = await (0, import_promises3.mkdtemp)((0, import_node_path2.join)(parent, prefix));
-  await writeFile3((0, import_node_path2.join)(directory, ".owner"), owner, { mode: 384 });
-  return directory;
-}
-async function removeOwned(directory, owner) {
-  const marker = await (0, import_promises3.readFile)((0, import_node_path2.join)(directory, ".owner"), "utf8");
-  if (marker !== owner) throw new Error("Refusing to remove resource not owned by this run");
-  await (0, import_promises3.rm)(directory, { recursive: true });
-}
-
-// src/project/schema.ts
-var import_yaml2 = __toESM(require_dist(), 1);
-function parseProjectDocument(source) {
-  const parsed = (0, import_yaml2.parseDocument)(source.toString("utf8"), { uniqueKeys: true });
-  if (parsed.errors.length)
-    throw new InputError(`Invalid snapcraft YAML: ${parsed.errors[0].message}`);
-  const document = parsed.toJS();
-  if (!document || typeof document !== "object" || Array.isArray(document))
-    throw new InputError("snapcraft.yaml must be a mapping");
-  const mapping = document;
-  if (typeof mapping.name !== "string" || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(mapping.name))
-    throw new InputError("Invalid snap name");
-  return {
-    document: mapping,
-    name: mapping.name,
-    ...typeof mapping.version === "string" || typeof mapping.version === "number" ? { version: String(mapping.version) } : {},
-    ...typeof mapping["adopt-info"] === "string" ? { adoptInfo: mapping["adopt-info"] } : {},
-    classic: mapping.confinement === "classic",
-    ...typeof mapping.base === "string" ? { base: mapping.base } : {},
-    components: parseComponents(mapping.components)
-  };
-}
-function parseComponents(value) {
-  if (value === void 0 || value === null) return [];
-  if (typeof value !== "object" || Array.isArray(value))
-    throw new InputError("components must be a mapping");
-  return Object.entries(value).map(([name, raw]) => {
-    if (!/^[a-z0-9][a-z0-9-]*$/.test(name) || !raw || typeof raw !== "object")
-      throw new InputError(`Invalid component ${name}`);
-    const version = raw.version;
-    if (version !== void 0 && version !== null && typeof version !== "string" && typeof version !== "number")
-      throw new InputError(`Invalid component version for ${name}`);
-    return {
-      name,
-      ...version === void 0 || version === null ? {} : { version: String(version) }
-    };
-  });
-}
-
-// src/project/parse.ts
-var candidates = [
-  ".snapcraft.yaml",
-  "build-aux/snap/snapcraft.yaml",
-  "snap/snapcraft.yaml",
-  "snapcraft.yaml"
-];
-async function regularFile(path, label) {
-  try {
-    const metadata = await (0, import_promises4.lstat)(path);
-    if (metadata.isSymbolicLink()) throw new InputError(`${label} must not be a symlink`);
-    if (!metadata.isFile()) throw new InputError(`${label} must be a regular file`);
-    return true;
-  } catch (error) {
-    if (error.code !== "ENOENT") throw error;
-    return false;
-  }
-}
-async function parseProject(workspace, inputRoot = "") {
-  const publicRoot = inputRoot || ".";
-  const root = await resolveProjectRoot(workspace, publicRoot);
-  const matches = [];
-  for (const candidate of candidates)
-    if (await regularFile((0, import_node_path3.resolve)(root, candidate), "snapcraft.yaml")) matches.push(candidate);
-  const selected = matches.at(-1);
-  if (!selected) throw new InputError("No snapcraft.yaml found");
-  const yamlPath = (0, import_node_path3.resolve)(root, selected);
-  const bytes = await readBoundedRegular(yamlPath, 2 * 1024 * 1024, "snapcraft.yaml");
-  const parsed = parseProjectDocument(bytes);
-  const plugsFile = await declaration(workspace, [
-    "plug-declaration.json",
-    ".github/plug-declaration.json"
-  ]);
-  const slotsFile = await declaration(workspace, [
-    "slot-declaration.json",
-    ".github/slot-declaration.json"
-  ]);
-  return {
-    root,
-    yamlPath,
-    publicRoot,
-    publicYamlPath: `${publicRoot.replace(/\/$/, "")}/${selected}`,
-    ...parsed,
-    ...plugsFile ? { plugsFile } : {},
-    ...slotsFile ? { slotsFile } : {}
-  };
-}
-async function declaration(workspace, paths) {
-  let found;
-  for (const path of paths)
-    if (await regularFile((0, import_node_path3.resolve)(workspace, path), "declaration file")) {
-      const metadata = await (0, import_promises4.lstat)((0, import_node_path3.resolve)(workspace, path));
-      if (metadata.size > 1024 * 1024)
-        throw new InputError("Declaration file exceeds 1 MiB limit");
-      found = path;
-    }
-  return found;
-}
-async function readBoundedRegular(path, limit, label) {
-  const handle = await (0, import_promises4.open)(path, import_node_fs.constants.O_RDONLY | import_node_fs.constants.O_NOFOLLOW);
-  try {
-    const metadata = await handle.stat();
-    if (!metadata.isFile()) throw new InputError(`${label} must be a regular file`);
-    if (metadata.size > limit) throw new InputError(`${label} exceeds 2 MiB limit`);
-    const buffer = Buffer.alloc(Math.min(metadata.size + 1, limit + 1));
-    let offset = 0;
-    while (offset < buffer.length) {
-      const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
-      if (!bytesRead) break;
-      offset += bytesRead;
-    }
-    if (offset > limit) throw new InputError(`${label} exceeds 2 MiB limit`);
-    return buffer.subarray(0, offset);
-  } finally {
-    await handle.close();
-  }
 }
 
 // src/runtime/clock.ts
@@ -28370,6 +28370,11 @@ async function runReleaseAction(env, dependencies = {}) {
         throw new InputError("Release state channel mismatch");
       if (resumed.sourceSha !== context.sha)
         throw new InputError("Release state source SHA mismatch");
+      const project = await parseProject(
+        context.workspace,
+        optional(env, "snapcraft-project-root")
+      );
+      if (resumed.snap !== project.name) throw new InputError("Release state snap mismatch");
       await ensureManifest(context.workspace, resumed);
       core.setOutput("revision", resumed.revision);
       return;

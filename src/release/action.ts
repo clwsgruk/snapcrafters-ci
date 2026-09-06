@@ -13,6 +13,7 @@ import {
 } from "../actions/inputs.js";
 import { actionSignal } from "../actions/signal.js";
 import { encodeManifest } from "../manifests/codec.js";
+import { parseProject } from "../project/parse.js";
 import { InputError } from "../runtime/errors.js";
 import { runProcess } from "../runtime/process.js";
 import { runReview } from "../review/run.js";
@@ -73,6 +74,11 @@ export async function runReleaseAction(
         throw new InputError("Release state channel mismatch");
       if (resumed.sourceSha !== context.sha)
         throw new InputError("Release state source SHA mismatch");
+      const project = await parseProject(
+        context.workspace,
+        optional(env, "snapcraft-project-root"),
+      );
+      if (resumed.snap !== project.name) throw new InputError("Release state snap mismatch");
       await ensureManifest(context.workspace, resumed);
       core.setOutput("revision", resumed.revision);
       return;

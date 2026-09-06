@@ -12,6 +12,10 @@ async function context(state: Published): Promise<{ env: NodeJS.ProcessEnv; stat
   const output = join(workspace, "output");
   await writeFile(eventPath, "{}");
   await writeFile(output, "");
+  await writeFile(
+    join(workspace, "snapcraft.yaml"),
+    "name: demo\nbase: core24\nversion: '1.0'\nplatforms:\n  amd64:\n",
+  );
   const statePath = join(workspace, ".snapcrafters-release-amd64.json");
   await writeFile(statePath, JSON.stringify(state), { mode: 0o600 });
   return {
@@ -64,6 +68,18 @@ test("rejects mismatched publication state before build or Store orchestration",
     runReleaseAction(fixture.env, { release, context: fakeContext(fixture.env) }),
   ).rejects.toThrow(/channel mismatch/i);
   expect(release).not.toHaveBeenCalled();
+});
+
+test("rejects another snap's same-source publication before resume", async () => {
+  const fixture = await context({ ...state(), snap: "other-snap" });
+  const release = vi.fn();
+  await expect(
+    runReleaseAction(fixture.env, { release, context: fakeContext(fixture.env) }),
+  ).rejects.toThrow(/snap mismatch/i);
+  expect(release).not.toHaveBeenCalled();
+  await expect(
+    access(join(fixture.env.GITHUB_WORKSPACE!, "manifest-amd64.yaml")),
+  ).rejects.toMatchObject({ code: "ENOENT" });
 });
 
 test("records a fresh publication through the injected release boundary", async () => {
