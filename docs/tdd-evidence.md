@@ -36,3 +36,13 @@ with its state in /tmp and unrelated global tool configuration excluded.
   not claimed as historical RED).
 
 - GREEN: 11 tests passed and six action bundles built.
+
+- `mise run test -- test/release.test.ts` — RED: absent revisions parser; GREEN: real four/five
+  column formats. Second RED: `publish is not a function`; implemented fresh staging and exact
+  publication readback. The first implementation run exposed an incorrectly unquoted version
+  in the synthetic snap metadata fixture; corrected it to Snapcraft's string form. GREEN:
+  exactly one upload/build, digest confirmation and pre-build state replay passed.
+- Same command — RED: `tagRelease is not a function`; GREEN: lost ref-write response recovered,
+  annotated tag readback verified, replay made no further writes.
+
+- GREEN: 14 tests passed; eight public adapters built.

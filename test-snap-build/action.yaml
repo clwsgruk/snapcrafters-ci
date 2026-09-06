@@ -21,32 +21,44 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Checkout the source
-      uses: actions/checkout@v6
-
-    - name: Find and parse snapcraft.yaml
-      id: snapcraft-yaml
-      uses: snapcrafters/ci/parse-snapcraft-yaml@main
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
       with:
-        snapcraft-project-root: ${{ inputs.snapcraft-project-root }}
-
-    - name: Build snap
-      uses: snapcore/action-build@v1
+        node-version: "24"
+    - shell: bash
+      env:
+        CI_PHASE: validate
+      run: node "$GITHUB_ACTION_PATH/dist/index.cjs"
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+    - shell: bash
+      env:
+        CI_PHASE: run
+        INPUT_INSTALL: ${{ inputs.install }}
+        INPUT_SNAPCRAFT_CHANNEL: ${{ inputs.snapcraft-channel }}
+        INPUT_SNAPCRAFT_PROJECT_ROOT: ${{ inputs.snapcraft-project-root }}
+      run: node "$GITHUB_ACTION_PATH/dist/index.cjs"
+      id: snapcraft-yaml
+    - uses: snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79
       id: build
       with:
         path: ${{ steps.snapcraft-yaml.outputs.project-root }}
         snapcraft-channel: ${{ inputs.snapcraft-channel }}
-
-    - name: Review the built snap
-      uses: snapcrafters/ci/review-snap@main
-      with:
-        snap: ${{ steps.build.outputs.snap }}
-        is-classic: ${{ steps.snapcraft-yaml.outputs.classic }}
-        plugs: ${{ steps.snapcraft-yaml.outputs.plugs-file }}
-        slots: ${{ steps.snapcraft-yaml.outputs.slots-file }}
-
-    - name: Install the snap
-      if: ${{ inputs.install == 'true' }}
+    - name: Install review-tools
       shell: bash
-      run: |
-        sudo snap install --classic --dangerous "${{ steps.build.outputs.snap }}"
+      run: "if ! snap list review-tools &>/dev/null; then\n  sudo snap install review-tools\nfi\n"
+    - name: Review the snap
+      shell: bash
+      env:
+        snap_file: ${{ steps.build.outputs.snap }}
+        plugs_file: ${{ steps.snapcraft-yaml.outputs.plugs-file }}
+        slots_file: ${{ steps.snapcraft-yaml.outputs.slots-file }}
+        is_classic: ${{ steps.snapcraft-yaml.outputs.classic }}
+      run:
+        "args=()\nif [[ -n \"${plugs_file}\" ]]; then\n  args+=(\"--plugs\" \"${plugs_file}\")\nfi\nif [[ -n \"\
+        ${slots_file}\" ]]; then\n  args+=(\"--slots\" \"${slots_file}\")\nfi\nif [[ \"${is_classic}\" == \"true\"\
+        \ ]]; then\n  args+=(\"--allow-classic\")\nfi\nargs+=(\"${snap_file}\")\nreview-tools.snap-review \"${args[@]}\"\
+        \n"
+    - shell: bash
+      if: inputs.install == 'true'
+      env:
+        SNAP_FILE: ${{ steps.build.outputs.snap }}
+      run: sudo snap install --classic --dangerous "$SNAP_FILE"
