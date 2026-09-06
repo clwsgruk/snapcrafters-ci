@@ -11,6 +11,29 @@ import { runUpdate } from "../../src/update/run.js";
 const execFile = promisify(execFileCallback);
 
 describe("tracked-only updates", () => {
+  test("computes a version-bump commit message after the trusted update succeeds", async () => {
+    const { repo } = await seededRepository();
+    await writeFile(join(repo, "tracked"), "version: '1.0'\n");
+    await execFile("git", ["add", "tracked"], { cwd: repo });
+    await execFile("git", ["commit", "-m", "add version"], { cwd: repo });
+    await execFile("git", ["push"], { cwd: repo });
+    await runUpdate({
+      cwd: repo,
+      script: "printf \"version: '2.0'\\n\" > tracked",
+      name: "bot",
+      email: "bot@example.invalid",
+      message: async () => {
+        const source = await (
+          await import("node:fs/promises")
+        ).readFile(join(repo, "tracked"), "utf8");
+        return `chore: bump to ${/version: '([^']+)'/.exec(source)?.[1]}`;
+      },
+    });
+    expect(
+      (await execFile("git", ["log", "-1", "--format=%s"], { cwd: repo })).stdout.trim(),
+    ).toBe("chore: bump to 2.0");
+  });
+
   test("commits tracked modifications and rejects every untracked path", async () => {
     const repo = await mkdtemp(join(tmpdir(), "update repo-"));
     const remote = await mkdtemp(join(tmpdir(), "update remote-"));

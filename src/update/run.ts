@@ -23,7 +23,6 @@ export async function runUpdate(input: UpdateInput): Promise<{ changed: boolean 
   try {
     await writeFile(script, input.script, { mode: 0o600 });
     const env = { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? input.cwd };
-    const message = typeof input.message === "string" ? input.message : await input.message();
     await successful(
       "bash",
       ["--noprofile", "--norc", "-e", "-o", "pipefail", script],
@@ -45,6 +44,7 @@ export async function runUpdate(input: UpdateInput): Promise<{ changed: boolean 
     if (untracked.length)
       throw new Error(`Update created untracked paths: ${untracked.join(", ")}`);
     if (records.length === 0) return { changed: false };
+    const message = typeof input.message === "string" ? input.message : await input.message();
     await successful("git", ["add", "-u"], input.cwd, env, signal);
     await successful(
       "git",
