@@ -115,6 +115,12 @@ mutable sibling references, and public metadata drift.
 
 ## Phase 6 — Testing issues and screenshot publication
 
+- `mise run test:integration -- screenshots` — RED: hostile application data reached `ghvmctl`
+  and capture reused ambient screenshot state without owned VM/file cleanup. GREEN: 7 files, 31
+  tests; validated snap/app and exact snap+amd64 manifest binding precede execution, ghvmctl receives
+  argument arrays, every run uses a unique VM and fresh owned capture directory, LXD/file cleanup
+  runs, and only bounded regular PNG files are returned.
+
 - `mise run test:unit -- testing-issue screenshots` — RED: 3 failures proved screenshot
   repository/date inputs reached blob creation unchecked, comment retry orchestration was absent,
   and the issue body had drifted from the bundled legacy template/placeholders.
