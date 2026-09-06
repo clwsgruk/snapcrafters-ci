@@ -8742,6 +8742,7 @@ function project(input2 = "", cwd = process.cwd()) {
   };
 }
 function readProjectFile(file, limit = 1024 * 1024) {
+  if ((0, import_node_fs.realpathSync)(file) !== file) throw Error("Project input path contains a symlink");
   const fd = (0, import_node_fs.openSync)(file, import_node_fs.constants.O_RDONLY | import_node_fs.constants.O_NOFOLLOW);
   try {
     const stat = (0, import_node_fs.fstatSync)(fd);
@@ -9139,7 +9140,9 @@ async function script(source, directory, env = process.env, storage = (0, import
   let extra = "";
   if (env.GITHUB_STEP_SUMMARY) {
     try {
-      extra = "\nWorkflow summary:\n" + redact(readBounded(callerSummary, 16e3, true).toString("utf8")).split("\n").slice(0, 100).join("\n");
+      const overlap = Math.max(0, ...secrets.map((secret) => Buffer.byteLength(secret)));
+      const sanitized = redact(readBounded(callerSummary, 16e3 + overlap, true).toString("utf8"));
+      extra = "\nWorkflow summary:\n" + Buffer.from(sanitized).subarray(0, 16e3).toString("utf8").replace(/\uFFFD$/, "").split("\n").slice(0, 100).join("\n");
     } catch {
     }
   }

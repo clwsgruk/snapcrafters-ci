@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vitest";
@@ -42,6 +42,14 @@ test("project paths stay inside the checkout and recipes cannot be symlinks", ()
     expect(() => project("../outside", cwd)).toThrow(/checkout/i);
     symlinkSync(join(outside, "snapcraft.yaml"), join(cwd, "snapcraft.yaml"));
     expect(() => project("", cwd)).toThrow();
+    unlinkSync(join(cwd, "snapcraft.yaml"));
+    symlinkSync(outside, join(cwd, "snap"));
+    expect(() => project("", cwd)).toThrow(/symlink/i);
+    unlinkSync(join(cwd, "snap"));
+    writeFileSync(join(cwd, "snapcraft.yaml"), "name: local\nversion: '1'\n");
+    writeFileSync(join(outside, "plug-declaration.json"), "{}");
+    symlinkSync(outside, join(cwd, ".github"));
+    expect(() => project("", cwd)).toThrow(/symlink/i);
   } finally {
     rmSync(parent, { recursive: true, force: true });
   }

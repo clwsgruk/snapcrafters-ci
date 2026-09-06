@@ -164,3 +164,8 @@ with its state in /tmp and unrelated global tool configuration excluded.
   verifies Store/digest state and makes zero remote-build/upload calls. The smoke suite passed 30
   tests. While green, testing/screenshots consume validated manifest rows directly, removing the
   redundant write-rescan-reparse path.
+- Final Astra review at `d7455ce4cdf747b306664268fdf5fcc44c3e3182` — RED: truncating a
+  private caller summary before redaction exposed a credential prefix crossing byte 16,000; an
+  intermediate `snap/` or `.github/` directory symlink could also escape the canonical checkout.
+  GREEN: caller-summary reads retain the longest-secret overlap, redact, then byte-bound published
+  text; complete canonical input paths must be symlink-free. Focused result: 13 tests passed.

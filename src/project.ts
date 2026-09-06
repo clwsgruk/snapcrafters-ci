@@ -69,6 +69,7 @@ export function project(input = "", cwd = process.cwd()) {
 }
 
 function readProjectFile(file: string, limit = 1024 * 1024): string {
+  if (realpathSync(file) !== file) throw Error("Project input path contains a symlink");
   const fd = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW);
   try {
     const stat = fstatSync(fd);

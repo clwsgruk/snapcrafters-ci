@@ -8753,6 +8753,7 @@ function project(input2 = "", cwd = process.cwd()) {
   };
 }
 function readProjectFile(file, limit = 1024 * 1024) {
+  if ((0, import_node_fs.realpathSync)(file) !== file) throw Error("Project input path contains a symlink");
   const fd = (0, import_node_fs.openSync)(file, import_node_fs.constants.O_RDONLY | import_node_fs.constants.O_NOFOLLOW);
   try {
     const stat = (0, import_node_fs.fstatSync)(fd);

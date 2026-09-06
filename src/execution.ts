@@ -146,9 +146,14 @@ export async function script(
   let extra = "";
   if (env.GITHUB_STEP_SUMMARY) {
     try {
+      const overlap = Math.max(0, ...secrets.map((secret) => Buffer.byteLength(secret)));
+      const sanitized = redact(readBounded(callerSummary, 16000 + overlap, true).toString("utf8"));
       extra =
         "\nWorkflow summary:\n" +
-        redact(readBounded(callerSummary, 16000, true).toString("utf8"))
+        Buffer.from(sanitized)
+          .subarray(0, 16000)
+          .toString("utf8")
+          .replace(/\uFFFD$/, "")
           .split("\n")
           .slice(0, 100)
           .join("\n");

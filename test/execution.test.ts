@@ -119,6 +119,28 @@ test("caller step-summary is included, bounded and redacted without changing the
   }
 });
 
+test("a credential crossing the caller-summary byte limit is redacted before publication", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "summary-boundary-")),
+    file = join(dir, "summary"),
+    secret = "summary-secret-crossing-limit";
+  try {
+    const result = await script(
+      `printf '%015990d%s' 0 '${secret}' > "$GITHUB_STEP_SUMMARY"; exit 7`,
+      dir,
+      {
+        PATH: process.env.PATH,
+        GITHUB_STEP_SUMMARY: file,
+        INPUT_TOKEN: secret,
+      },
+    );
+    expect(result.code).toBe(7);
+    expect(readFileSync(file, "utf8")).not.toContain(secret.slice(0, -1));
+    expect(readFileSync(file, "utf8")).toContain("***");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("multiline credential fragments never appear in live output or summary", async () => {
   const { vi } = await import("vitest");
   const output: string[] = [];
