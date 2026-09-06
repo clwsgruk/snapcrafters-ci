@@ -19,6 +19,7 @@ export async function buildAll(
       outfile: resolve(destination, "index.cjs"),
       bundle: true,
       format: "cjs",
+      footer: { js: "void module.exports.main().catch(module.exports.fail);" },
       platform: "node",
       target: "node24",
       legalComments: "none",

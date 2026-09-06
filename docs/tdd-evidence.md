@@ -296,3 +296,12 @@ boundary and supersedes the plan's sandbox/canary definition-of-done for this lo
 manual integration and release workflows require protected environments and are not reachable from
 untrusted pull requests. The parent will independently inspect and push; this child did not push or
 create a pull request.
+
+## Final independent-review remediation
+
+- Entrypoint RED: `vp test run test/smoke/wrappers.test.ts -t 'invalid consumer context'`
+  failed on the first bundle (`call-for-testing`, exit 0) when the consumer supplied
+  `NODE_ENV=test`. GREEN after moving direct execution into the deterministic CJS build footer:
+  all 12 bundles rejected the isolated invalid context, with deny-command stubs proving no
+  subprocess orchestration occurred. `mise run ci` then passed 151 tests in 35 files, the
+  96.21% branch parser gate, all static checks, and two isolated Node 24 bundle rebuilds.

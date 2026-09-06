@@ -5,8 +5,6 @@ export async function main(): Promise<void> {
   await runTestingIssueAction(process.env);
 }
 
-if (process.env.NODE_ENV !== "test") {
-  void main().catch((error: unknown) =>
-    core.setFailed(error instanceof Error ? error : String(error)),
-  );
+export function fail(error: unknown): void {
+  core.setFailed(error instanceof Error ? error : String(error));
 }

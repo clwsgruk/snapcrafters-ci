@@ -70,7 +70,7 @@ async function runNode(node: string, bundle: string, cwd: string, fakeBin: strin
     cwd,
     env: {
       PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
-      NODE_ENV: "production",
+      NODE_ENV: "test",
     },
     stdio: "pipe",
   });

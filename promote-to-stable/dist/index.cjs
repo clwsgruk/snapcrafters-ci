@@ -31174,6 +31174,7 @@ var require_github = __commonJS({
 // promote-to-stable/main.ts
 var main_exports = {};
 __export(main_exports, {
+  fail: () => fail,
   main: () => main
 });
 module.exports = __toCommonJS(main_exports);
@@ -32045,12 +32046,12 @@ async function runPromotionAction(env) {
 async function main() {
   await runPromotionAction(process.env);
 }
-if (process.env.NODE_ENV !== "test") {
-  void main().catch(
-    (error) => core2.setFailed(error instanceof Error ? error : String(error))
-  );
+function fail(error) {
+  core2.setFailed(error instanceof Error ? error : String(error));
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  fail,
   main
 });
+void module.exports.main().catch(module.exports.fail);

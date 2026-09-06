@@ -53,7 +53,7 @@ test("all twelve bundles reject an invalid consumer context without the smoke by
   for (const action of actions) {
     const result = await execute(node, [resolve(action, "dist/index.cjs")], repositoryRoot, {
       PATH: sandbox,
-      NODE_ENV: "production",
+      NODE_ENV: "test",
     });
     expect(result.code, action).not.toBe(0);
     await expect(

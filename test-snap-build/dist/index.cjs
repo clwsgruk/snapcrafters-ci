@@ -27105,6 +27105,7 @@ var require_dist = __commonJS({
 // test-snap-build/main.ts
 var main_exports = {};
 __export(main_exports, {
+  fail: () => fail,
   main: () => main
 });
 module.exports = __toCommonJS(main_exports);
@@ -27566,12 +27567,12 @@ async function runBuildReviewActionWith(env, deps) {
 async function main() {
   await runBuildReviewAction(process.env);
 }
-if (process.env.NODE_ENV !== "test") {
-  void main().catch(
-    (error) => core.setFailed(error instanceof Error ? error : String(error))
-  );
+function fail(error) {
+  core.setFailed(error instanceof Error ? error : String(error));
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  fail,
   main
 });
+void module.exports.main().catch(module.exports.fail);
