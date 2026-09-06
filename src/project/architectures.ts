@@ -50,13 +50,16 @@ function fromArchitectures(document: Record<string, unknown>): BuildTarget[] {
     if (!entry || typeof entry !== "object") throw new InputError("Ambiguous architectures entry");
     const mapping = entry as Record<string, unknown>;
     const buildOn = list(mapping["build-on"], "build-on");
-    if (mapping["build-for"] === undefined) {
+    if (mapping["build-for"] !== undefined && mapping["run-on"] !== undefined) {
+      throw new InputError("Architecture entry cannot declare both build-for and run-on");
+    }
+    const requestedTarget = mapping["build-for"] ?? mapping["run-on"];
+    if (requestedTarget === undefined) {
       targets.push(...buildOn.map((arch) => ({ buildOn: [arch], buildFor: arch })));
     } else {
-      const buildFor = list(mapping["build-for"], "build-for");
-      if (buildFor.length !== 1)
-        throw new InputError("Each architecture entry must have one build-for");
-      targets.push({ buildOn, buildFor: buildFor[0]! });
+      const field = mapping["run-on"] === undefined ? "build-for" : "run-on";
+      const buildFor = list(requestedTarget, field);
+      targets.push(...buildFor.map((target) => ({ buildOn, buildFor: target })));
     }
   }
   return deduplicate(targets);

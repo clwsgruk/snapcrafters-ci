@@ -56,6 +56,9 @@ mutable sibling references, and public metadata drift.
   filenames, snap/architecture/revision binding, expired artifacts, duplicate records and
   destinations, traversal/absolute paths, symlinks, and archive limits passed.
 - `mise run test:contract` — GREEN: 2 files, 2 tests.
+- `mise run test:unit -- project` — RED then GREEN: the active Spelunky-style legacy
+  `build-on: amd64` plus `run-on: [amd64, i386]` fixture initially lost the i386 target; 7 files,
+  30 tests pass after preserving both normalized build targets.
 
 ## Phase 4 — Update, review, and trusted tests
 

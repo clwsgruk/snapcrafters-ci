@@ -42,6 +42,11 @@ describe("architecture normalization", () => {
       ["arm64"],
     ],
     ["core24", { platforms: { amd64: null, arm64: null } }, ["amd64", "arm64"]],
+    [
+      undefined,
+      { architectures: [{ "build-on": "amd64", "run-on": ["amd64", "i386"] }] },
+      ["amd64", "i386"],
+    ],
   ])("normalizes %s inventory schema", (base, fields, expected) => {
     expect(getBuildTargets({ base, ...fields })).toEqual(
       expected.map((buildFor) => expect.objectContaining({ buildFor })),
