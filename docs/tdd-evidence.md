@@ -23,3 +23,12 @@ mutable sibling references, and public metadata drift.
 - `mise run check` — GREEN: 62 formatted files; 30 linted/type-checked files, zero warnings or
   errors.
 - `bun scripts/check-contracts.ts` under the pinned mise environment — GREEN: all 12 boundaries.
+
+## Phase 2 — Execution boundary
+
+- `mise run test:integration -- runtime` — RED: 3 failures proved pre-aborted work spawned,
+  TERM-resistant descendants outlived the parent until timeout, and secrets remained in bounded
+  output.
+- `mise run test:integration -- runtime` — GREEN: 2 files, 11 tests; abort-before-spawn,
+  TERM→KILL process-group handling, listener cleanup, bounded logs, redaction, both streams,
+  timeout, and ownership confinement passed.

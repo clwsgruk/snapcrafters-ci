@@ -13,6 +13,10 @@ run = "vp install --frozen-lockfile"
 description = "Format, lint, and type-check"
 run = "./node_modules/.bin/vp check"
 
+[tasks.fmt]
+description = "Format repository files"
+run = "./node_modules/.bin/vp fmt"
+
 [tasks.test]
 description = "Run the complete test suite"
 run = "./node_modules/.bin/vp test run"
