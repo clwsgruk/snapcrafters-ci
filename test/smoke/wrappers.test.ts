@@ -39,12 +39,27 @@ test("all twelve copied composite wrappers execute real success paths under Node
 
 test("all twelve bundles reject an invalid consumer context without the smoke bypass", async () => {
   const node = await pinnedNode();
+  const sandbox = await mkdtemp(join(tmpdir(), "invalid-wrapper-context-"));
+  const marker = join(sandbox, "unexpected-command");
+  for (const command of ["sudo", "git", "snap", "snapcraft", "ghvmctl", "lxc"]) {
+    await writeFile(
+      join(sandbox, command),
+      `#!/bin/bash\nprintf blocked > '${marker}'\nexit 123\n`,
+      {
+        mode: 0o700,
+      },
+    );
+  }
   for (const action of actions) {
     const result = await execute(node, [resolve(action, "dist/index.cjs")], repositoryRoot, {
-      PATH: process.env.PATH ?? "",
+      PATH: sandbox,
       NODE_ENV: "production",
     });
     expect(result.code, action).not.toBe(0);
+    await expect(
+      readFile(marker),
+      `${action} must reject before process orchestration`,
+    ).rejects.toMatchObject({ code: "ENOENT" });
   }
 }, 60_000);
 
