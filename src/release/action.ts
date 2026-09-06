@@ -17,11 +17,7 @@ import { runReview } from "../review/run.js";
 import { recordReleaseTag, runRelease } from "./run.js";
 import { inspectSnapArtifact, snapcraftRevisionReader } from "./snapcraft.js";
 
-interface ReleaseState {
-  name: string;
-  version: string;
-  revision: string;
-}
+type ReleaseState = Awaited<ReturnType<typeof runRelease>>["published"];
 
 export async function runReleaseAction(env: NodeJS.ProcessEnv): Promise<void> {
   const context = await actionContext(env);
@@ -33,11 +29,18 @@ export async function runReleaseAction(env: NodeJS.ProcessEnv): Promise<void> {
       const requested = positiveDecimal(required(env, "published-revision"), "revision");
       const state = parseReleaseState(await readFile(statePath, "utf8"));
       if (state.revision !== requested) throw new InputError("Release state revision mismatch");
+      if (state.architecture !== target)
+        throw new InputError("Release state architecture mismatch");
+      if (state.sourceSha !== context.sha)
+        throw new InputError("Release state source SHA mismatch");
       await recordReleaseTag(
         {
           cwd: context.workspace,
-          ...state,
-          architecture: target,
+          name: state.snap,
+          version: state.version,
+          revision: state.revision,
+          architecture: state.architecture,
+          sourceSha: state.sourceSha,
           multiSnap: boolean(optional(env, "multi-snap", "false"), "multi-snap"),
           botName: optional(env, "bot-name", "Snapcrafters Bot"),
           botEmail: optional(env, "bot-email", "snapforge.team@gmail.com"),
@@ -72,15 +75,7 @@ export async function runReleaseAction(env: NodeJS.ProcessEnv): Promise<void> {
         readback: snapcraftRevisionReader(storeToken, context.workspace),
         recordPublication: async (published) => {
           core.setOutput("revision", published.revision);
-          await writeFile(
-            statePath,
-            JSON.stringify({
-              name: published.snap,
-              version: published.version,
-              revision: published.revision,
-            }),
-            { flag: "wx", mode: 0o600 },
-          );
+          await writeFile(statePath, JSON.stringify(published), { flag: "wx", mode: 0o600 });
         },
         writeManifest: async (path, contents) =>
           writeFile(path, contents, { flag: "wx", mode: 0o600 }),
@@ -97,14 +92,22 @@ function parseReleaseState(source: string): ReleaseState {
   if (
     !value ||
     typeof value !== "object" ||
-    typeof value.name !== "string" ||
-    !/^[a-z0-9][a-z0-9-]{0,39}$/.test(value.name) ||
+    typeof value.snap !== "string" ||
+    !/^[a-z0-9][a-z0-9-]{0,39}$/.test(value.snap) ||
     typeof value.version !== "string" ||
     !value.version ||
     value.version.includes("\n") ||
     typeof value.revision !== "string" ||
-    !/^[1-9][0-9]*$/.test(value.revision)
+    !/^[1-9][0-9]*$/.test(value.revision) ||
+    typeof value.channel !== "string" ||
+    typeof value.architecture !== "string" ||
+    typeof value.digest !== "string" ||
+    !/^[0-9a-f]{96}$/.test(value.digest) ||
+    typeof value.sourceSha !== "string" ||
+    !/^[0-9a-f]{40}$/.test(value.sourceSha)
   )
     throw new InputError("Invalid release state");
-  return { name: value.name, version: value.version, revision: value.revision };
+  architecture(value.architecture);
+  channel(value.channel);
+  return value as unknown as ReleaseState;
 }

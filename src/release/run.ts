@@ -408,6 +408,7 @@ export async function recordReleaseTag(
     multiSnap: boolean;
     botName: string;
     botEmail: string;
+    sourceSha: string;
     signal?: AbortSignal;
   },
   run: ReleaseDependencies["run"],
@@ -422,34 +423,78 @@ export async function recordReleaseTag(
     input.botName.includes("\n") ||
     Buffer.byteLength(input.botName) > 100 ||
     !/^[^\s@]+@[^\s@]+$/.test(input.botEmail) ||
-    Buffer.byteLength(input.botEmail) > 254
+    Buffer.byteLength(input.botEmail) > 254 ||
+    !/^[0-9a-f]{40}$/.test(input.sourceSha)
   )
     throw new InputError("Invalid release tag identity");
   const tag = `${input.multiSnap ? `${input.name}-` : ""}${input.version}/rev${input.revision}/${input.architecture}`;
   const env = { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? input.cwd };
   const signal = input.signal ?? new AbortController().signal;
-  for (const [file, args] of [
-    [
-      "git",
-      [
-        "-c",
-        `user.name=${input.botName}`,
-        "-c",
-        `user.email=${input.botEmail}`,
-        "tag",
-        "-a",
-        tag,
-        "-m",
-        `Revision ${input.revision}, released for ${input.architecture}`,
-      ],
-    ],
-    ["git", ["push", "origin", tag]],
-  ] as const) {
-    const result = await run({ file, args, cwd: input.cwd, env, timeoutMs: 5 * 60_000, signal });
-    if (result.exitCode !== 0)
+  const execute = (args: readonly string[]) =>
+    run({ file: "git", args, cwd: input.cwd, env, timeoutMs: 5 * 60_000, signal });
+  const head = await execute(["rev-parse", "HEAD"]);
+  if (head.exitCode !== 0 || head.stdout.trim() !== input.sourceSha)
+    throw new InputError("Release state does not match the checked-out source commit");
+  const local = await execute(["rev-parse", "-q", "--verify", `refs/tags/${tag}^{commit}`]);
+  if (local.exitCode === 0 && local.stdout.trim() !== input.sourceSha)
+    throw new InputError("Existing release tag points at a different commit");
+  const remoteBefore = await execute([
+    "ls-remote",
+    "origin",
+    `refs/tags/${tag}`,
+    `refs/tags/${tag}^{}`,
+  ]);
+  if (remoteBefore.exitCode !== 0)
+    throw new PartialPublicationError(
+      `Published revision ${input.revision}; tag readback failed`,
+      ["publish", "manifest"],
+    );
+  const existingRemote = parseRemoteTag(remoteBefore.stdout, tag);
+  if (existingRemote && existingRemote !== input.sourceSha)
+    throw new InputError("Existing remote release tag points at a different commit");
+  if (existingRemote === input.sourceSha) return;
+  if (local.exitCode !== 0) {
+    const created = await execute([
+      "-c",
+      `user.name=${input.botName}`,
+      "-c",
+      `user.email=${input.botEmail}`,
+      "tag",
+      "-a",
+      tag,
+      "-m",
+      `Revision ${input.revision}, released for ${input.architecture}`,
+    ]);
+    if (created.exitCode !== 0)
       throw new PartialPublicationError(`Published revision ${input.revision}; tagging failed`, [
         "publish",
         "manifest",
       ]);
   }
+  const pushed = await execute(["push", "origin", tag]);
+  const remoteAfter = await execute([
+    "ls-remote",
+    "origin",
+    `refs/tags/${tag}`,
+    `refs/tags/${tag}^{}`,
+  ]);
+  if (remoteAfter.exitCode !== 0 || parseRemoteTag(remoteAfter.stdout, tag) !== input.sourceSha)
+    throw new PartialPublicationError(
+      `Published revision ${input.revision}; tagging failed after push exit ${pushed.exitCode}`,
+      ["publish", "manifest"],
+    );
+}
+
+function parseRemoteTag(output: string, tag: string): string | undefined {
+  let direct: string | undefined;
+  let peeled: string | undefined;
+  for (const line of output.trim().split("\n")) {
+    if (!line) continue;
+    const [sha, ref] = line.split("\t");
+    if (!sha || !/^[0-9a-f]{40}$/.test(sha)) throw new InputError("Invalid remote tag readback");
+    if (ref === `refs/tags/${tag}`) direct = sha;
+    else if (ref === `refs/tags/${tag}^{}`) peeled = sha;
+    else throw new InputError("Unexpected remote tag readback ref");
+  }
+  return peeled ?? direct;
 }

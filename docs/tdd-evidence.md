@@ -128,6 +128,10 @@ mutable sibling references, and public metadata drift.
   not only the target channel, and tag identity fails before subprocesses. Explicit regressions
   cover remote-build zero-write failure, publication-before-manifest failure, and tag failure after
   publication/manifest stages.
+- `mise run test:unit -- release` — RED: an exact existing local/remote tag was rewritten. GREEN:
+  14 files, 88 tests; complete publication state (snap/version/revision/channel/architecture/digest/
+  source SHA) is revalidated against the tag phase checkout, exact tags are idempotent, ambiguous
+  push results are read back, and Launchpad/Store credentials are absent from the tag subprocess.
 
 - Read-only `gh run list`/`gh run view --log` for public run `33880420814` — PASS: immutable
   consumer SHA `8e68f1ac9fed2dd7accd582bf80b81e0b1486bd2`, observed revisions 943/944 and

@@ -39,7 +39,7 @@ const actions: Record<
     - name: Create revision tag
       shell: bash
       env:
-${Object.keys(parse(await readFile("release-to-candidate/action.yaml", "utf8")).inputs ?? {})
+${["architecture", "bot-email", "bot-name", "multi-snap"]
   .map(
     (name) => `        INPUT_${name.toUpperCase().replaceAll("-", "_")}: \${{ inputs.${name} }}\n`,
   )

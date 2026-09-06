@@ -65,6 +65,7 @@ describe("staged release", () => {
           multiSnap: false,
           botName: "bot\nname",
           botEmail: "bot@example.invalid",
+          sourceSha: "a".repeat(40),
         },
         async () => {
           runs++;
@@ -441,7 +442,7 @@ describe("staged release", () => {
   });
 
   test("reports tag push failure after publication and manifest stages", async () => {
-    let calls = 0;
+    const sourceSha = "a".repeat(40);
     const operation = recordReleaseTag(
       {
         cwd: process.cwd(),
@@ -452,10 +453,45 @@ describe("staged release", () => {
         multiSnap: false,
         botName: "bot",
         botEmail: "bot@example.invalid",
+        sourceSha,
       },
-      async () => (++calls === 1 ? ok : { ...ok, exitCode: 9 }),
+      async (spec) => {
+        if (spec.args[0] === "rev-parse" && spec.args[1] === "HEAD")
+          return { ...ok, stdout: `${sourceSha}\n` };
+        if (spec.args[0] === "rev-parse") return { ...ok, exitCode: 1 };
+        if (spec.args[0] === "push") return { ...ok, exitCode: 9 };
+        return ok;
+      },
     );
     await expect(operation).rejects.toBeInstanceOf(PartialPublicationError);
     await expect(operation).rejects.toThrow(/published revision 44.*tagging/i);
+  });
+
+  test("adopts an exact existing local and remote tag without rewriting it", async () => {
+    const sourceSha = "a".repeat(40);
+    let writes = 0;
+    await recordReleaseTag(
+      {
+        cwd: process.cwd(),
+        name: "demo",
+        version: "1.0",
+        revision: "44",
+        architecture: "amd64",
+        multiSnap: false,
+        botName: "bot",
+        botEmail: "bot@example.invalid",
+        sourceSha,
+      },
+      async (spec) => {
+        if (spec.args.includes("tag") || spec.args.includes("push")) writes++;
+        if (spec.args[0] === "rev-parse" && spec.args[1] === "HEAD")
+          return { ...ok, stdout: `${sourceSha}\n` };
+        if (spec.args[0] === "rev-parse") return { ...ok, stdout: `${sourceSha}\n` };
+        if (spec.args[0] === "ls-remote")
+          return { ...ok, stdout: `${sourceSha}\trefs/tags/1.0/rev44/amd64^{}\n` };
+        return ok;
+      },
+    );
+    expect(writes).toBe(0);
   });
 });
