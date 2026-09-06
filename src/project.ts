@@ -1,0 +1,114 @@
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { parse } from "yaml";
+
+export function mapping(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw Error("Expected a mapping");
+  return value as Record<string, unknown>;
+}
+export function yaml(source: string) {
+  return mapping(parse(source, { intAsBigInt: true, uniqueKeys: true, maxAliasCount: 50 }));
+}
+export function project(input = "", cwd = process.cwd()) {
+  const publicRoot = input || ".";
+  const root = resolve(cwd, publicRoot);
+  const candidates = [
+    ".snapcraft.yaml",
+    "build-aux/snap/snapcraft.yaml",
+    "snap/snapcraft.yaml",
+    "snapcraft.yaml",
+  ];
+  const file = candidates.filter((p) => existsSync(resolve(root, p))).at(-1);
+  if (!file) throw Error(`No snapcraft.yaml found in ${root}`);
+  const absoluteYaml = resolve(root, file);
+  const data = yaml(readFileSync(absoluteYaml, "utf8"));
+  const declaration = (kind: string) =>
+    [`${kind}-declaration.json`, `.github/${kind}-declaration.json`]
+      .filter((p) => existsSync(resolve(cwd, p)))
+      .at(-1) || "";
+  const plugs = declaration("plug"),
+    slots = declaration("slot");
+  const components = data.components == null ? {} : mapping(data.components);
+  return {
+    root,
+    yaml: absoluteYaml,
+    data,
+    plugs: plugs ? resolve(cwd, plugs) : "",
+    slots: slots ? resolve(cwd, slots) : "",
+    outputs: {
+      "project-root": publicRoot,
+      "yaml-path": `${publicRoot}/${file}`,
+      "snap-name": scalar(data.name),
+      version: scalar(data.version),
+      classic: String(data.confinement === "classic"),
+      "plugs-file": plugs,
+      "slots-file": slots,
+      components: Object.entries(components)
+        .map(([name, value]) => `${name}|${scalar(mapping(value).version)}`)
+        .join(","),
+    },
+  };
+}
+
+export const supportedArchitectures = [
+  "amd64",
+  "arm64",
+  "armhf",
+  "i386",
+  "ppc64el",
+  "riscv64",
+  "s390x",
+];
+export function architecture(value: unknown): string {
+  if (typeof value !== "string" || !supportedArchitectures.includes(value))
+    throw Error(`Unsupported architecture: ${scalar(value)}`);
+  return value;
+}
+function archList(value: unknown): string[] {
+  const list = Array.isArray(value) ? value : [value];
+  if (!list.length) throw Error("Empty architecture declaration");
+  return list.map(architecture);
+}
+export function architectures(data: Record<string, unknown>): string[] {
+  if (
+    data.base !== undefined &&
+    !["core18", "core20", "core22", "core24"].includes(scalar(data.base))
+  )
+    throw Error("Unsupported base");
+  if (!data.architectures && !data.platforms)
+    throw Error("Explicitly declare architectures or platforms");
+  if (data.architectures && data.platforms) throw Error("Ambiguous architectures and platforms");
+  let result: string[];
+  if (data.base === "core24") {
+    result = Object.entries(mapping(data.platforms)).flatMap(([label, value]) => {
+      if (value === null) return [architecture(label)];
+      const fields = mapping(value);
+      if (Object.keys(fields).some((k) => !["build-on", "build-for"].includes(k)))
+        throw Error("Unknown platform field");
+      archList(fields["build-on"] ?? label);
+      const targets = archList(fields["build-for"] ?? label);
+      if (targets.length !== 1) throw Error("Ambiguous platform targets");
+      return targets;
+    });
+  } else {
+    if (!Array.isArray(data.architectures)) throw Error("Expected architectures list");
+    result = data.architectures.flatMap((value) => {
+      if (typeof value === "string") return [architecture(value)];
+      const fields = mapping(value);
+      if (Object.keys(fields).some((k) => !["build-on", "run-on"].includes(k)))
+        throw Error("Unknown architecture field");
+      if (fields["run-on"] !== undefined) archList(fields["run-on"]);
+      return archList(fields["build-on"]);
+    });
+  }
+  if (!result.length) throw Error("Empty architecture matrix");
+  return [...new Set(result)];
+}
+
+export function scalar(value: unknown): string {
+  if (value == null) return "null";
+  if (!["string", "number", "bigint", "boolean"].includes(typeof value))
+    throw Error("Expected a scalar");
+  return String(value as string | number | bigint | boolean);
+}

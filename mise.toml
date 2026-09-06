@@ -14,3 +14,5 @@ run = "./node_modules/.bin/vp check"
 run = "./node_modules/.bin/vp test run"
 [tasks.size]
 run = "node scripts/size.ts"
+[tasks.build]
+run = "bun scripts/build.ts"

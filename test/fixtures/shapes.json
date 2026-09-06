@@ -1,0 +1,439 @@
+{
+  "d393b3ad1ddba18d": {
+    "base": "core18",
+    "version-kind": "adopted"
+  },
+  "d920ce5fa84cb1fa": {
+    "base": "core22",
+    "architectures": [
+      {
+        "build-on": "amd64"
+      },
+      {
+        "build-on": "arm64"
+      },
+      {
+        "build-on": "armhf"
+      }
+    ],
+    "version-kind": "literal"
+  },
+  "b0982379a498293d": {
+    "base": "core20",
+    "architectures": [
+      {
+        "build-on": "amd64"
+      },
+      {
+        "build-on": "i386"
+      },
+      {
+        "build-on": "armhf"
+      }
+    ],
+    "version-kind": "adopted"
+  },
+  "a94ece8e09263d97": {
+    "base": "core24",
+    "platforms": {
+      "amd64": null,
+      "arm64": null,
+      "armhf": null,
+      "ppc64el": null,
+      "riscv64": null,
+      "s390x": null
+    },
+    "version-kind": "adopted"
+  },
+  "d235e474349459f5": {
+    "base": "core24",
+    "platforms": {
+      "amd64": {
+        "build-on": [
+          "amd64"
+        ],
+        "build-for": [
+          "amd64"
+        ]
+      },
+      "arm64": {
+        "build-on": [
+          "arm64"
+        ],
+        "build-for": [
+          "arm64"
+        ]
+      }
+    },
+    "version-kind": "literal"
+  },
+  "b3df4c5e6b012931": {
+    "base": "core24",
+    "platforms": {
+      "amd64": null,
+      "arm64": null
+    },
+    "version-kind": "literal"
+  },
+  "e8a8e82915fd017d": {
+    "base": "core20",
+    "architectures": [
+      {
+        "build-on": "amd64"
+      },
+      {
+        "build-on": "armhf"
+      },
+      {
+        "build-on": "arm64"
+      }
+    ],
+    "version-kind": "adopted"
+  },
+  "7a680494688a9f68": {
+    "base": "core22",
+    "architectures": [
+      "amd64"
+    ],
+    "version-kind": "literal"
+  },
+  "d342205cd5f1f12c": {
+    "base": "core22",
+    "version-kind": "literal"
+  },
+  "64bf1966d9b0e0e8": {
+    "base": "core20",
+    "architectures": [
+      {
+        "build-on": "i386"
+      },
+      {
+        "build-on": "amd64"
+      }
+    ],
+    "version-kind": "literal"
+  },
+  "2cf20c43a8e093c1": {
+    "base": "core24",
+    "platforms": {
+      "amd64": null,
+      "armhf": null,
+      "arm64": null,
+      "s390x": null
+    },
+    "version-kind": "literal"
+  },
+  "db5cb02cddf0cf46": {
+    "base": "core24",
+    "platforms": {
+      "amd64": null,
+      "arm64": null,
+      "armhf": null,
+      "ppc64el": null
+    },
+    "version-kind": "literal"
+  },
+  "ddbd7a556abbcd2d": {
+    "base": "core22",
+    "architectures": [
+      {
+        "build-on": "amd64"
+      }
+    ],
+    "version-kind": "literal"
+  },
+  "b02b2e592f1fec69": {
+    "base": "core20",
+    "version-kind": "adopted"
+  },
+  "ff3b3165b9aaeeb0": {
+    "base": "core24",
+    "platforms": {
+      "amd64": {
+        "build-on": [
+          "amd64"
+        ],
+        "build-for": [
+          "amd64"
+        ]
+      }
+    },
+    "version-kind": "literal"
+  },
+  "f650dcbd24f912b2": {
+    "base": "core20",
+    "architectures": [
+      {
+        "build-on": "amd64"
+      },
+      {
+        "build-on": "arm64"
+      },
+      {
+        "build-on": "armhf"
+      }
+    ],
+    "version-kind": "adopted"
+  },
+  "3e22be43b5339674": {
+    "base": "core24",
+    "platforms": {
+      "amd64": null,
+      "arm64": null,
+      "armhf": null
+    },
+    "version-kind": "literal"
+  },
+  "806eb7591524bd74": {
+    "base": "core24",
+    "version-kind": "adopted"
+  },
+  "a10b16ceb1f846d1": {
+    "base": "core22",
+    "architectures": [
+      "amd64",
+      "arm64",
+      "armhf",
+      "ppc64el",
+      "riscv64",
+      "s390x"
+    ],
+    "version-kind": "literal"
+  },
+  "7dc616c37506f64b": {
+    "base": "core24",
+    "platforms": {
+      "amd64": null
+    },
+    "version-kind": "literal"
+  },
+  "272e55644b309a9f": {
+    "base": "core24",
+    "platforms": {
+      "amd64": null,
+      "armhf": null,
+      "arm64": null,
+      "s390x": null,
+      "ppc64el": null
+    },
+    "version-kind": "literal"
+  },
+  "4e8176aa0239c8b4": {
+    "base": "core22",
+    "architectures": [
+      {
+        "build-on": "i386"
+      },
+      {
+        "build-on": "amd64"
+      }
+    ],
+    "version-kind": "adopted"
+  },
+  "1725d99913dc90be": {
+    "base": "core22",
+    "architectures": [
+      {
+        "build-on": "amd64"
+      },
+      {
+        "build-on": "arm64"
+      }
+    ],
+    "version-kind": "adopted"
+  },
+  "662867f42ff9320e": {
+    "base": "core18",
+    "architectures": [
+      {
+        "build-on": "amd64"
+      },
+      {
+        "build-on": "armhf"
+      },
+      {
+        "build-on": "arm64"
+      },
+      {
+        "build-on": "s390x"
+      },
+      {
+        "build-on": "ppc64el"
+      }
+    ],
+    "version-kind": "adopted"
+  },
+  "331a987764bd7a8a": {
+    "base": "core22",
+    "architectures": [
+      {
+        "build-on": "amd64"
+      },
+      {
+        "build-on": "armhf"
+      },
+      {
+        "build-on": "arm64"
+      }
+    ],
+    "version-kind": "adopted"
+  },
+  "6a6e5441a79e970b": {
+    "base": "core22",
+    "architectures": [
+      {
+        "build-on": "amd64"
+      },
+      {
+        "build-on": "arm64"
+      },
+      {
+        "build-on": "armhf"
+      },
+      {
+        "build-on": "ppc64el"
+      },
+      {
+        "build-on": "s390x"
+      }
+    ],
+    "version-kind": "literal"
+  },
+  "d3a2a2c5205abac0": {
+    "base": "core18",
+    "architectures": [
+      {
+        "build-on": "amd64"
+      }
+    ],
+    "version-kind": "literal"
+  },
+  "0595f380d53392d7": {
+    "base": "core18",
+    "architectures": [
+      {
+        "build-on": "amd64"
+      },
+      {
+        "build-on": "i386"
+      }
+    ],
+    "version-kind": "literal"
+  },
+  "07b890f430116a95": {
+    "architectures": [
+      {
+        "build-on": "amd64",
+        "run-on": [
+          "amd64",
+          "i386"
+        ]
+      }
+    ],
+    "version-kind": "literal"
+  },
+  "9c23657b4e654032": {
+    "base": "core18",
+    "architectures": [
+      {
+        "build-on": "amd64",
+        "run-on": "amd64"
+      }
+    ],
+    "version-kind": "literal"
+  },
+  "b1bcbf7d4e2ed15f": {
+    "base": "core24",
+    "version-kind": "literal"
+  },
+  "58033ecd2ea6d84f": {
+    "base": "core18",
+    "architectures": [
+      {
+        "build-on": "amd64"
+      },
+      {
+        "build-on": "armhf"
+      },
+      {
+        "build-on": "arm64"
+      }
+    ],
+    "version-kind": "literal"
+  },
+  "3d9ef8df483a2eca": {
+    "base": "core18",
+    "version-kind": "literal"
+  },
+  "82d7070ba767beff": {
+    "base": "core22",
+    "architectures": [
+      {
+        "build-on": "amd64"
+      },
+      {
+        "build-on": "armhf"
+      },
+      {
+        "build-on": "arm64"
+      },
+      {
+        "build-on": "s390x"
+      },
+      {
+        "build-on": "ppc64el"
+      }
+    ],
+    "version-kind": "literal"
+  },
+  "8dc3888a65ee8842": {
+    "base": "core18",
+    "architectures": [
+      {
+        "build-on": "arm64"
+      }
+    ],
+    "version-kind": "literal"
+  },
+  "c0ac893fe7835ca5": {
+    "base": "core24",
+    "platforms": {
+      "amd64": null,
+      "arm64": null,
+      "ppc64el": null,
+      "riscv64": null,
+      "s390x": null
+    },
+    "version-kind": "literal"
+  },
+  "3fa279fc1c5effa3": {
+    "base": "core24",
+    "platforms": {
+      "amd64": null,
+      "arm64": null,
+      "armhf": null,
+      "ppc64el": null,
+      "riscv64": null,
+      "s390x": null
+    },
+    "version-kind": "literal"
+  },
+  "38174b02ae126c8f": {
+    "base": "core22",
+    "architectures": [
+      {
+        "build-on": "amd64"
+      },
+      {
+        "build-on": "arm64"
+      },
+      {
+        "build-on": "armhf"
+      },
+      {
+        "build-on": "ppc64el"
+      }
+    ],
+    "version-kind": "literal"
+  }
+}
