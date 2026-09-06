@@ -5,7 +5,7 @@ import { InputError } from "../runtime/errors.js";
 export interface TestingIssueInput {
   ciRepo: string;
   snap: string;
-  version: string;
+  version?: string;
   channel: string;
   promotionChannel: string;
   architectures: Architecture[];
@@ -44,7 +44,11 @@ You can promote all revisions that were just built with:
 export async function createTestingIssue(
   input: TestingIssueInput,
   deps: {
-    lookup(snap: string, architecture: Architecture, channel: string): Promise<string | undefined>;
+    lookup(
+      snap: string,
+      architecture: Architecture,
+      channel: string,
+    ): Promise<{ revision: string; version: string } | undefined>;
     createIssue(title: string, body: string, labels: string[]): Promise<number>;
   },
 ): Promise<number> {
@@ -54,6 +58,7 @@ export async function createTestingIssue(
     );
   }
   const revisions = new Map<Architecture, string>();
+  const observedVersions = new Set<string>();
   if (input.manifests.length) {
     for (const manifest of input.manifests) {
       if (manifest.name !== input.snap)
@@ -61,11 +66,15 @@ export async function createTestingIssue(
       if (revisions.has(manifest.architecture))
         throw new InputError(`Duplicate manifest for ${manifest.architecture}`);
       revisions.set(manifest.architecture, manifest.revision);
+      if (manifest.version) observedVersions.add(manifest.version);
     }
   } else {
     for (const architecture of input.architectures) {
-      const revision = await deps.lookup(input.snap, architecture, input.channel);
-      if (revision) revisions.set(architecture, revision);
+      const found = await deps.lookup(input.snap, architecture, input.channel);
+      if (found) {
+        revisions.set(architecture, found.revision);
+        observedVersions.add(found.version);
+      }
     }
   }
   for (const architecture of input.architectures) {
@@ -74,10 +83,14 @@ export async function createTestingIssue(
   }
   if (revisions.size !== input.architectures.length)
     throw new InputError("Manifest includes an unexpected architecture");
+  if (input.version) observedVersions.add(input.version);
+  if (observedVersions.size !== 1)
+    throw new InputError("Testing issue requires one exact published version");
+  const version = [...observedVersions][0]!;
   const table = `<table><thead><tr><th>CPU Architecture</th><th>Revision</th></tr></thead><tbody>${input.architectures.map((arch) => `<tr><td>${arch}</td><td>${revisions.get(arch)}</td></tr>`).join("")}</tbody></table>`;
   const values: Record<string, string> = {
     snap: input.snap,
-    version: input.version,
+    version,
     channel: input.channel,
     promotionChannel: input.promotionChannel,
     table,

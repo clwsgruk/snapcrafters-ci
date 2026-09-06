@@ -65,3 +65,28 @@ test("rejects template overrides and missing expected architectures before write
   ).rejects.toThrow(/snap/i);
   expect(writes).toBe(0);
 });
+
+test("uses the actual manifest version for an adopt-info project", async () => {
+  let body = "";
+  await createTestingIssue(
+    {
+      ciRepo: "snapcrafters/ci",
+      snap: "demo",
+      version: undefined as unknown as string,
+      channel: "latest/candidate",
+      promotionChannel: "latest/stable",
+      architectures: ["amd64"],
+      manifests: [{ name: "demo", architecture: "amd64", revision: "4", version: "9.4" } as never],
+      instructions: "test",
+    },
+    {
+      lookup: async () => undefined,
+      createIssue: async (_title, value) => {
+        body = value;
+        return 1;
+      },
+    },
+  );
+  expect(body).toContain("A new version (9.4)");
+  expect(body).not.toContain("null");
+});

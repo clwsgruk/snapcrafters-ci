@@ -147,6 +147,11 @@ mutable sibling references, and public metadata drift.
 
 ## Phase 6 — Testing issues and screenshot publication
 
+- `mise run test:unit -- testing-issue` — RED: an adopt-info manifest rendered version
+  `undefined`. GREEN with `manifests release`: 15 files, 88 tests; backward-compatible manifests
+  optionally carry the inspected artifact version, every architecture must agree on one version,
+  and Store fallback supplies the exact revision/version pair.
+
 - `mise run test:integration -- screenshots` — RED: hostile application data reached `ghvmctl`
   and capture reused ambient screenshot state without owned VM/file cleanup. GREEN: 7 files, 31
   tests; validated snap/app and exact snap+amd64 manifest binding precede execution, ghvmctl receives

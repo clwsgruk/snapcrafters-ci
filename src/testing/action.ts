@@ -39,7 +39,7 @@ export async function runTestingIssueAction(env: NodeJS.ProcessEnv): Promise<voi
       {
         ciRepo: optional(env, "ci-repo", "snapcrafters/ci"),
         snap: project.name,
-        version: project.version ?? "null",
+        ...(project.version ? { version: project.version } : {}),
         channel: channel(optional(env, "channel", "latest/candidate")),
         promotionChannel: channel(optional(env, "promotion-channel", "latest/stable")),
         architectures,
@@ -76,7 +76,8 @@ export async function runTestingIssueAction(env: NodeJS.ProcessEnv): Promise<voi
             signal: cancellation.signal,
             redact: [storeToken],
           });
-          return parseRevisions(result.stdout, releaseChannel, architecture)[0]?.revision;
+          const found = parseRevisions(result.stdout, releaseChannel, architecture)[0];
+          return found ? { revision: found.revision, version: found.version } : undefined;
         },
         createIssue: issueCreator(token, context.repository, cancellation.signal),
       },

@@ -6,6 +6,7 @@ export interface Manifest {
   name: string;
   architecture: Architecture;
   revision: string;
+  version?: string;
 }
 
 const manifestName = /^manifest-(amd64|arm64|armhf|i386|ppc64el|riscv64|s390x)\.ya?ml$/;
@@ -24,11 +25,25 @@ export function decodeManifest(source: string, filename: string): Manifest {
     throw new InputError("Manifest architecture does not match filename");
   const revision = String(value.revision);
   if (!/^[1-9][0-9]*$/.test(revision)) throw new InputError("Revision must be a positive decimal");
-  return { name: value.name, architecture: value.architecture as Architecture, revision };
+  const version = value.version;
+  if (
+    version !== undefined &&
+    (typeof version !== "string" ||
+      !version ||
+      version.includes("\n") ||
+      Buffer.byteLength(version) > 128)
+  )
+    throw new InputError("Manifest version is invalid");
+  return {
+    name: value.name,
+    architecture: value.architecture as Architecture,
+    revision,
+    ...(version === undefined ? {} : { version }),
+  };
 }
 
 export function encodeManifest(manifest: Manifest): string {
-  return `name: ${manifest.name}\narchitecture: ${manifest.architecture}\nrevision: ${manifest.revision}\n`;
+  return `name: ${manifest.name}\narchitecture: ${manifest.architecture}\nrevision: ${manifest.revision}\n${manifest.version ? `version: ${JSON.stringify(manifest.version)}\n` : ""}`;
 }
 
 export function validateArchiveEntry(name: string, size: number, limit: number): void {

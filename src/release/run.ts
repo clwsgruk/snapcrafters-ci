@@ -184,7 +184,12 @@ export async function runRelease(
     try {
       await deps.writeManifest(
         manifestPath,
-        encodeManifest({ name: source.name, architecture: input.architecture, revision }),
+        encodeManifest({
+          name: source.name,
+          architecture: input.architecture,
+          revision,
+          version: identity.version,
+        }),
       );
     } catch (error) {
       throw new PartialPublicationError(
