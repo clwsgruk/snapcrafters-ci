@@ -254,8 +254,12 @@ async function fakeExecutables(bin: string, log: string, action: string): Promis
     ghvmctl: `printf 'ghvmctl:%s\\n' "$*" >> '${log}'
 mkdir -p "$SNAP_REAL_HOME/ghvmctl-screenshots"
 case "$1" in
- screenshot-full) printf '\\211PNG\\r\\n\\032\\nscreen' > "$SNAP_REAL_HOME/ghvmctl-screenshots/screenshot-screen.png" ;;
- screenshot-window) printf '\\211PNG\\r\\n\\032\\nwindow' > "$SNAP_REAL_HOME/ghvmctl-screenshots/screenshot-window.png" ;;
+ screenshot-full)
+   printf '\\211PNG\\r\\n\\032\\nscreen' > "$SNAP_REAL_HOME/ghvmctl-screenshots/screenshot-screen-2026-09-06_120000.png"
+   ln -sf screenshot-screen-2026-09-06_120000.png "$SNAP_REAL_HOME/ghvmctl-screenshots/screenshot-screen.png" ;;
+ screenshot-window)
+   printf '\\211PNG\\r\\n\\032\\nwindow' > "$SNAP_REAL_HOME/ghvmctl-screenshots/screenshot-window-2026-09-06_120001.png"
+   ln -sf screenshot-window-2026-09-06_120001.png "$SNAP_REAL_HOME/ghvmctl-screenshots/screenshot-window.png" ;;
 esac`,
     snapcraft: snapcraftScript(log, action),
   };

@@ -1,8 +1,17 @@
-import { access, chmod, mkdtemp, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import {
+  access,
+  chmod,
+  mkdtemp,
+  mkdir,
+  readFile,
+  readdir,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vite-plus/test";
-import { captureScreenshots } from "../../src/screenshots/run.js";
+import { captureScreenshots, readPng } from "../../src/screenshots/run.js";
 
 test("runs ghvmctl with argument arrays and exact amd64 manifest binding", async () => {
   const root = await mkdtemp(join(tmpdir(), "screenshots integration-"));
@@ -21,8 +30,12 @@ test("runs ghvmctl with argument arrays and exact amd64 manifest binding", async
 printf '%s\n' "$@" >> '${log}'
 mkdir -p "$SNAP_REAL_HOME/ghvmctl-screenshots"
 case "$1" in
-  screenshot-full) printf '\\211PNG\\r\\n\\032\\nscreen' > "$SNAP_REAL_HOME/ghvmctl-screenshots/screenshot-screen.png" ;;
-  screenshot-window) printf '\\211PNG\\r\\n\\032\\nwindow' > "$SNAP_REAL_HOME/ghvmctl-screenshots/screenshot-window.png" ;;
+  screenshot-full)
+    printf '\\211PNG\\r\\n\\032\\nscreen' > "$SNAP_REAL_HOME/ghvmctl-screenshots/screenshot-screen-2026-09-06_120000.png"
+    ln -sf screenshot-screen-2026-09-06_120000.png "$SNAP_REAL_HOME/ghvmctl-screenshots/screenshot-screen.png" ;;
+  screenshot-window)
+    printf '\\211PNG\\r\\n\\032\\nwindow' > "$SNAP_REAL_HOME/ghvmctl-screenshots/screenshot-window-2026-09-06_120001.png"
+    ln -sf screenshot-window-2026-09-06_120001.png "$SNAP_REAL_HOME/ghvmctl-screenshots/screenshot-window.png" ;;
 esac
 `,
     { mode: 0o700 },
@@ -87,4 +100,13 @@ test("rejects a wrong-snap manifest before invoking ghvmctl", async () => {
       home: root,
     }),
   ).rejects.toThrow(/manifest snap/i);
+});
+
+test("rejects screenshot aliases outside the exact ghvmctl naming contract", async () => {
+  const root = await mkdtemp(join(tmpdir(), "screenshots-alias-"));
+  const outside = join(root, "outside.png");
+  const alias = join(root, "screenshot-screen.png");
+  await writeFile(outside, Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  await symlink("../outside.png", alias);
+  await expect(readPng(alias)).rejects.toThrow(/alias target/i);
 });

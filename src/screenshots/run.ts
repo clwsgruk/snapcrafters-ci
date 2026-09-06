@@ -1,5 +1,6 @@
-import { lstat, open } from "node:fs/promises";
-import { join } from "node:path";
+import { constants } from "node:fs";
+import { lstat, open, readlink } from "node:fs/promises";
+import { basename, dirname, join, resolve } from "node:path";
 import type { Manifest } from "../manifests/codec.js";
 import { ownedTemp, removeOwned } from "../runtime/files.js";
 import { runProcess } from "../runtime/process.js";
@@ -101,14 +102,43 @@ export async function captureScreenshots(input: {
   return images;
 }
 
-async function readPng(path: string): Promise<Buffer> {
+export async function readPng(path: string): Promise<Buffer> {
   const limit = 10 * 1024 * 1024;
-  const pathMetadata = await lstat(path);
-  if (pathMetadata.isSymbolicLink()) throw new Error("Screenshot symlinks are forbidden");
-  const handle = await open(path, "r");
+  const uid = process.getuid?.();
+  if (uid === undefined) throw new Error("Screenshot ownership cannot be verified");
+  const aliasMetadata = await lstat(path);
+  if (aliasMetadata.uid !== uid) throw new Error("Screenshot alias has an unexpected owner");
+  let targetPath = path;
+  if (aliasMetadata.isSymbolicLink()) {
+    const alias = basename(path);
+    const kind = /^screenshot-(screen|window)\.png$/.exec(alias)?.[1];
+    const target = await readlink(path);
+    if (
+      !kind ||
+      target !== basename(target) ||
+      !new RegExp(`^screenshot-${kind}-[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{6}\\.png$`).test(target)
+    )
+      throw new Error("Screenshot alias target is invalid");
+    targetPath = resolve(dirname(path), target);
+    if (dirname(targetPath) !== dirname(path))
+      throw new Error("Screenshot alias escapes its capture directory");
+  } else if (!aliasMetadata.isFile()) {
+    throw new Error("Screenshot alias must be a regular file or constrained symlink");
+  }
+  const handle = await open(targetPath, constants.O_RDONLY | constants.O_NOFOLLOW);
   try {
     const metadata = await handle.stat();
-    if (!metadata.isFile() || metadata.size < 8 || metadata.size > limit)
+    const current = await lstat(targetPath);
+    if (
+      current.isSymbolicLink() ||
+      !metadata.isFile() ||
+      metadata.uid !== uid ||
+      current.uid !== uid ||
+      metadata.dev !== current.dev ||
+      metadata.ino !== current.ino ||
+      metadata.size < 8 ||
+      metadata.size > limit
+    )
       throw new Error("Screenshot must be a non-empty bounded regular PNG file");
     const buffer = Buffer.alloc(metadata.size);
     const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);

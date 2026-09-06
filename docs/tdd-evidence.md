@@ -314,3 +314,9 @@ create a pull request.
   `test/fixtures/cli-contracts`. The first full gate correctly failed formatting and then a stale
   optional-tuple type; after both corrections, `mise run ci` passed 154 tests in 35 files,
   96.28% parser branches, all static checks, and both isolated Node 24 rebuilds.
+- ghvmctl-alias RED: the integration fake was changed to the immutable ghvmctl 0.4.1 behavior—two
+  timestamped PNGs plus relative stable-name symlinks—and capture failed with `Screenshot symlinks
+  are forbidden`. GREEN: capture accepts only exact same-directory timestamp aliases owned by the
+  current UID, opens the resolved file with `O_NOFOLLOW`, and verifies owner/device/inode, size,
+  and PNG signature. A traversal alias is rejected. The full gate passed 155 tests in 35 files,
+  96.28% parser branches, static checks, and isolated bundle rebuilds.
