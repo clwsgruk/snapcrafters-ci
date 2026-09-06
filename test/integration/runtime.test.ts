@@ -36,6 +36,21 @@ describe("process boundary", () => {
       signal: new AbortController().signal,
     });
     expect(result.timedOut).toBe(true);
+    expect(result.exitCode).not.toBe(0);
+  });
+
+  test("does not report success when a timed-out process handles TERM with exit zero", async () => {
+    const root = await mkdtemp(join(tmpdir(), "ci-timeout-zero-"));
+    const result = await runProcess({
+      file: "bash",
+      args: ["--noprofile", "--norc", "-c", "trap 'exit 0' TERM; while :; do sleep 1; done"],
+      cwd: root,
+      env: { PATH: process.env.PATH ?? "" },
+      timeoutMs: 50,
+      killAfterMs: 50,
+      signal: new AbortController().signal,
+    });
+    expect(result).toMatchObject({ timedOut: true, exitCode: 124 });
   });
 
   test("does not spawn when already aborted and closes resources on spawn errors", async () => {
@@ -118,6 +133,23 @@ describe("process boundary", () => {
     expect(Buffer.byteLength(logged)).toBeLessThanOrEqual(256);
     expect(logged).not.toContain("secret");
     expect(logged).toContain("***");
+  });
+
+  test("redacts a secret crossing the truncation boundary before bounding output", async () => {
+    const root = await mkdtemp(join(tmpdir(), "ci-redaction-boundary-"));
+    const secret = "supersecretvalue";
+    const result = await runProcess({
+      file: "bash",
+      args: ["-c", `printf '%0124d%s' 0 '${secret}'`],
+      cwd: root,
+      env: { PATH: process.env.PATH ?? "" },
+      timeoutMs: 2_000,
+      signal: new AbortController().signal,
+      maxOutputBytes: 128,
+      redact: [secret],
+    });
+    expect(result.stdout).toContain("***");
+    expect(result.stdout).not.toContain("supe");
   });
 
   test("settles a log write failure and removes the abort listener", async () => {

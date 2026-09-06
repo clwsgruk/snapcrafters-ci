@@ -33,6 +33,11 @@ mutable sibling references, and public metadata drift.
 
 ## Phase 2 — Execution boundary
 
+- `mise run test:integration -- runtime` — RED: a timed-out TERM handler exited zero and was
+  reported as success, while a token crossing the byte cap leaked its retained prefix. GREEN: 7
+  files, 29 tests; timeout/abort override process status (124/130), and bounded capture retains a
+  secret-length margin so redaction always happens before final truncation.
+
 - `mise run test:unit -- context` — RED: unsupported GitHub Enterprise/self-hosted/Windows/Ubuntu
   20 contexts reached the missing event file instead of failing the capability boundary. GREEN:
   12 files, 70 tests; github.com, hosted Linux Ubuntu 22.04/24.04, Node 24, repository, run ID,
