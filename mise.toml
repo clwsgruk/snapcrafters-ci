@@ -1,0 +1,45 @@
+[tools]
+node = "24.20.0"
+bun = "1.4.0"
+vp = "0.3.0"
+actionlint = "1.7.12"
+shellcheck = "0.11.0"
+
+[tasks.install]
+description = "Install locked JavaScript dependencies with Bun through Vite+"
+run = "vp install --frozen-lockfile"
+
+[tasks.check]
+description = "Format, lint, and type-check"
+run = "./node_modules/.bin/vp check"
+
+[tasks.test]
+description = "Run the complete test suite"
+run = "./node_modules/.bin/vp test run"
+
+[tasks."test:contract"]
+run = "./node_modules/.bin/vp test run test/contract"
+
+[tasks."test:unit"]
+run = "./node_modules/.bin/vp test run src"
+
+[tasks."test:integration"]
+run = "./node_modules/.bin/vp test run test/integration"
+
+[tasks."test:smoke"]
+run = "./node_modules/.bin/vp test run test/smoke"
+
+[tasks.build]
+run = "bun scripts/build.ts"
+
+[tasks."check-dist"]
+run = "bun scripts/check-dist.ts"
+
+[tasks.actionlint]
+run = "actionlint"
+
+[tasks.shellcheck]
+run = "shellcheck get-screenshots/wait-for-window"
+
+[tasks.ci]
+depends = ["check", "test", "actionlint", "shellcheck", "check-dist"]
