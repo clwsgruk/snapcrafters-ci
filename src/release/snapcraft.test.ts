@@ -1,6 +1,11 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "vite-plus/test";
-import { snapcraftRevisionReader, parseRevisions, parseSnapMetadata } from "./snapcraft.js";
+import {
+  isRevisionReleased,
+  snapcraftRevisionReader,
+  parseRevisions,
+  parseSnapMetadata,
+} from "./snapcraft.js";
 
 test("parses the immutable Snapcraft revisions table fixture", async () => {
   const fixture = JSON.parse(
@@ -15,6 +20,9 @@ test("parses the immutable Snapcraft revisions table fixture", async () => {
   expect(() => parseRevisions("not a revisions table", "latest/stable", "amd64")).toThrow(
     /header/i,
   );
+  expect(isRevisionReleased(fixture.revisions, "1", "latest/stable")).toBe(true);
+  expect(isRevisionReleased(fixture.revisions, "2", "latest/stable")).toBe(false);
+  expect(() => isRevisionReleased("garbage", "1", "latest/stable")).toThrow(/header/i);
 });
 
 test("parses and strictly binds built snap metadata", () => {

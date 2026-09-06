@@ -5,6 +5,7 @@ import { actionSignal } from "../actions/signal.js";
 import { parseProject } from "../project/parse.js";
 import { promotionGitHub } from "../runtime/github.js";
 import { runProcess } from "../runtime/process.js";
+import { isRevisionReleased } from "../release/snapcraft.js";
 import { promote } from "./run.js";
 
 export async function runPromotionAction(env: NodeJS.ProcessEnv): Promise<void> {
@@ -102,13 +103,7 @@ export async function runPromotionAction(env: NodeJS.ProcessEnv): Promise<void> 
             redact: [storeToken],
           });
           if (result.exitCode !== 0) throw new Error(`Store readback failed (${result.exitCode})`);
-          return result.stdout.split("\n").some((line) => {
-            const fields = line.trim().split(/\s{2,}/);
-            return (
-              fields[0] === revision &&
-              fields[4]?.split(",").some((item) => item.replace(/\*$/, "") === destination)
-            );
-          });
+          return isRevisionReleased(result.stdout, revision, destination);
         },
       },
     );

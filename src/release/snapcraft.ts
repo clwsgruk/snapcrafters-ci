@@ -46,6 +46,19 @@ export function parseRevisions(
     .map((row) => ({ revision: row.revision, architecture, version: row.version }));
 }
 
+export function isRevisionReleased(output: string, revision: string, channel: string): boolean {
+  if (!/^[1-9][0-9]*$/.test(revision)) throw new InputError("Invalid Store revision");
+  if (
+    !/^[A-Za-z0-9][A-Za-z0-9.+-]{0,63}\/(stable|candidate|beta|edge)(\/[A-Za-z0-9][A-Za-z0-9.+-]{0,63})?$/.test(
+      channel,
+    )
+  )
+    throw new InputError("Invalid Store channel");
+  const matches = parseRevisionRows(output).filter((row) => row.revision === revision);
+  if (matches.length > 1) throw new InputError("Ambiguous Snapcraft revision rows");
+  return matches[0]?.channels.includes(channel) ?? false;
+}
+
 function parseRevisionRows(output: string): Array<{
   revision: string;
   architectures: Architecture[];
