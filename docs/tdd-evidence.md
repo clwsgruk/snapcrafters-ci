@@ -92,6 +92,10 @@ mutable sibling references, and public metadata drift.
 - `mise run test:integration -- workflows` — RED: the pushed subject remained `bump to 1.0`
   after the script wrote version 2.0. GREEN: 5 files, 26 tests; the callback now runs only after a
   successful script and tracked-change/untracked-policy inspection, immediately before commit.
+- `mise run test:integration -- workflows` — RED: a safe caller variable was missing from the
+  trusted Bash environment. GREEN: 5 files, 27 tests; safe inherited/GitHub variables remain,
+  credential and Bash-loader names are removed, bounded redacted output is streamed to the job
+  log, and the optional summary is read into a fixed byte allocation before UTF-8 truncation.
 
 - `mise run test:integration -- workflows` — RED: 4 failures proved update/test caller
   cancellation was ignored, the complete log was not returned independently of scratch storage,

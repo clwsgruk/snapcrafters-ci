@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { readFile, writeFile } from "node:fs/promises";
+import { open, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ownedTemp, removeOwned } from "../runtime/files.js";
@@ -38,12 +38,13 @@ export async function runTests(
       file: "bash",
       args: ["--noprofile", "--norc", "-e", "-o", "pipefail", scriptPath],
       cwd: input.cwd,
-      env: { PATH: process.env.PATH ?? "", GITHUB_STEP_SUMMARY: summaryPath },
+      env: safeTestEnvironment(summaryPath),
       timeoutMs: 30 * 60_000,
       signal: input.signal ?? new AbortController().signal,
       logPath,
-      maxOutputBytes: 2 * 1024 * 1024,
-      maxLogBytes: 2 * 1024 * 1024,
+      maxOutputBytes: 10 * 1024 * 1024,
+      maxLogBytes: 10 * 1024 * 1024,
+      streamOutput: true,
     });
     const log = await readFile(logPath, "utf8");
     const summary = await readOptionalSummary(summaryPath);
@@ -67,11 +68,50 @@ export async function runTests(
 }
 
 async function readOptionalSummary(path: string): Promise<string> {
+  const limit = 16_000;
   try {
-    return await readFile(path, "utf8");
+    const handle = await open(path, "r");
+    try {
+      const metadata = await handle.stat();
+      if (!metadata.isFile() || metadata.size === 0) return "";
+      const buffer = Buffer.alloc(Math.min(metadata.size, limit + 1));
+      const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
+      const value = buffer.subarray(0, Math.min(bytesRead, limit)).toString("utf8");
+      return bytesRead > limit || metadata.size > limit
+        ? `${value}\n\n(Summary truncated.)`
+        : value;
+    } finally {
+      await handle.close();
+    }
   } catch {
     return "";
   }
+}
+
+function safeTestEnvironment(summaryPath: string): Record<string, string> {
+  const rejected = /(?:TOKEN|SECRET|PASSWORD|CREDENTIAL|AUTH|COOKIE|PRIVATE_KEY)/i;
+  const dangerous = new Set([
+    "BASH_ENV",
+    "ENV",
+    "SHELLOPTS",
+    "CDPATH",
+    "GLOBIGNORE",
+    "LD_PRELOAD",
+  ]);
+  const env: Record<string, string> = {};
+  for (const [name, value] of Object.entries(process.env)) {
+    if (
+      value === undefined ||
+      rejected.test(name) ||
+      name.startsWith("INPUT_") ||
+      dangerous.has(name)
+    )
+      continue;
+    env[name] = value;
+  }
+  env.PATH = process.env.PATH ?? "";
+  env.GITHUB_STEP_SUMMARY = summaryPath;
+  return env;
 }
 
 export function formatTestComment(
@@ -92,6 +132,11 @@ export function formatTestComment(
       ]
     : lines;
   const log = selected.join("\n").slice(0, 24_000).replaceAll("```", "`\u200b``");
-  const summary = rawSummary.slice(0, 16_000).replaceAll("```", "`\u200b``");
+  const summary = truncateUtf8(rawSummary, 16_000).replaceAll("```", "`\u200b``");
   return `Automated testing ${exitCode === 0 ? "succeeded" : "failed"}.\n\nFull logs: ${runUrl}\n\n<details><summary>Logs</summary>\n\n\`\`\`\n${log}\n\`\`\`\n\n</details>${summary ? `\n\n<details><summary>Test summary</summary>\n\n${summary}\n\n</details>` : ""}`;
+}
+
+function truncateUtf8(value: string, limit: number): string {
+  const bytes = Buffer.from(value);
+  return bytes.length <= limit ? value : bytes.subarray(0, limit).toString("utf8");
 }

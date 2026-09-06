@@ -192,6 +192,31 @@ describe("review command", () => {
 });
 
 describe("trusted test runner", () => {
+  test("streams bounded logs with safe inherited variables while removing credentials", async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "tests-env-"));
+    const previous = process.env.SNAPCRAFTERS_TEST_VALUE;
+    const previousSecret = process.env.SNAPCRAFTERS_TEST_TOKEN;
+    process.env.SNAPCRAFTERS_TEST_VALUE = "visible";
+    process.env.SNAPCRAFTERS_TEST_TOKEN = "must-not-reach-script";
+    try {
+      const result = await runTests(
+        {
+          cwd,
+          script: 'printf \'%s:%s\' "$SNAPCRAFTERS_TEST_VALUE" "${SNAPCRAFTERS_TEST_TOKEN-unset}"',
+          runUrl: "https://github.test/run",
+        },
+        { comment: async () => undefined },
+      );
+      expect(result.log).toContain("visible:unset");
+      expect(result.log).not.toContain("must-not-reach-script");
+    } finally {
+      if (previous === undefined) delete process.env.SNAPCRAFTERS_TEST_VALUE;
+      else process.env.SNAPCRAFTERS_TEST_VALUE = previous;
+      if (previousSecret === undefined) delete process.env.SNAPCRAFTERS_TEST_TOKEN;
+      else process.env.SNAPCRAFTERS_TEST_TOKEN = previousSecret;
+    }
+  });
+
   test("captures multiline early failure and summary while comment errors do not replace result", async () => {
     const cwd = await mkdtemp(join(tmpdir(), "tests-"));
     const result = await runTests(
