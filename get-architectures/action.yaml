@@ -22,37 +22,14 @@ runs:
   using: composite
   steps:
     - name: Checkout the source
-      uses: actions/checkout@v6
-
-    - name: Find and parse snapcraft.yaml
-      id: snapcraft-yaml
-      uses: snapcrafters/ci/parse-snapcraft-yaml@main
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+    - name: Setup Node 24
+      uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
       with:
-        snapcraft-project-root: ${{ inputs.snapcraft-project-root }}
-
-    - name: Compute architectures
+        node-version: "24.20.0"
+    - name: Run get-architectures
       id: architectures
       shell: bash
       env:
-        yaml_path: ${{ steps.snapcraft-yaml.outputs.yaml-path }}
-      run: |
-        # core24 uses a different syntax for specifying platforms.
-        if [[ "$(yq -r '.base' "$yaml_path")" == "core24" ]]; then
-          architectures_list="$(yq -r -I=0 -o=json '[.platforms | to_entries | .[] | .key]' "$yaml_path")"
-          architectures="$(yq -r -I=0 -o=csv '[.platforms | to_entries | .[] | .key]' "$yaml_path" | tr ',' ' ')"
-        else
-          # Get the list as a json array. E.g. ["amd64", "arm64"]
-          architectures_list="$(yq -r -I=0 -o=json '[.architectures[]]' "$yaml_path")"
-          
-          # Get the list as a space-separated string. E.g. "amd64" "arm64"
-          architectures="$(yq -r -I=0 -o=csv '[.architectures[]]' "$yaml_path" | tr ',' ' ')"
-          
-          # Handle the case where architectures is a list of objects
-          if echo "$architectures" | grep -q "build-on"; then
-            architectures_list="$(yq -r -I=0 -o=json '[.architectures[]."build-on"]' "$yaml_path")"
-            architectures="$(yq -r -I=0 -o=csv '[.architectures[]."build-on"]' "$yaml_path" | tr ',' ' ')"
-          fi
-        fi
-
-        echo "architectures_list=$architectures_list" >> "$GITHUB_OUTPUT"
-        echo "architectures=$architectures" >> "$GITHUB_OUTPUT"
+        INPUT_SNAPCRAFT_PROJECT_ROOT: ${{ inputs.snapcraft-project-root }}
+      run: node "${{ github.action_path }}/dist/index.cjs"

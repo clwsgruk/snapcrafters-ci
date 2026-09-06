@@ -26,76 +26,18 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Checkout the code
-      uses: actions/checkout@v6
-
-    - name: Fetch build manifests
-      uses: snapcrafters/ci/fetch-manifests@main
+    - name: Checkout the source
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+    - name: Setup Node 24
+      uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
       with:
-        token: ${{ inputs.github-token }}
-
-    - name: Find and parse snapcraft.yaml
-      id: snapcraft-yaml
-      uses: snapcrafters/ci/parse-snapcraft-yaml@main
-      with:
-        snapcraft-project-root: ${{ inputs.snapcraft-project-root }}
-
-    - name: Install snap
+        node-version: "24.20.0"
+    - name: Run run-tests
       shell: bash
       env:
-        snap_name: ${{ steps.snapcraft-yaml.outputs.snap-name }}
-      run: |
-        # If we got a manifest file then parse the revision from it
-        arch="$(dpkg --print-architecture)"
-        if ls "manifest-${arch}.yaml" &>/dev/null; then
-          rev="$(yq -r '.revision' "manifest-${arch}.yaml")"
-          echo "Installing snap revision '${rev}' from build manifest"
-          sudo snap install "${snap_name}" --revision "${rev}"
-        else
-          echo "Installing snap from '${{ inputs.channel }}'"
-          sudo snap install "${snap_name}" --channel "${{ inputs.channel }}"
-        fi
-
-    - name: Run tests
-      id: tests
-      shell: bash
-      run: |
-        # shellcheck disable=SC2288,SC2086,SC1083
-        ${{ inputs.test-script }} |& tee raw-output.txt
-
-    - name: Process tests
-      shell: bash
-      if: success() || failure()
-      run: |
-        if [[ $(wc -l raw-output.txt | cut -f1 -d' ') -gt 250 ]]; then
-          head --lines=100 raw-output.txt > test-output.txt
-          echo -e "\n\n(Logs truncated. See full logs at: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n\n" >> test-output.txt
-          tail --lines=100 raw-output.txt >> test-output.txt
-        else
-          mv raw-output.txt test-output.txt
-        fi
-
-    - name: Comment on call for testing issue with test result
-      if: success() || failure()
-      uses: actions/github-script@v8
-      with:
-        script: |
-          const fs = require('node:fs');
-          const summary = fs.readFileSync('test-output.txt', 'utf8');
-          github.rest.issues.createComment({
-            issue_number: ${{ inputs.issue-number }},
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: `Automated testing ${{ steps.tests.conclusion }}.
-
-            Full logs are available at https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}. The first 100, and last 100 lines of the log are displayed in the Summary below.
-
-            <details><summary>Logs</summary>
-
-            \`\`\`
-            ${summary}
-            \`\`\`
-
-            </details>
-            `
-          })
+        INPUT_CHANNEL: ${{ inputs.channel }}
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
+        INPUT_SNAPCRAFT_PROJECT_ROOT: ${{ inputs.snapcraft-project-root }}
+        INPUT_ISSUE_NUMBER: ${{ inputs.issue-number }}
+        INPUT_TEST_SCRIPT: ${{ inputs.test-script }}
+      run: node "${{ github.action_path }}/dist/index.cjs"

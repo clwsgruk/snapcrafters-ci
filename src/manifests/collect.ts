@@ -18,6 +18,7 @@ export interface ManifestGitHub {
 export interface ExpectedManifests {
   snap: string;
   architectures: readonly Manifest["architecture"][];
+  allowEmpty?: boolean;
 }
 
 export async function collectManifests(
@@ -70,7 +71,7 @@ export async function collectManifests(
     const missing = expected.architectures.filter(
       (architecture) => !manifests.some((item) => item.architecture === architecture),
     );
-    if (missing.length)
+    if (missing.length && !(expected.allowEmpty && manifests.length === 0))
       throw new InputError(`Missing expected manifest architectures: ${missing.join(", ")}`);
   }
   for (const { filename } of files) {

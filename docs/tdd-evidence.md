@@ -27,6 +27,9 @@ mutable sibling references, and public metadata drift.
   GREEN: 10 files, 45 tests. Scalar booleans, revisions/issues, repositories, Snapcraft channels
   (including dotted tracks), architecture lists, absolute context paths, run IDs, SHAs, event
   mappings, newlines, duplicates, and size limits are fail-closed.
+- `mise run test:contract` — RED: the first long adapter (`call-for-testing`, 46 lines) violated
+  the 10–30-line boundary. After moving orchestration into shallow feature-local `action.ts`
+  modules, GREEN: 2 files, 2 tests; all twelve adapters are 13 lines and retain exact metadata.
 
 ## Phase 2 — Execution boundary
 

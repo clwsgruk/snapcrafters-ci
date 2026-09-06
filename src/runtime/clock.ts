@@ -7,15 +7,15 @@ export const systemClock: Clock = {
   now: () => Date.now(),
   sleep: (ms, signal) =>
     new Promise((resolve, reject) => {
-      const timer = setTimeout(resolve, ms);
-      signal.addEventListener(
-        "abort",
-        () => {
-          clearTimeout(timer);
-          reject(signal.reason ?? new Error("Operation aborted"));
-        },
-        { once: true },
-      );
+      const aborted = () => {
+        clearTimeout(timer);
+        reject(signal.reason ?? new Error("Operation aborted"));
+      };
+      const timer = setTimeout(() => {
+        signal.removeEventListener("abort", aborted);
+        resolve();
+      }, ms);
+      signal.addEventListener("abort", aborted, { once: true });
     }),
 };
 

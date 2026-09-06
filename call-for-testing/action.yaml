@@ -57,115 +57,22 @@ runs:
   using: composite
   steps:
     - name: Checkout the source
-      uses: actions/checkout@v6
-
-    - name: Fetch build manifests
-      uses: snapcrafters/ci/fetch-manifests@main
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+    - name: Setup Node 24
+      uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
       with:
-        token: ${{ inputs.github-token }}
-
-    - name: Setup snapcraft
-      shell: bash
-      run: |
-        sudo snap install snapcraft --channel "${{inputs.snapcraft-channel}}" --classic
-
-    - name: Find and parse snapcraft.yaml
-      id: snapcraft-yaml
-      uses: snapcrafters/ci/parse-snapcraft-yaml@main
-      with:
-        snapcraft-project-root: ${{ inputs.snapcraft-project-root }}
-
-    - name: Write the arch/rev table
-      shell: bash
-      id: build
-      env:
-        SNAPCRAFT_STORE_CREDENTIALS: ${{ inputs.store-token }}
-        snap_name: ${{ steps.snapcraft-yaml.outputs.snap-name }}
-        snapcraft_yaml: ${{ steps.snapcraft-yaml.outputs.yaml-path }}
-      run: |
-        revisions=()
-
-        # Build the initial structure for the HTML table including the header row.
-        table="<table><thead><tr><th>CPU Architecture</th><th>Revision</th></tr></thead><tbody>"
-
-        # If we were able to fetch build manifests from previous step, use those
-        if ls -l manifest-*.yaml &>/dev/null; then
-          echo "Found build manifests - populating template with revisions from the manifests"
-          
-          # Iterate over the manifest files and write the table rows for each architecture
-          for file in manifest-*.yaml; do
-            # Parse the arch and the revision
-            arch="$(yq -r '.architecture' "${file}")"
-            rev="$(yq -r '.revision' "${file}")"
-            # Write the table row and add the revision to the list we're tracking
-            table="${table}<tr><td>${arch}</td><td>${rev}</td></tr>"
-            revisions+=("$rev")
-          done
-        else
-          echo "No build manifests found - populating template with information from the store"
-          
-          # Otherwise, get the latest revision for each architecture in the release channel
-          # shellcheck disable=SC1083
-          for arch in ${{ inputs.architectures }}; do
-            rev="$(snapcraft list-revisions "${snap_name}" --arch "$arch" | grep "${{ inputs.channel }}*" | head -n1 | cut -d' ' -f1)"
-            revisions+=("$rev")
-            # Add a row to the HTML table
-            table="${table}<tr><td>${arch}</td><td>${rev}</td></tr>"
-          done
-        fi
-
-        # Add the closing tags for the table
-        table="${table}</tbody></table>"
-
-        # Get a comma separated list of revisions
-        printf -v joined '%s,' "${revisions[@]}"
-
-        echo "revisions=${joined%,}" >> "$GITHUB_OUTPUT"
-        echo "table=${table}" >> "$GITHUB_OUTPUT"
-
-    - name: Prepare the call for testing template
-      shell: bash
-      env:
-        testing_instructions: ${{ inputs.testing-instructions }}
-      run: |
-        # Fetch the template from the repo
-        wget -qO template-raw.md "https://raw.githubusercontent.com/${{ inputs.ci-repo }}/main/call-for-testing/template.md"
-
-        # Substitute in the testing instructions
-        awk -v r="${testing_instructions}" '{gsub(/TESTING_INSTRUCTIONS/,r)}1' template-raw.md > template.md
-
-    - name: Create call for testing issue
+        node-version: "24.20.0"
+    - name: Run call-for-testing
       id: issue
       shell: bash
       env:
-        GITHUB_TOKEN: ${{ inputs.github-token }}
-        snap_name: ${{ steps.snapcraft-yaml.outputs.snap-name }}
-        channel: ${{ inputs.channel }}
-        revisions: ${{ steps.build.outputs.revisions }}
-        table: ${{ steps.build.outputs.table }}
-        version: ${{ steps.snapcraft-yaml.outputs.version }}
-        promotion_channel: ${{ inputs.promotion-channel }}
-      run: |
-        # Extract front-matter fields using yq
-        title=$(yq --front-matter=extract '.title' template.md)
-        labels=$(yq --front-matter=extract '.labels' template.md)
-
-        # Extract the body (everything after the closing --- of front-matter)
-        body=$(sed '1{/^---$/!q;};1,/^---$/d' template.md)
-
-        # Render {{ env.VAR }} placeholders using environment variables
-        render() {
-          sed 's/{{ *env\.\([a-zA-Z_][a-zA-Z0-9_]*\) *}}/${\1}/g' <<< "$1" | envsubst
-        }
-
-        rendered_title=$(render "$title")
-        rendered_body=$(render "$body")
-
-        # Create the issue and extract the issue number from the returned URL
-        url=$(gh issue create \
-          --repo "$GITHUB_REPOSITORY" \
-          --title "$rendered_title" \
-          --label "$labels" \
-          --body "$rendered_body")
-
-        echo "number=$(basename "$url")" >> "$GITHUB_OUTPUT"
+        INPUT_ARCHITECTURES: ${{ inputs.architectures }}
+        INPUT_CI_REPO: ${{ inputs.ci-repo }}
+        INPUT_CHANNEL: ${{ inputs.channel }}
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
+        INPUT_PROMOTION_CHANNEL: ${{ inputs.promotion-channel }}
+        INPUT_SNAPCRAFT_PROJECT_ROOT: ${{ inputs.snapcraft-project-root }}
+        INPUT_SNAPCRAFT_CHANNEL: ${{ inputs.snapcraft-channel }}
+        INPUT_STORE_TOKEN: ${{ inputs.store-token }}
+        INPUT_TESTING_INSTRUCTIONS: ${{ inputs.testing-instructions }}
+      run: node "${{ github.action_path }}/dist/index.cjs"

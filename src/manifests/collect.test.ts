@@ -135,6 +135,17 @@ describe("manifest collection", () => {
     ).rejects.toThrow(/expired/i);
   });
 
+  test("permits an explicitly empty artifact set for Store fallback only", async () => {
+    const destination = await mkdtemp(join(tmpdir(), "manifests-"));
+    await expect(
+      collectManifests(api([[]], new Map()), destination, {
+        snap: "demo",
+        architectures: ["amd64"],
+        allowEmpty: true,
+      }),
+    ).resolves.toEqual([]);
+  });
+
   test.each([
     ["traversal", "../manifest-amd64.yaml", 0o100600],
     ["absolute", "/manifest-amd64.yaml", 0o100600],

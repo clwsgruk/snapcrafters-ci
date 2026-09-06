@@ -13,19 +13,12 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Fetch artifacts
+    - name: Setup Node 24
+      uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      with:
+        node-version: "24.20.0"
+    - name: Run fetch-manifests
       shell: bash
       env:
-        GH_TOKEN: ${{ inputs.token }}
-      run: |
-        # Construct the URL for the API endpoint where the artifacts are available
-        url="/repos/${{ github.repository }}/actions/runs/${GITHUB_RUN_ID}/artifacts"
-
-        # Get a list of IDs for appropriately named artifacts (those starting 'manifest-*')
-        artifacts="$(gh api "$url" --jq '.artifacts[] | select(.name | startswith("manifest-")) | .id')"
-
-        # Iterate over the manifest URLS, downloading and unpacking them one by one
-        for id in $artifacts; do
-          gh api "/repos/${{ github.repository }}/actions/artifacts/${id}/zip" > manifests.zip
-          unzip manifests.zip
-        done
+        INPUT_TOKEN: ${{ inputs.token }}
+      run: node "${{ github.action_path }}/dist/index.cjs"

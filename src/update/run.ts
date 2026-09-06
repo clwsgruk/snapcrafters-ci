@@ -10,7 +10,7 @@ export interface UpdateInput {
   script: string;
   name: string;
   email: string;
-  message: string;
+  message: string | (() => Promise<string>);
   signal?: AbortSignal;
   tempRoot?: string;
 }
@@ -23,6 +23,7 @@ export async function runUpdate(input: UpdateInput): Promise<{ changed: boolean 
   try {
     await writeFile(script, input.script, { mode: 0o600 });
     const env = { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? input.cwd };
+    const message = typeof input.message === "string" ? input.message : await input.message();
     await successful(
       "bash",
       ["--noprofile", "--norc", "-e", "-o", "pipefail", script],
@@ -56,7 +57,7 @@ export async function runUpdate(input: UpdateInput): Promise<{ changed: boolean 
         "commit.gpgsign=false",
         "commit",
         "-m",
-        input.message,
+        message,
       ],
       input.cwd,
       env,

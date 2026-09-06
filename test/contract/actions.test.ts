@@ -51,10 +51,11 @@ describe("public action contracts", () => {
       expect(createHash("sha256").update(stable(publicContract)).digest("hex"), action).toBe(
         contracts[action],
       );
-      await expect(
-        readFile(resolve(root, action, "main.ts"), "utf8"),
-        action,
-      ).resolves.toBeTruthy();
+      const adapter = await readFile(resolve(root, action, "main.ts"), "utf8");
+      expect(adapter, action).toBeTruthy();
+      const lines = adapter.trimEnd().split("\n").length;
+      expect(lines, `${action} adapter lines`).toBeGreaterThanOrEqual(10);
+      expect(lines, `${action} adapter lines`).toBeLessThanOrEqual(30);
       expect(source, action).not.toContain("snapcrafters/ci/");
       expect(source, action).not.toContain("@main");
       const inputs = (metadata.inputs ?? {}) as Record<string, unknown>;

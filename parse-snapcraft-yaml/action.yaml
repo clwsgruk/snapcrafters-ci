@@ -39,60 +39,13 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Find and parse snapcraft.yaml
+    - name: Setup Node 24
+      uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      with:
+        node-version: "24.20.0"
+    - name: Run parse-snapcraft-yaml
       id: parse
       shell: bash
       env:
-        project_root: ${{ inputs.snapcraft-project-root }}
-      run: |
-        # If no project path is specified, default to top-level of repo
-        project_root="${project_root:-.}"
-
-        valid_paths=(
-          "${project_root}/.snapcraft.yaml"
-          "${project_root}/build-aux/snap/snapcraft.yaml"
-          "${project_root}/snap/snapcraft.yaml"
-          "${project_root}/snapcraft.yaml"
-        )
-
-        for file in "${valid_paths[@]}"; do
-            if [[ -f "$file" ]]; then
-                yaml_path="$file"
-            fi
-        done
-
-        if [[ -z "${yaml_path}" ]]; then
-           echo "No snapcraft.yaml found"
-           exit 1
-        fi
-
-        # Populate defaults
-        echo "classic=false" >> "$GITHUB_OUTPUT"
-
-        # Check for classic confinement and update the output if the snap is classic
-        if [[ "$(yq -r '.confinement' "$yaml_path")" == "classic" ]]; then
-          echo "classic=true" >> "$GITHUB_OUTPUT"
-        fi
-
-        # Declare the common locations for plugs/slots declarations
-        plugs_files=("plug-declaration.json" ".github/plug-declaration.json")
-        slots_files=("slot-declaration.json" ".github/slot-declaration.json")
-
-        for file in "${plugs_files[@]}"; do
-          if [[ -f "$file" ]]; then
-            echo "plugs-file=$file" >> "$GITHUB_OUTPUT"
-          fi
-        done
-
-        for file in "${slots_files[@]}"; do
-          if [[ -f "$file" ]]; then
-            echo "slots-file=$file" >> "$GITHUB_OUTPUT"
-          fi
-        done
-
-        echo "project-root=${project_root}" >> "$GITHUB_OUTPUT"
-        echo "yaml-path=${yaml_path}" >> "$GITHUB_OUTPUT"
-        echo "snap-name=$(yq -r '.name' "$yaml_path")" >> "$GITHUB_OUTPUT"
-        echo "version=$(yq -r '.version' "$yaml_path")" >> "$GITHUB_OUTPUT"
-        # shellcheck disable=SC2016
-        echo "components=$(yq -r '.components as $in | $in | keys | map("\(.)|\($in[.].version)") | join(",")' "$yaml_path")" >> "$GITHUB_OUTPUT"
+        INPUT_SNAPCRAFT_PROJECT_ROOT: ${{ inputs.snapcraft-project-root }}
+      run: node "${{ github.action_path }}/dist/index.cjs"

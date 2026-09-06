@@ -52,155 +52,47 @@ runs:
   using: composite
   steps:
     - name: Checkout the source
-      uses: actions/checkout@v6
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       with:
         token: ${{ inputs.repo-token }}
         fetch-depth: 0
-
-    - name: Setup semver tool
-      shell: bash
-      run: |
-        wget -q https://raw.githubusercontent.com/fsaintjacques/semver-tool/master/src/semver
-        sudo mv semver /usr/bin/semver
-        chmod +x /usr/bin/semver
-
-    - name: Setup snapcraft
-      id: setup
-      shell: bash
-      run: |
-        sudo snap install snapcraft --channel "${{inputs.snapcraft-channel}}" --classic
-        git config --global user.email "${{ inputs.bot-email }}"
-        git config --global user.name "${{ inputs.bot-name }}"
-
-    - name: Setup Launchpad credentials
-      shell: bash
-      run: |
-        # For versions of snapcraft after 8.2.0, the path is different
-        mkdir -p ~/.local/share/snapcraft/provider/launchpad ~/.local/share/snapcraft
-        echo "${{ inputs.launchpad-token }}" > ~/.local/share/snapcraft/provider/launchpad/credentials
-        echo "${{ inputs.launchpad-token }}" > ~/.local/share/snapcraft/launchpad-credentials
-
-        git config --global user.email "${{ inputs.bot-email }}"
-        git config --global user.name "${{ inputs.bot-name }}"
-
-    - name: Find and parse snapcraft.yaml
-      id: snapcraft-yaml
-      uses: snapcrafters/ci/parse-snapcraft-yaml@main
+    - name: Setup Node 24
+      uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
       with:
-        snapcraft-project-root: ${{ inputs.snapcraft-project-root }}
-
-    - name: Build the snap (${{ inputs.architecture }})
-      id: build
-      shell: bash
-      env:
-        arch: ${{ inputs.architecture }}
-        name: ${{ steps.snapcraft-yaml.outputs.snap-name }}
-        yaml_path: ${{ steps.snapcraft-yaml.outputs.yaml-path }}
-        version: ${{ steps.snapcraft-yaml.outputs.version }}
-        project_root: ${{ steps.snapcraft-yaml.outputs.project-root }}
-      run: |
-        # Set unique LP build branch when git initialisation is done for multi-snap projects
-        git config --global init.defaultBranch "build-${{ inputs.architecture }}-${{ github.run_id }}"
-
-        pushd "$project_root" && git init || exit
-        snapcraft_args=("--launchpad-accept-public-upload")
-
-        if [[ "$(yq -r '.base' "$yaml_path")" == "core22" || "$(yq -r '.base' "$yaml_path")" == "core20" || "$(yq -r '.base' "$yaml_path")" == "core18" ]]; then
-          # Restrict the manifest because remote-build cannot combine architectures with --build-for.
-          yq -i '.architectures |= [{"build-on": env(arch)}]' "$yaml_path"
-        else
-          snapcraft_args+=("--build-for=$arch")
-        fi
-
-        # Dispatch the remote build.
-        snapcraft remote-build "${snapcraft_args[@]}" || true
-
-        # Try to locate the build log.
-        # shellcheck disable=SC2086
-        if ls "${name}_${arch}.txt"; then
-            cat "${name}_${arch}.txt"
-        elif ls snapcraft-${name}*${arch}*.txt; then
-            cat snapcraft-${name}*${arch}*.txt
-        else
-            echo "Could not find build log"
-        fi
-
-        # If we can't find a snap file, throw an error.
-        snap_file="${name}_${version}_${arch}.snap"
-        if [[ ! -f "$snap_file" ]]; then
-            echo "Could not find snap artefact '${snap_file}'"
-            exit 1
-        fi
-
-        popd || exit
-
-        # Write the manifest file which is used by later steps
-        echo "snap=${snap_file}" >> "$GITHUB_OUTPUT"
-        if  [[ -n "$project_root" ]]; then
-            echo "snap=${project_root}/${snap_file}" >> "$GITHUB_OUTPUT"
-        fi
-        echo "name: ${name}" >> "manifest-${{ inputs.architecture }}.yaml"
-        echo "architecture: ${arch}" >> "manifest-${{ inputs.architecture }}.yaml"
-
-    - name: Review the built snap
-      uses: snapcrafters/ci/review-snap@main
-      with:
-        snap: ${{ steps.build.outputs.snap }}
-        is-classic: ${{ steps.snapcraft-yaml.outputs.classic }}
-        plugs: ${{ steps.snapcraft-yaml.outputs.plugs-file }}
-        slots: ${{ steps.snapcraft-yaml.outputs.slots-file }}
-
-    - name: Release the built snap to ${{ inputs.channel }}
+        node-version: "24.20.0"
+    - name: Run release-to-candidate
       id: publish
       shell: bash
       env:
-        SNAPCRAFT_STORE_CREDENTIALS: ${{ inputs.store-token }}
-        SNAP_FILE: ${{ steps.build.outputs.snap }}
-        components: ${{ steps.snapcraft-yaml.outputs.components }}
-        name: ${{ steps.snapcraft-yaml.outputs.snap-name }}
-      run: |
-        component_flags=()
-        for comp in ${components//,/ }
-        do
-            comp_name="$(echo "$comp" | cut -f1 -d"|")"
-            comp_version="$(echo "$comp" | cut -f2 -d"|")"
-            component_flags+=("--component")
-            if [[ "${comp_version}" == "null" ]]; then
-                component_flags+=("${comp_name}=${name}+${comp_name}.comp")
-            else
-                component_flags+=("${comp_name}=${name}+${comp_name}_${comp_version}.comp")
-            fi
-        done
-        snapcraft_out="$(snapcraft upload "${SNAP_FILE:-}" "${component_flags[@]}" --release="${{ inputs.channel }}")"
-        revision="$(echo "$snapcraft_out" | grep -Po "Revision \K[^ ]+")"
-        echo "revision=${revision}" >> "$GITHUB_OUTPUT"
-        echo "revision: ${revision}" >> "manifest-${{ inputs.architecture }}.yaml"
-
-    # Upload the manifest file as an artifact for retrieval during future actions
+        INPUT_ARCHITECTURE: ${{ inputs.architecture }}
+        INPUT_BOT_EMAIL: ${{ inputs.bot-email }}
+        INPUT_BOT_NAME: ${{ inputs.bot-name }}
+        INPUT_CHANNEL: ${{ inputs.channel }}
+        INPUT_LAUNCHPAD_TOKEN: ${{ inputs.launchpad-token }}
+        INPUT_MULTI_SNAP: ${{ inputs.multi-snap }}
+        INPUT_REPO_TOKEN: ${{ inputs.repo-token }}
+        INPUT_SNAPCRAFT_PROJECT_ROOT: ${{ inputs.snapcraft-project-root }}
+        INPUT_SNAPCRAFT_CHANNEL: ${{ inputs.snapcraft-channel }}
+        INPUT_STORE_TOKEN: ${{ inputs.store-token }}
+      run: node "${{ github.action_path }}/dist/index.cjs"
     - name: Upload revision manifest
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
       with:
-        name: "manifest-${{ inputs.architecture }}"
-        path: "manifest-${{ inputs.architecture }}.yaml"
-
-    # Create a tag in the repo that corresponds to the revision pushed
-    - name: Create tag
+        name: manifest-${{ inputs.architecture }}
+        path: manifest-${{ inputs.architecture }}.yaml
+    - name: Create revision tag
       shell: bash
       env:
-        multi_snap: ${{ inputs.multi-snap }}
-        name: ${{ steps.snapcraft-yaml.outputs.snap-name }}
-        version: ${{ steps.snapcraft-yaml.outputs.version }}
-      run: |
-        git config --global user.name "${{ inputs.bot-name }}"
-        git config --global user.email "${{ inputs.bot-email }}"
-
-        revision="${{ steps.publish.outputs.revision }}"
-
-        if [[ "${multi_snap}" == "true" ]]; then
-          tag_name="${name}-${version}/rev${revision}/${{ inputs.architecture }}"
-        else
-          tag_name="${version}/rev${revision}/${{ inputs.architecture }}"
-        fi
-
-        git tag -a "$tag_name" -m "Revision ${revision}, released for ${{ inputs.architecture }}"
-        git push origin "$tag_name"
+        INPUT_ARCHITECTURE: ${{ inputs.architecture }}
+        INPUT_BOT_EMAIL: ${{ inputs.bot-email }}
+        INPUT_BOT_NAME: ${{ inputs.bot-name }}
+        INPUT_CHANNEL: ${{ inputs.channel }}
+        INPUT_LAUNCHPAD_TOKEN: ${{ inputs.launchpad-token }}
+        INPUT_MULTI_SNAP: ${{ inputs.multi-snap }}
+        INPUT_REPO_TOKEN: ${{ inputs.repo-token }}
+        INPUT_SNAPCRAFT_PROJECT_ROOT: ${{ inputs.snapcraft-project-root }}
+        INPUT_SNAPCRAFT_CHANNEL: ${{ inputs.snapcraft-channel }}
+        INPUT_STORE_TOKEN: ${{ inputs.store-token }}
+        INPUT_PUBLISHED_REVISION: ${{ steps.publish.outputs.revision }}
+        SNAPCRAFTERS_PHASE: tag
+      run: node "${{ github.action_path }}/dist/index.cjs"

@@ -22,31 +22,22 @@ runs:
   using: composite
   steps:
     - name: Checkout the source
-      uses: actions/checkout@v6
-
-    - name: Find and parse snapcraft.yaml
-      id: snapcraft-yaml
-      uses: snapcrafters/ci/parse-snapcraft-yaml@main
-      with:
-        snapcraft-project-root: ${{ inputs.snapcraft-project-root }}
-
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
     - name: Build snap
-      uses: snapcore/action-build@v1
+      uses: snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79 # v1
       id: build
       with:
-        path: ${{ steps.snapcraft-yaml.outputs.project-root }}
+        path: ${{ inputs.snapcraft-project-root }}
         snapcraft-channel: ${{ inputs.snapcraft-channel }}
-
-    - name: Review the built snap
-      uses: snapcrafters/ci/review-snap@main
+    - name: Setup Node 24
+      uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
       with:
-        snap: ${{ steps.build.outputs.snap }}
-        is-classic: ${{ steps.snapcraft-yaml.outputs.classic }}
-        plugs: ${{ steps.snapcraft-yaml.outputs.plugs-file }}
-        slots: ${{ steps.snapcraft-yaml.outputs.slots-file }}
-
-    - name: Install the snap
-      if: ${{ inputs.install == 'true' }}
+        node-version: "24.20.0"
+    - name: Run test-snap-build
       shell: bash
-      run: |
-        sudo snap install --classic --dangerous "${{ steps.build.outputs.snap }}"
+      env:
+        INPUT_INSTALL: ${{ inputs.install }}
+        INPUT_SNAPCRAFT_CHANNEL: ${{ inputs.snapcraft-channel }}
+        INPUT_SNAPCRAFT_PROJECT_ROOT: ${{ inputs.snapcraft-project-root }}
+        INPUT_SNAP: ${{ steps.build.outputs.snap }}
+      run: node "${{ github.action_path }}/dist/index.cjs"
