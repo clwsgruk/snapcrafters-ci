@@ -83,11 +83,11 @@ async function readOptionalSummary(path: string): Promise<string> {
     try {
       const metadata = await handle.stat();
       if (!metadata.isFile() || metadata.size === 0) return "";
-      const buffer = Buffer.alloc(Math.min(metadata.size, limit + 1));
+      const buffer = Buffer.alloc(Math.min(metadata.size, limit + 4));
       const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
-      const value = buffer.subarray(0, Math.min(bytesRead, limit)).toString("utf8");
+      const value = buffer.subarray(0, bytesRead).toString("utf8").replace(/�$/, "");
       return bytesRead > limit || metadata.size > limit
-        ? `${value}\n\n(Summary truncated.)`
+        ? truncateUtf8(value, limit, "\n\n(Summary truncated.)")
         : value;
     } finally {
       await handle.close();
@@ -141,11 +141,20 @@ export function formatTestComment(
       ]
     : lines;
   const log = selected.join("\n").slice(0, 24_000).replaceAll("```", "`\u200b``");
-  const summary = truncateUtf8(rawSummary, 16_000).replaceAll("```", "`\u200b``");
+  const summary = truncateUtf8(rawSummary, 16_000, "\n\n(Summary truncated.)").replaceAll(
+    "```",
+    "`\u200b``",
+  );
   return `Automated testing ${exitCode === 0 ? "succeeded" : "failed"}.\n\nFull logs: ${runUrl}\n\n<details><summary>Logs</summary>\n\n\`\`\`\n${log}\n\`\`\`\n\n</details>${summary ? `\n\n<details><summary>Test summary</summary>\n\n${summary}\n\n</details>` : ""}`;
 }
 
-function truncateUtf8(value: string, limit: number): string {
+function truncateUtf8(value: string, limit: number, marker = ""): string {
   const bytes = Buffer.from(value);
-  return bytes.length <= limit ? value : bytes.subarray(0, limit).toString("utf8");
+  if (bytes.length <= limit) return value;
+  const target = limit - Buffer.byteLength(marker);
+  let end = target;
+  let result = bytes.subarray(0, end).toString("utf8");
+  while (Buffer.byteLength(result) > target || result.endsWith("�"))
+    result = bytes.subarray(0, --end).toString("utf8");
+  return `${result}${marker}`;
 }

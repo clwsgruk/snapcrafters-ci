@@ -290,4 +290,19 @@ describe("trusted test runner", () => {
     expect(result.commentBody).toContain("Logs truncated");
     expect(result.commentBody).not.toContain("line 1 ```");
   });
+
+  test("bounds an oversized multibyte step summary without failing the test result", async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "tests-unicode-summary-"));
+    const result = await runTests(
+      {
+        cwd,
+        script: "for _ in {1..9000}; do printf 'é' >> \"$GITHUB_STEP_SUMMARY\"; done",
+        runUrl: "https://github.test/run",
+      },
+      { comment: async () => undefined },
+    );
+    expect(result.exitCode).toBe(0);
+    expect(result.commentBody).toContain("Summary truncated");
+    expect(Buffer.byteLength(result.commentBody)).toBeLessThan(20_000);
+  });
 });
