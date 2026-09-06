@@ -8,8 +8,8 @@ Commands in this file were run from `/home/jon/snapcrafters-ci-reimplementation`
 - `gh auth status` — PASS, authenticated as `clwsgruk`.
 - `gh api 'orgs/snapcrafters/repos?per_page=100&type=public' --paginate --jq ...` — PASS,
   118 repositories across all pages.
-- GitHub code search plus one immutable recursive-tree and blob read per active repository —
-  PASS, 32 non-archived repositories, 35 recipe blobs.
+- Immutable recursive-tree and blob reads for every active repository — PASS, all 87
+  non-archived/non-disabled repositories checked and 80 recipe blobs captured.
 
 ## Phase 1 — Freeze interfaces
 
@@ -45,3 +45,14 @@ mutable sibling references, and public metadata drift.
 - `mise run test:contract -- inventory` — GREEN: 2 files, 2 tests; all 87 repositories and all
   80 exact source blobs verified, with every observed declared schema normalized and all 14 omitted
   declarations rejected in `get-architectures` policy.
+
+## Phase 3 — Manifest collection
+
+- `mise run test:unit -- manifests` — RED: 3 behavioral failures proved that a wrong snap,
+  duplicate architecture record, and missing expected architecture were accepted. Four archive
+  safety cases already rejected correctly. An earlier run failed in the test ZIP encoder itself
+  and is not counted as behavioral RED evidence.
+- `mise run test:unit -- manifests` — GREEN: 8 files, 30 tests; pagination, immutable legacy
+  filenames, snap/architecture/revision binding, expired artifacts, duplicate records and
+  destinations, traversal/absolute paths, symlinks, and archive limits passed.
+- `mise run test:contract` — GREEN: 2 files, 2 tests.
