@@ -140,3 +140,12 @@ mutable sibling references, and public metadata drift.
   wrappers, admitted only the five approved SHA-pinned external actions, mapped wrapper input
   environments, and executed every wrapper-owned bundle step from a disposable external checkout;
   release-to-candidate exercised both its publish and tag bundle invocations.
+
+## Intentionally unrun external acceptance
+
+No Launchpad remote build, Snap Store upload/release/promotion, GitHub issue/comment/tag/ref write,
+or KVM/ghvmctl desktop session was triggered. This is deliberate under the no-external-writes
+boundary and supersedes the plan's sandbox/canary definition-of-done for this local child. The
+manual integration and release workflows require protected environments and are not reachable from
+untrusted pull requests. The parent will independently inspect and push; this child did not push or
+create a pull request.

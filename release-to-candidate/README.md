@@ -3,6 +3,11 @@
 This action is used to run `snapcraft remote-build` for a given Snap, and a given architecture.
 Following that, the snap is released to the specified channel automatically.
 
+Each architecture job builds from fresh nested-project staging and reconciles one Snapcraft upload
+against before/after Store readback using name, version, architecture, and artifact digest. Adopted
+versions come from built snap metadata. Known publication is recorded before manifest/tag work;
+upload itself is never blindly retried.
+
 ## Usage
 
 ```yaml
@@ -11,9 +16,12 @@ jobs:
   release:
     name: 🚢 Release to latest/candidate
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.repository }}-latest-candidate
+      cancel-in-progress: false
     steps:
       - name: 🚢 Release to latest/candidate
-        uses: snapcrafters/ci/release-to-candidate@main
+        uses: snapcrafters/ci/release-to-candidate@<immutable-commit-sha>
         with:
           architecture: arm64
           launchpad-token: ${{ secrets.LAUNCHPAD_TOKEN }}

@@ -7,6 +7,8 @@ maintained.
 If you need to specify plug or slot declarations per the [review-tools] README, you can pass them
 using the `plugs` and `slots` inputs.
 
+Inputs are passed as process arguments and are never interpolated into executable source.
+
 ## Usage
 
 ```yaml
@@ -16,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Review the built snap
-        uses: snapcrafters/ci/review-snap@main
+        uses: snapcrafters/ci/review-snap@<immutable-commit-sha>
         with:
           snap: my-snap.snap
 ```

@@ -1,0 +1,55 @@
+name: Release action suite
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Semantic version tag to create (for example v2.0.0)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: snapcrafters-ci-action-suite-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    environment: snapcrafters-ci-release
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout complete history
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+      - name: Install mise
+        uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
+        with:
+          install: false
+          cache: false
+      - name: Install pinned tools and dependencies
+        run: |
+          mise install
+          mise run install
+      - name: Verify release contents
+        run: mise run ci
+      - name: Create immutable release tag
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "version must be an exact semantic version" >&2
+            exit 1
+          fi
+          git fetch --tags --force
+          if git rev-parse --verify --quiet "refs/tags/$VERSION"; then
+            echo "tag already exists: $VERSION" >&2
+            exit 1
+          fi
+          git -c user.name='Snapcrafters Bot' \
+            -c user.email='snapforge.team@gmail.com' \
+            tag -a "$VERSION" -m "Snapcrafters CI $VERSION"
+          git push origin "refs/tags/$VERSION"

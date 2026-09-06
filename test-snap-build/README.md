@@ -4,6 +4,9 @@ Designed to be a quick "smoke test" that doesn't require any special credentials
 action tries to build the snap "locally" on the Github Actions runner for `amd64` only. Once the
 snap is built, it is reviewed using [review-tools].
 
+This is the secret-free PR path. Pin this action and its external checkout/build dependencies to
+immutable commit SHAs.
+
 Information about your snap will be automatically parsed for the review stage. If you need to
 specify plug or slot declarations per the [snapcraft-review-tools] README, you can include any of
 the following files in your repository, which will be passed to the review action:
@@ -27,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 🧪 Build snap on amd64
-        uses: snapcrafters/ci/test-snap-build@main
+        uses: snapcrafters/ci/test-snap-build@<immutable-commit-sha>
 ```
 
 ## API

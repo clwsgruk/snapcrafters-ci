@@ -7,6 +7,9 @@ on Github Actions runners is also included in this repository. It has three majo
 - Install and initialise LXD
 - Install and configure `ghvmctl`
 
+Pin this action to an immutable commit SHA; setup-node and setup-LXD are SHA-pinned inside its
+composite wrapper as well.
+
 ## Usage
 
 ```yaml
@@ -15,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Setup ghvmctl
-        uses: snapcrafters/ci/setup-ghvmctl@main
+        uses: snapcrafters/ci/setup-ghvmctl@<immutable-commit-sha>
 
       - name: Prepare test environment
         run: |

@@ -3,6 +3,9 @@
 Automatically creates a templated call for testing as a Github issue, containing the details of
 newly released revisions and instructions on how to test and promote them.
 
+The template is bundled with the pinned action. The legacy `ci-repo` default is preserved, but a
+custom override is rejected; test forks by pinning the forked action itself to an immutable SHA.
+
 ## Usage
 
 ### Use in combination with `snapcrafters/ci/release-to-candidate`
@@ -18,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 🚢 Release to latest/candidate
-        uses: snapcrafters/ci/release-to-candidate@main
+        uses: snapcrafters/ci/release-to-candidate@<immutable-commit-sha>
         with:
           architecture: arm64
           launchpad-token: ${{ secrets.LAUNCHPAD_TOKEN }}
@@ -30,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 📣 Create call for testing
-        uses: snapcrafters/ci/call-for-testing@main
+        uses: snapcrafters/ci/call-for-testing@<immutable-commit-sha>
         with:
           architectures: "amd64 arm64"
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -49,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 📣 Create call for testing
-        uses: snapcrafters/ci/call-for-testing@main
+        uses: snapcrafters/ci/call-for-testing@<immutable-commit-sha>
         with:
           architectures: "amd64 arm64"
           github-token: ${{ secrets.GITHUB_TOKEN }}

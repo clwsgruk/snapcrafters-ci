@@ -5,6 +5,9 @@ desktop, and the most recent active window after the snap was launched. Screensh
 committed to [ci-screenshots](https://github.com/snapcrafters/ci-screenshots), and added to a comment on
 the original call for testing issue.
 
+Both images are written by one non-force Git commit and returned URLs name that immutable commit.
+The issue token and screenshot-repository token are isolated. Comment retries never repeat upload.
+
 ## Usage
 
 ```yaml
@@ -16,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 📸 Gather screenshots
-        uses: snapcrafters/ci/get-screenshots@main
+        uses: snapcrafters/ci/get-screenshots@<immutable-commit-sha>
         with:
           issue-number: ${{ needs.call-for-testing.outputs.issue-number }}
           github-token: ${{ secrets.GITHUB_TOKEN }}

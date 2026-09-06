@@ -1,6 +1,8 @@
 # snapcrafters/ci/parse-snapcraft-yaml
 
-This action is more for use internally than otherwise. It's purpose is to either find a snapcraft.yaml file from a list of known common locations in a repository, or take the path to a snapcraft.yaml, then parse some information from it and provide that information as outputs. This action **will not** checkout the source code, and expects that to have already happened.
+This action is more for internal use. It locates a snapcraft YAML file in known locations, parses
+its public outputs, and does not check out source. Public paths retain legacy relative formatting;
+internal file operations use resolved paths.
 
 You only need to specify the `snapcraft-project-root` input if your `snapcraft.yaml` is not in one of the following locations:
 
@@ -27,7 +29,7 @@ jobs:
     steps:
       - name: Find and parse snapcraft.yaml
         id: snapcraft-yaml
-        uses: snapcrafters/ci/parse-snapcraft-yaml@main
+        uses: snapcrafters/ci/parse-snapcraft-yaml@<immutable-commit-sha>
 ```
 
 ## API
@@ -47,6 +49,6 @@ jobs:
 | `plugs-file`   | The location of a plugs declaration file to be used during review, if one was found              | `./plugs-declaration.json` |
 | `project-root` | The root of the snapcraft project, where the `snapcraft` command would usually be executed from. | `./ffmpeg-2204-sdk`        |
 | `slots-file`   | The location of a slots declaration file to be used during review, if one was found              | `./slots-declaration.json` |
-| `snap_name`    | The name of the snap as declared in the snapcraft.yaml                                           | `signal-desktop`           |
+| `snap-name`    | The name of the snap as declared in the snapcraft.yaml                                           | `signal-desktop`           |
 | `version`      | The version declared in the snapcraft.yaml file                                                  | `6.41.0`                   |
-| `yaml_path`    | The path to the snapcraft.yaml for the project                                                   | `snap/snapcraft.yaml`      |
+| `yaml-path`    | The path to the snapcraft.yaml for the project                                                   | `snap/snapcraft.yaml`      |

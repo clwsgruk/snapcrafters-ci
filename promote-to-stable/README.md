@@ -4,6 +4,10 @@ Promote to stable is generally triggered in response to a Snapcrafters reviewer 
 containing a `/promote` command. Once the arguments are successfully parsed, the specified
 revisions are promoted to the specified channel (`latest/stable`) by default.
 
+The exact command grammar, event, permission, configured channel, and complete requested revision
+set are validated before the first Store write. Releases are sequential; partial success is
+reported precisely, and `done` closes only after every release and report succeeds.
+
 ## Usage
 
 ```yaml
@@ -18,7 +22,7 @@ jobs:
       && contains(github.event.*.labels.*.name, 'testing')
     steps:
       - name: ⬆️ Promote to stable
-        uses: snapcrafters/ci/promote-to-stable@main
+        uses: snapcrafters/ci/promote-to-stable@<immutable-commit-sha>
         with:
           store-token: ${{ secrets.SNAP_STORE_STABLE }}
 ```

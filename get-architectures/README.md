@@ -3,6 +3,9 @@
 Parses a `snapcraft.yaml` and returns the list of architectures supported both as a JSON array, and
 a space-separated string.
 
+The action supports the architecture/platform forms captured in the immutable active-recipe
+inventory. A recipe omitting both fields, or using an unknown/ambiguous form, fails in this action.
+
 ## Usage
 
 ```yaml
@@ -17,7 +20,7 @@ jobs:
     steps:
       - name: 🖥 Get snap architectures
         id: get-architectures
-        uses: snapcrafters/ci/get-architectures@main
+        uses: snapcrafters/ci/get-architectures@<immutable-commit-sha>
 ```
 
 ## API

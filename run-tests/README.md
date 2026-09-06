@@ -1,6 +1,10 @@
 # snapcrafters/ci/run-tests
 
-Runs tests on a snap deployed from a specified channel and logs the result to the provided issue. If the given test command writes any markdown to the file in the environment variable `$GITHUB_STEP_SUMMARY`, that will be included in the resulting comment. See [the GitHub workflows documentation](https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#adding-a-job-summary) for more info.
+Runs tests on a snap deployed from a specified channel and logs the result to the provided issue.
+`test-script` is intentionally trusted Bash. It is written unchanged to a private temporary file
+and run with `bash --noprofile --norc -e -o pipefail`; both streams and the complete multiline
+status are captured in a bounded private log. Missing or empty summaries are no-ops, and
+summary/comment failures do not replace the test result.
 
 ## Usage
 
@@ -13,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 🗒️ Run tests
-        uses: snapcrafters/ci/run-tests@main
+        uses: snapcrafters/ci/run-tests@<immutable-commit-sha>
         with:
           issue-number: ${{ needs.call-for-testing.outputs.issue-number }}
           github-token: ${{ secrets.GITHUB_TOKEN }}

@@ -4,6 +4,10 @@ Takes an `update-script` input which should be a script that automatically check
 updates to the upstream application, and modifies the `snapcraft.yaml` as appropriate. This action
 takes care of identifying and committing those changes.
 
+`update-script` is intentionally trusted Bash. Tracked modifications and deletions are committed;
+any untracked path is listed and fails before commit. The action never uses `git add -A`, and Git
+identity is set only for its local commit command.
+
 ## Usage
 
 ```yaml
@@ -13,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 🔄 Sync version with upstream
-        uses: snapcrafters/ci/sync-version@main
+        uses: snapcrafters/ci/sync-version@<immutable-commit-sha>
         with:
           token: ${{ secrets.TOKEN }}
           update-script: |
