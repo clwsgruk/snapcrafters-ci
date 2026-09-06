@@ -93,7 +93,7 @@ describe("manifest collection", () => {
 
   test.each([
     ["wrong snap", "name: other\narchitecture: amd64\nrevision: 10\n", /snap/i],
-    ["duplicate revision record", amd64, /duplicate/i],
+    ["duplicate revision record", amd64, /duplicate|single/i],
   ])("rejects %s before writing any destination", async (kind, second, error) => {
     const destination = await mkdtemp(join(tmpdir(), "manifests-"));
     const entries =
@@ -133,6 +133,20 @@ describe("manifest collection", () => {
         { snap: "demo", architectures: ["arm64"] },
       ),
     ).rejects.toThrow(/expired/i);
+  });
+
+  test("rejects an artifact whose label does not match its manifest entry", async () => {
+    const destination = await mkdtemp(join(tmpdir(), "manifests-"));
+    await expect(
+      collectManifests(
+        api(
+          [[{ id: 1, name: "manifest-arm64", expired: false }]],
+          new Map([[1, zip([{ name: "manifest-amd64.yaml", contents: amd64 }])]]),
+        ),
+        destination,
+      ),
+    ).rejects.toThrow(/artifact.*architecture|label/i);
+    expect(await readdir(destination)).toEqual([]);
   });
 
   test("permits an explicitly empty artifact set for Store fallback only", async () => {

@@ -26,6 +26,7 @@ export function manifestGitHub(
   repository: string,
   runId: string,
   signal: AbortSignal = new AbortController().signal,
+  options: { fetcher?: typeof fetch; apiBase?: string } = {},
 ): ManifestGitHub {
   const [owner, repo] = repository.split("/") as [string, string];
   const client = getOctokit(token);
@@ -51,18 +52,50 @@ export function manifestGitHub(
       };
     },
     async downloadArtifact(id) {
-      const response = await readRequest(signal, 60_000, (requestSignal) =>
-        client.rest.actions.downloadArtifact({
-          owner,
-          repo,
-          artifact_id: id,
-          archive_format: "zip",
-          request: { signal: requestSignal },
-        }),
-      );
-      return Buffer.from(response.data as ArrayBuffer);
+      return readRequest(signal, 60_000, async (requestSignal) => {
+        const response = await (options.fetcher ?? fetch)(
+          `${options.apiBase ?? "https://api.github.com"}/repos/${owner}/${repo}/actions/artifacts/${id}/zip`,
+          {
+            headers: {
+              accept: "application/vnd.github+json",
+              authorization: `Bearer ${token}`,
+              "user-agent": "snapcrafters-ci",
+              "x-github-api-version": "2022-11-28",
+            },
+            redirect: "follow",
+            signal: requestSignal,
+          },
+        );
+        if (!response.ok)
+          throw Object.assign(new Error(`Artifact download failed (${response.status})`), {
+            status: response.status,
+          });
+        return readBoundedResponse(response, 5 * 1024 * 1024);
+      });
     },
   };
+}
+
+async function readBoundedResponse(response: Response, limit: number): Promise<Buffer> {
+  const declared = response.headers.get("content-length");
+  if (declared && (!/^[0-9]+$/.test(declared) || Number(declared) > limit))
+    throw new Error("Artifact response exceeds size limit");
+  if (!response.body) return Buffer.alloc(0);
+  const reader = response.body.getReader();
+  const chunks: Buffer[] = [];
+  let size = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > limit) throw new Error("Artifact response exceeds size limit");
+      chunks.push(Buffer.from(value));
+    }
+    return Buffer.concat(chunks, size);
+  } finally {
+    await reader.cancel().catch(() => undefined);
+  }
 }
 
 export function issueCommenter(

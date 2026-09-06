@@ -40,13 +40,20 @@ export async function collectManifests(
   let archiveBytes = 0;
   for (const artifact of artifacts) {
     if (artifact.expired) throw new InputError(`Manifest artifact ${artifact.name} is expired`);
+    const artifactMatch = /^manifest-(amd64|arm64|armhf|i386|ppc64el|riscv64|s390x)$/.exec(
+      artifact.name,
+    );
+    if (!artifactMatch) throw new InputError(`Invalid manifest artifact label: ${artifact.name}`);
     const archive = await api.downloadArtifact(artifact.id);
     archiveBytes += archive.length;
     if (archive.length > 5 * 1024 * 1024)
       throw new InputError("Manifest archive exceeds size limit");
     if (archiveBytes > 25 * 1024 * 1024)
       throw new InputError("Combined manifest archives exceed size limit");
-    for (const entry of await unzipEntries(archive)) {
+    const entries = await unzipEntries(archive);
+    if (entries.length !== 1 || entries[0]!.name !== `${artifact.name}.yaml`)
+      throw new InputError("Manifest artifact label does not match its single archive entry");
+    for (const entry of entries) {
       validateArchiveEntry(entry.name, entry.data.length, 64 * 1024);
       const filename = basename(entry.name);
       if (destinations.has(filename))
@@ -54,6 +61,8 @@ export async function collectManifests(
       destinations.add(filename);
       const text = entry.data.toString("utf8");
       const manifest = decodeManifest(text, filename);
+      if (manifest.architecture !== artifactMatch[1])
+        throw new InputError("Manifest artifact architecture does not match its label");
       if (expected && manifest.name !== expected.snap)
         throw new InputError(`Manifest snap ${manifest.name} does not match ${expected.snap}`);
       if (manifests.some((item) => item.architecture === manifest.architecture))

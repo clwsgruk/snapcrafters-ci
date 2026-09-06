@@ -75,6 +75,12 @@ mutable sibling references, and public metadata drift.
 
 ## Phase 3 — Manifest collection
 
+- `mise run test:unit -- manifests` — RED: `manifest-arm64` containing
+  `manifest-amd64.yaml` was accepted. GREEN with `github`: 14 files, 86 tests; an artifact has one
+  exact label-matching YAML entry and manifest architecture. `mise run test:integration -- http`
+  GREEN: 5 files, 28 tests, including authenticated streaming artifact downloads rejected from
+  Content-Length or accumulated bytes before an oversized ArrayBuffer allocation.
+
 - `mise run test:unit -- manifests` — RED: 3 behavioral failures proved that a wrong snap,
   duplicate architecture record, and missing expected architecture were accepted. Four archive
   safety cases already rejected correctly. An earlier run failed in the test ZIP encoder itself

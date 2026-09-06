@@ -2,14 +2,31 @@ import { createServer } from "node:http";
 import { once } from "node:events";
 import { afterAll, beforeAll, expect, test } from "vite-plus/test";
 import { retryRequest, withDeadline } from "../../src/runtime/retry.js";
+import { manifestGitHub } from "../../src/runtime/github.js";
 
 let origin = "";
 let rateRequests = 0;
 let server: ReturnType<typeof createServer>;
+let artifactAuthorization = "";
 
 beforeAll(async () => {
   server = createServer((request, response) => {
     const url = new URL(request.url ?? "/", "http://local.test");
+    const artifact = /\/artifacts\/(\d+)\/zip$/.exec(url.pathname);
+    if (artifact) {
+      artifactAuthorization = request.headers.authorization ?? "";
+      if (artifact[1] === "2") {
+        response.writeHead(200, { "content-length": String(6 * 1024 * 1024) }).end();
+        return;
+      }
+      if (artifact[1] === "3") {
+        response.writeHead(200);
+        response.end(Buffer.alloc(5 * 1024 * 1024 + 1));
+        return;
+      }
+      response.writeHead(200, { "content-length": "3" }).end("zip");
+      return;
+    }
     if (url.pathname === "/rate" && rateRequests++ === 0) {
       response.writeHead(429, { "retry-after": "0" }).end("rate limited");
       return;
@@ -33,6 +50,16 @@ beforeAll(async () => {
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("Missing local HTTP address");
   origin = `http://127.0.0.1:${address.port}`;
+});
+
+test("streams artifact downloads with authorization and pre-allocation limits", async () => {
+  const api = manifestGitHub("artifact-token", "owner/repo", "1", new AbortController().signal, {
+    apiBase: origin,
+  });
+  await expect(api.downloadArtifact(1)).resolves.toEqual(Buffer.from("zip"));
+  expect(artifactAuthorization).toBe("Bearer artifact-token");
+  await expect(api.downloadArtifact(2)).rejects.toThrow(/size limit/i);
+  await expect(api.downloadArtifact(3)).rejects.toThrow(/size limit/i);
 });
 
 afterAll(() => server.close());
