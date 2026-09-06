@@ -1,0 +1,86 @@
+name: mattermost-desktop
+title: Mattermost Desktop
+license: MIT
+version: 6.3.0
+base: core24
+summary: A secure, flexible platform build for the new era of collaboration
+description: |
+  Mattermost is secure workplace messaging from behind your firewall.
+
+  - Discuss topics in private groups, one-to-one or team-wide
+  - Easily share and view image files
+  - Connect in-house systems with webhooks and Slack-compatible integrations
+
+  For technical and operations teams who execute high-stakes, collaborative workflows,
+  Mattermost provides integrated team messaging, audio and screen share, workflow automation
+  and project management. Governments, banks and tech giants use our secure collaboration platform
+  to reduce risk and error rates while accelerating technical productivity.
+
+  To use this app, you need a URL for a Mattermost server.
+
+  This snap is maintained by the Snapcrafters community, and is not necessarily endorsed or
+  officially maintained by the upstream developers.
+website: https://mattermost.com/
+contact: https://github.com/snapcrafters/mattermost-desktop/issues
+issues: https://github.com/snapcrafters/mattermost-desktop/issues
+source-code: https://github.com//snapcrafters/mattermost-desktop
+icon: snap/gui/mattermost-desktop.png
+
+grade: stable
+confinement: strict
+compression: lzo
+
+platforms:
+  amd64:
+  arm64:
+
+parts:
+  mattermost-desktop:
+    plugin: dump
+    source: https://releases.mattermost.com/desktop/${SNAPCRAFT_PROJECT_VERSION}/mattermost-desktop_${SNAPCRAFT_PROJECT_VERSION}-1_${CRAFT_ARCH_BUILD_ON}.deb
+    source-type: deb
+    override-build: |
+      craftctl default
+      sed -i 's|Icon=mattermost-desktop|Icon=/usr/share/icons/hicolor/256x256/apps/mattermost-desktop.png|' ${CRAFT_PART_INSTALL}/usr/share/applications/mattermost-desktop.desktop
+    stage-packages:
+      # Needed for the fix-hardware-accel-with-no-renderer script
+      - mesa-utils
+      - jq
+    prime:
+      - -opt/Mattermost/chrome-sandbox
+
+  local-parts:
+    plugin: dump
+    source: snap/local
+    source-type: local
+
+apps:
+  mattermost-desktop:
+    extensions: [gnome]
+    command-chain:
+      - opt/Mattermost/fix-default-download-dir
+      - opt/Mattermost/fix-hardware-accel-with-no-renderer
+    command: launcher.sh
+    desktop: usr/share/applications/mattermost-desktop.desktop
+    environment:
+      # Correct the TMPDIR path for Chromium Framework/Electron to
+      # ensure libappindicator has readable resources
+      TMPDIR: $XDG_RUNTIME_DIR
+    plugs:
+      - shmem
+      - home
+      - login-session-observe
+      - network
+      - network-bind
+      - pulseaudio
+      - audio-playback
+      - audio-record
+      - removable-media
+      - screen-inhibit-control
+      - unity7
+      - camera
+
+plugs:
+  shmem:
+    interface: shared-memory
+    private: true

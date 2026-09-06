@@ -1,0 +1,163 @@
+name: signal-desktop
+title: Signal Desktop
+summary: Speak Freely - Private Messenger
+description: |
+  **Note: To use the Signal desktop app, you must first install Signal on your phone.**
+
+  Millions of people use Signal every day for free and instantaneous communication anywhere in the world. Send and receive high-fidelity messages, participate in HD voice/video calls, and explore a growing set of new features that help you stay connected. Signal's advanced privacy-preserving technology is always enabled, so you can focus on sharing the moments that matter with the people who matter to you.
+
+  - Say anything - State-of-the-art end-to-end encryption (powered by the open source Signal Protocol™) keeps your conversations secure. Privacy isn't an optional mode; it's just the way that Signal works. Every message, every call, every time.
+  - Go fast - Messages are delivered quickly and reliably, even on slow networks. Signal is optimized to operate in the most constrained environment possible.
+  - Feel free - Signal is a completely independent 501c3 nonprofit. Development is supported by users like you. No advertisements. No trackers. No kidding.
+  - Be yourself - You can use your existing phone number and address book to securely communicate with your friends.
+  - Speak up - Whether they live across town or across the ocean, Signal's enhanced audio and video quality will make your friends and family feel closer.
+  - Whisper in the shadows - Switch to the dark theme if you refuse to see the light.
+
+  **Minimize to tray**
+
+  Per the request of the Signal developers, this snap does not use the system tray by default because that support is not stable. Signal will stop when you close it and will not have a system tray icon. You can enable it by running the following command.
+
+      snap set signal-desktop tray-icon=true
+
+
+  **Are you having issues?**
+
+  Let us know by creating a new issue here: https://github.com/snapcrafters/signal-desktop/issues
+
+  **Authors**
+
+  This snap is maintained by the Snapcrafters community, and is not necessarily endorsed or officially maintained by the upstream developers.
+website: https://signal.org/
+contact: https://github.com/snapcrafters/signal-desktop/issues
+issues: https://github.com/snapcrafters/signal-desktop/issues
+source-code: https://github.com/snapcrafters/signal-desktop
+license: AGPL-3.0-only
+icon: snap/gui/signal-desktop.png
+version: 8.26.0
+
+base: core24
+grade: stable
+confinement: strict
+compression: lzo
+
+platforms:
+  amd64:
+  arm64:
+
+parts:
+  node-runtime:
+    plugin: nil
+    build-packages:
+      - curl
+    override-build: |
+      # Install pnpm in a dedicated part so Signal's workspace hooks are not
+      # loaded while bootstrapping pnpm itself.
+      export PNPM_HOME="${CRAFT_PART_INSTALL}/pnpm"
+      export PATH="$PNPM_HOME/bin:$PNPM_HOME:$PATH"
+      curl -fsSL https://get.pnpm.io/install.sh -o /tmp/install-pnpm.sh
+      (cd /tmp && env SHELL=bash sh /tmp/install-pnpm.sh)
+    prime:
+      - -*
+
+  signal-desktop:
+    after:
+      - node-runtime
+    plugin: dump
+    source: https://github.com/signalapp/Signal-Desktop
+    source-type: git
+    source-tag: v$SNAPCRAFT_PROJECT_VERSION
+    build-packages:
+      - jq
+      - python3
+    build-environment:
+      - SIGNAL_ENV: "production"
+      - ELECTRON_GET_USE_PROXY: "1"
+    override-build: |
+      export PNPM_HOME="${CRAFT_STAGE}/pnpm"
+      export PATH="$PNPM_HOME/bin:$PNPM_HOME:$PATH"
+      PNPM_VERSION="$(jq -r '.packageManager // empty' package.json | sed 's/pnpm@//')"
+      # Run outside Signal's workspace so pnpm updates the installed CLI rather
+      # than handling the workspace's packageManager declaration.
+      (cd /tmp && pnpm self-update "${PNPM_VERSION}")
+      hash -r
+      ACTUAL_PNPM_VERSION="$(cd /tmp && pnpm --version)"
+      if [ "${ACTUAL_PNPM_VERSION}" != "${PNPM_VERSION}" ]; then
+        echo "ERROR: Expected pnpm ${PNPM_VERSION}, got ${ACTUAL_PNPM_VERSION}" >&2
+        exit 1
+      fi
+      # The required version is installed and verified above. Fail rather than
+      # downloading another pnpm if a nested invocation finds a mismatch.
+      export pnpm_config_pm_on_fail=error
+      pnpm env use --global "$(jq -r .engines.node package.json)"
+      # Global installs must run outside Signal's workspace. Otherwise pnpm
+      # loads .pnpmfile.mjs, whose nested `pnpm config` call resolves the
+      # managed pnpm binary from the registry during each global install.
+      (cd /tmp && pnpm add --global npm)
+
+      # Add a patch that fixes the rendering of images on arm64 builds.
+      # See: https://github.com/snapcrafters/signal-desktop/issues/279#issuecomment-2372021170
+      cp "$CRAFT_PROJECT_DIR"/snap/patches/* patches/
+
+      # pnpm 11 only reads patchedDependencies from pnpm-workspace.yaml. Merge
+      # our patch into Signal's existing block before any workspace install.
+      node "$CRAFT_PROJECT_DIR/snap/scripts/add-pnpm-patch.mjs"
+
+      # Apply source patches.
+      patch -p1 < patches/production-desktop-name.patch
+
+      # Ensure node-gyp is available for native addon builds (installed via
+      # pnpm so that it lands in $PNPM_HOME, which is already on PATH).
+      (cd /tmp && pnpm add -g node-gyp)
+
+      # Install dependencies for the complete workspace.
+      pnpm install --no-frozen-lockfile
+
+      # Build the sticker-creator for inclusion in the application.
+      pnpm -C ./sticker-creator/ run build
+
+      # Fail if pnpm silently ignores the fs-extra patch.
+      FS_EXTRA_FILE="$(node -p "require('node:path').join(require('node:path').dirname(require.resolve('fs-extra')), 'ensure/file.js')")"
+      if ! grep -Fq "most likely been created just fine" "$FS_EXTRA_FILE"; then
+        echo "ERROR: fs-extra workaround was not applied to $FS_EXTRA_FILE" >&2
+        exit 1
+      fi
+
+      pnpm run generate
+       
+      # This is the equivalent of 'npm run build-linux' with some adjustments
+      pnpm run build:esbuild:prod
+      pnpm run build:electron --config.directories.output=release --dir
+
+      # Stage the built release. Directory is called 'linux-unpacked' for amd64,
+      # and 'linux-arm64-unpacked' for arm64.
+      mkdir -p "${CRAFT_PART_INSTALL}/opt"
+      mv release/linux-*unpacked "${CRAFT_PART_INSTALL}/opt/Signal"
+    stage-packages:
+      - libnss3
+      - libnss-sss
+    prime:
+      - -opt/Signal/chrome-sandbox
+      - -opt/Signal/resources/app.asar.unpacked/node_modules/sharp/vendor/lib
+      - -opt/Signal/resources/app.asar.unpacked/node_modules/sharp/vendor/include
+
+  local-parts:
+    plugin: dump
+    source: ./snap/local
+    source-type: local
+
+apps:
+  signal-desktop:
+    extensions: [gnome]
+    command: usr/bin/signal-desktop-wrapper
+    plugs:
+      - browser-support
+      - camera
+      - home
+      - network
+      - audio-playback
+      - audio-record
+      - removable-media
+      - unity7
+      - screen-inhibit-control
+    environment:
+      TMPDIR: $XDG_RUNTIME_DIR

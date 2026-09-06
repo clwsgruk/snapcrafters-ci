@@ -1,0 +1,40 @@
+name: tcpie
+summary: CLI tool to ping any TCP port
+description: |
+  tcpie is a tool to measure latency and verify the reliabilty of a TCP connection.
+adopt-info: tcpie
+base: core18
+
+grade: stable
+confinement: strict
+
+architectures:
+  - build-on: amd64
+  - build-on: armhf
+  - build-on: arm64
+  - build-on: s390x
+  - build-on: ppc64el
+
+apps:
+  tcpie:
+    command: tcpie
+    plugs: [network]
+
+parts:
+  tcpie:
+    plugin: nodejs
+    source: https://github.com/silverwind/tcpie.git
+    nodejs-version: "12.18.3"
+    build-packages:
+     - curl
+    override-pull: |
+      snapcraftctl pull
+      last_committed_tag="$(curl --silent 'https://api.github.com/repos/silverwind/tcpie/releases/latest' | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')"
+      last_released_tag="$(snap info tcpie | awk '$1 == "latest/beta:" { print $2 }')"
+      # If the latest tag from the upstream project has not been released to
+      # beta, build that tag instead of master.
+      if [ "${last_committed_tag}" != "${last_released_tag}" ]; then
+        git fetch
+        git checkout "${last_committed_tag}"
+      fi
+      snapcraftctl set-version "$(git describe --tags | tr -d 'v')"

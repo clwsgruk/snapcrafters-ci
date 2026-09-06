@@ -1,0 +1,75 @@
+name: protonmail-bridge
+icon: snap/gui/protonmail-bridge.svg
+title: Proton Mail Bridge
+summary: Proton Mail Bridge application
+version: 3.25.0
+license: GPL-3.0-only
+description: |
+  NOTE: This is a wrapper of the official package, but it is not verified,
+  affiliated with, or supported by Proton AG.
+
+  You need to have a keychain in order to run the Proton Mail Bridge. To allow
+  access to the keychain, you have to manually connect the
+  `password-manager-service` plug. See more information about this interface
+  here: https://snapcraft.io/docs/password-manager-service-interface.
+
+  `sudo snap connect protonmail-bridge:password-manager-service`
+
+  Proton Mail Bridge is a desktop application that runs in the background,
+  encrypting and decrypting messages as they enter and leave your computer.
+
+website: https://proton.me/mail/bridge
+contact: https://github.com/pedro-avalos/protonmail-bridge-snap/issues
+issues: https://github.com/pedro-avalos/protonmail-bridge-snap/issues
+source-code: https://github.com/ProtonMail/proton-bridge
+
+base: core24
+grade: stable
+confinement: strict
+compression: lzo
+
+platforms:
+  amd64:
+
+apps:
+  protonmail-bridge:
+    command: usr/bin/protonmail-bridge
+    desktop: usr/share/applications/protonmail-bridge.desktop
+    common-id: ch.protonmail.protonmail-bridge
+    extensions: [kde-neon-6]
+    plugs:
+      - gsettings
+      - hardware-observe
+      - home
+      - password-manager-service
+      - process-control
+      - removable-media
+      - system-observe
+
+  cli:
+    command: usr/lib/protonmail/bridge/bridge
+    extensions: [kde-neon-6]
+    plugs:
+      - hardware-observe
+      - home
+      - password-manager-service
+      - process-control
+      - removable-media
+      - system-observe
+
+parts:
+  protonmail-bridge:
+    plugin: dump
+    source: https://proton.me/download/bridge/protonmail-bridge_${SNAPCRAFT_PROJECT_VERSION}-1_amd64.deb
+    source-type: deb
+    stage-packages:
+      - libsecret-1-0
+      - libxcb-icccm4
+      - libxcb-image0
+      - libxcb-keysyms1
+      - libxcb-render-util0
+      - libxcb-shape0
+    override-build: |
+      craftctl default
+      ln -sfn ../lib/protonmail/bridge/proton-bridge \
+        $SNAPCRAFT_PART_INSTALL/usr/bin/protonmail-bridge

@@ -1,0 +1,94 @@
+name: corsixth
+summary: Open source clone of Theme Hospital
+description:
+  CorsixTH aims to re-implement the game engine of Theme Hospital, and be
+  able to load the original game data files. This means that you will need
+  a purchased copy of Theme Hospital, or a copy of the demo, in order to
+  use CorsixTH. After most of the original engine has been re-implemented
+  in open source code, the project will serve as a base from which
+  extensions and improvements to the original game can be made.
+  We use graphics, sound and other data from the original game so one
+  of the following is required
+    Original game CD from eBay etc. or your dusty bookshelf
+    A download from GOG.com or Origin
+  https://github.com/CorsixTH/CorsixTH/wiki/Getting-Started
+adopt-info: corsixth
+base: core24
+
+grade: stable
+confinement: strict
+
+apps:
+  corsixth:
+    extensions: [gnome]
+    command: bin/launch
+    environment:
+      LUA_CPATH: '$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/lua/5.3/?.so;;'
+      LUA_PATH: '$SNAP/usr/share/corsix-th/Lua/?.lua;;'
+      TIMIDITY_CFG: $SNAP/timidity.cfg
+    plugs:
+      - network
+      - network-bind
+      - unity7
+      - opengl
+      - home
+      - pulseaudio
+      - joystick
+
+parts:
+  timidityconfig:
+    plugin: dump
+    source: snap/local
+
+  corsixth:
+    plugin: cmake
+    source: https://github.com/CorsixTH/CorsixTH.git
+    source-tag: v0.69.2
+    source-depth: 1
+    override-pull: |
+      craftctl default
+      craftctl set version="$(git describe --tags --always | tr -d 'v')"
+    build-packages:
+      - build-essential
+      - cmake
+      - doxygen
+      - libavcodec-dev
+      - libavdevice-dev
+      - libavfilter-dev
+      - libavformat-dev
+      - libavutil-dev
+      - libcurl4-openssl-dev
+      - libfreetype6-dev
+      - liblua5.3-0
+      - liblua5.3-dev
+      - libpostproc-dev
+      - libsdl2-dev
+      - libsdl2-mixer-dev
+      - libswresample-dev
+      - libswscale-dev
+      - lua-filesystem-dev
+      - lua-lpeg
+      - pkg-config
+      - timidity
+    stage-packages:
+      - libaom3
+      - libavformat60
+      - libbluray2
+      - libchromaprint1
+      - libcurl4t64
+      - libdav1d7
+      - libdecor-0-0
+      - libfluidsynth3
+      - libgme0
+      - libgsm1
+      - liblua5.3-0
+      - libmodplug1
+      - libmfx1
+      - libopusfile0
+      - libsdl2-2.0-0
+      - libsdl2-mixer-2.0-0
+      - libsodium23
+      - libswscale7
+      - libxss1
+      - lua-filesystem
+      - lua-lpeg

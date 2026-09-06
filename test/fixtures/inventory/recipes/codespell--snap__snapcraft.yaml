@@ -1,0 +1,50 @@
+name: codespell
+version: 2.4.3
+summary: Fix common misspellings in your code
+# noinspection YAMLSchemaValidation
+# https://youtrack.jetbrains.com/issue/PY-58754
+description: |
+  Fix common misspellings in text files.
+  It's designed primarily for checking misspelled words in source code (backslash escapes are skipped), but it can be used with other files as well.
+  It does not check for word membership in a complete dictionary, but instead looks for a set of common misspellings.
+  Therefore it should catch errors like "adn", but it will not catch "adnasdfasdf".
+  This also means it shouldn't generate false-positives when you use a niche term it doesn't know about.
+
+platforms:
+  amd64:
+  arm64:
+  armhf:
+  ppc64el:
+  riscv64:
+  s390x:
+
+confinement: strict
+base: core24
+compression: xz
+contact: https://github.com/lengau/codespell-snap/issues
+issues:
+  - https://github.com/lengau/codespell-snap/issues
+  - https://github.com/codespell-project/codespell/issues
+source-code: https://github.com/codespell-project/codespell
+website: https://github.com/codespell-project/codespell
+
+parts:
+  codespell:
+    plugin: python
+    python-packages:
+      - pip
+      - setuptools
+      - wheel
+      - tomli
+      - chardet
+    source: https://github.com/codespell-project/codespell
+    source-type: git
+    source-tag: v$SNAPCRAFT_PROJECT_VERSION
+    source-depth: 1
+
+apps:
+  codespell:
+    command: bin/codespell
+    plugs:
+      - home
+      - removable-media

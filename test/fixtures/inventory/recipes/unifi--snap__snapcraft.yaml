@@ -1,0 +1,34 @@
+name: unifi
+version: 5.13.29
+summary: Unifi Network controller software.
+description: |
+  Unifi Network controller software.
+base: core18
+confinement: strict
+grade: stable
+architectures:
+ - build-on: arm64
+parts:
+  mongodb:
+    plugin: nil
+    source: https://repo.mongodb.org/apt/ubuntu/dists/xenial/mongodb-org/3.6/multiverse/binary-arm64/mongodb-org-mongos_3.6.22_arm64.deb
+
+  unifi:
+    plugin: dump
+    source-type: deb
+    build-packages:
+      - ca-certificates
+      - ca-certificates-java
+      - openjdk-8-jre-headless
+    override-pull: snapcraftctl pull && rm -f etc/init.d/unifi
+    stage-packages:
+      - openjdk-8-jre-headless
+      - jsvc
+    source: https://dl.ui.com/unifi/6.0.45/unifi_sysvinit_all.deb
+
+apps:
+  unifi:
+    command: $SNAP/usr/lib/unifi/bin/unifi.init start
+    daemon: oneshot
+    plugs: [network,network-bind]
+    stop-command: $SNAP/usr/lib/unifi/bin/unifi.init stop

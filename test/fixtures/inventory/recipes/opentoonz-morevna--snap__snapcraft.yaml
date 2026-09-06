@@ -1,0 +1,196 @@
+name: opentoonz-morevna
+title: OpenToonz (Morevna Edition)
+summary: Free and open-source 2D animation software
+description: |
+  OpenToonz is based on  software “Toonz” which was developed by Digital Video S.p.A. in Italy, customized by Studio Ghibli, and has been used for creating its works for many years.
+
+  In March 2016 its source code was published under the terms of Modified BSD License. The open-source version is called OpenToonz and developed by international community.
+
+  **Features**
+
+  * _Powerful Digital Drawing Tools_: Vector and bitmap drawing tools with full support for graphic tablets allow you to create artwork of any complexity.
+  * _Scan and Cleanup_: Automatically scan and vectorize paper drawings created by animation artists. Clean and paint them in a completely color-consistent digital environment.
+  * _Indexed Colour Palettes_: Sequence of drawings can be painted quickly with automatic tools, and palette colors can be edited at any time, updating automatically all the level drawings.
+  * _Effects and Compositing_: Add animated special effects and composite scenes seamlessly. Blurs, lighting, keys, masks, warps and more than 100 other effects available.
+  * _Scripting_: Automate routine tasks by using ECMA-compatible scripting engine.
+  * _Motion Tracking_: Syncronize your animation with video footage automatically.
+  * _Scan and Cleanup_: Automatically scan and vectorize paper drawings created by animation artists. Clean and paint them in a completely color-consistent digital environment.
+  * _Frame-by-frame Animation_: A complete toolset for traditional frame-by-frame animation with configurable onionskin. Automatic creation of inbetween frames for vector shapes,
+  * _Motion Tweening_: Complex movements can be defined by linking objects or using motion paths, and everything can be also animated in a 3D environment, with an automatic multiplane effect.
+  * _Bones_: Animate your characters using bones, with IK support and mesh deformations.
+  * _Particle Systems_: Create particles effect supporting multiple layers as particles or as control images for particles animation.
+
+  **Morevna Edition**
+
+  This  edition of OpenToonz includes a special features developed by Morevna Project.
+
+  * _Assistant guides_: Create a drawing assistants for perfect drawing of parallel lines, perspective lines and more!
+  * _MyPaint brushes_: Integration with MyPaint brush engine. 45 parameters to configure bitmap brush + many brush templates.
+  * _Horizontal timeline_: Improved UI with comfortable horizontal timeline to control your animation.
+  * _Advanced color selector_: The new color selector panel helps you choose better colors thanks to Color Schemes, Color Harmonies and more!
+
+  This snap is maintained by the Snapcrafters community, and is not necessarily endorsed or officially maintained by the upstream developers.
+license: BSD-3-Clause 
+version: "1.4.0"
+grade: stable
+
+base: core18
+confinement: strict
+compression: lzo
+
+architectures:
+  - build-on: amd64
+  - build-on: i386
+
+apps:
+  opentoonz-morevna:
+    environment:
+      # Fallback to XWayland if running in a Wayland session.
+      DISABLE_WAYLAND: 1
+      HOME: "$SNAP_USER_COMMON"
+      LD_LIBRARY_PATH: "$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/blas:$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/pulseaudio"
+    command: bin/opentoonz
+    command-chain:
+      - bin/desktop-launch
+      - snap/command-chain/ensure-defaults.sh
+    plugs:
+      - desktop
+      - desktop-legacy
+      - x11
+      - unity7
+      - opengl
+      - network
+      - network-manager
+      - home
+      - removable-media
+      - pulseaudio
+  tcleanup:
+    command: bin/tcleanup
+    plugs:
+      - home
+  tcomposer:
+    command: bin/tcomposer
+    plugs:
+      - home
+  tconverter:
+    command: bin/tconverter
+    plugs:
+      - home
+  tfarmcontroller:
+    command: bin/tfarmcontroller
+    plugs:
+      - home
+  tfarmserver:
+    command: bin/tfarmserver
+    plugs:
+      - home
+
+parts:
+  libmypaint:
+    source: https://github.com/mypaint/libmypaint.git
+    source-tag: 'v1.5.1'
+    plugin: autotools
+    build-packages:
+      - build-essential
+      - python2.7
+      - autotools-dev
+      - intltool
+      - gettext
+      - libtool
+      - libjson-c-dev
+      - libgirepository1.0-dev
+      - libglib2.0-dev
+  opentoonz-morevna:
+    after: [libmypaint, desktop-qt5]
+    plugin: make
+    source: https://github.com/morevnaproject/opentoonz.git
+    source-type: git
+    source-tag: 'v1.4.0-morevna'
+    override-build: |
+      cd thirdparty/tiff-4.0.3
+      ./configure --with-pic --disable-jbig
+      make
+      cd ../../
+      mkdir build
+      cd build
+      cmake ../toonz/sources
+      make
+      cp -a bin $SNAPCRAFT_PART_INSTALL/
+      cp -a lib/opentoonz/ $SNAPCRAFT_PART_INSTALL/lib
+      mkdir -p $SNAPCRAFT_PART_INSTALL/share/opentoonz
+      cp -a ../stuff $SNAPCRAFT_PART_INSTALL/share/opentoonz
+    build-packages:
+      - build-essential
+      - cmake
+      - pkg-config
+      - libboost-all-dev
+      - qt5-default
+      - qtbase5-dev
+      - libqt5svg5-dev
+      - qtscript5-dev
+      - qttools5-dev
+      - qttools5-dev-tools
+      - libqt5opengl5-dev
+      - libsuperlu-dev
+      - liblz4-dev
+      - libusb-1.0-0-dev
+      - liblzo2-dev
+      - libjpeg-dev
+      - libglew-dev
+      - freeglut3-dev
+      - libsdl2-dev
+      - libfreetype6-dev
+      - qtmultimedia5-dev
+      - libqt5multimedia5
+    stage-packages:
+      - libglu1-mesa
+      - ffmpeg
+      - libpulse0
+      - gstreamer1.0-plugins-ugly
+      - gstreamer1.0-plugins-good
+      - gstreamer1.0-plugins-bad
+      - libqt5multimedia5-plugins
+      - libglew2.0
+      - libqt5printsupport5
+      - libqt5script5
+      - libblas3
+      - libpgm-5.2-0
+      - libsuperlu5
+      - freeglut3
+      - libgpm2
+      - libslang2
+    stage:
+      - -usr/share/X11/rgb.txt
+  desktop-qt5:
+      build-packages:
+        - qtbase5-dev
+        - dpkg-dev
+      make-parameters:
+        - FLAVOR=qt5
+      plugin: make
+      source: https://github.com/ubuntu/snapcraft-desktop-helpers.git
+      source-subdir: qt
+      stage-packages:
+        - libxkbcommon0
+        - ttf-ubuntu-font-family
+        - dmz-cursor-theme
+        - light-themes
+        - adwaita-icon-theme
+        - gnome-themes-standard
+        - shared-mime-info
+        - libqt5gui5
+        - libgdk-pixbuf2.0-0
+        - libqt5svg5
+        - locales-all
+        - xdg-user-dirs
+
+  # Inject default preferences to point to ffmpeg in the snap itself
+  default-preferences:
+    after: [ opentoonz-morevna ]
+    plugin: dump
+    source: default-preferences
+    organize:
+      preferences.ini: share/opentoonz/stuff/profiles/layouts/settings/preferences.ini
+      ensure-defaults.sh: snap/command-chain/ensure-defaults.sh
+    stage-packages:
+      - crudini

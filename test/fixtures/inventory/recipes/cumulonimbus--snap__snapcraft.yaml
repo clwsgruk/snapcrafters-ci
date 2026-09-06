@@ -1,0 +1,75 @@
+name: cumulonimbus
+title: CPod
+summary: A simple, beautiful podcast app.
+description: |
+  Simple podcast app built with Electron. Play your favorite podcasts, and discover new ones with an easy to use interface.
+
+  - Listen to our favorite podcasts
+  - Search for podcasts and subscribe directly from the app
+  - Add episodes to playlists
+  - Filter episodes by their duration and release date
+  - Export/import podcasts (.opml)
+
+  NOTE: CPod is unmaintained and may contain bugs and security vulnerabilities. Please use alternatives.
+  
+  **Authors**
+
+  This snap package is maintained by the Snapcrafters community. It is not necessarily endorsed or officially maintained by the developers of the application itself.  
+license: Apache-2.0
+website: https://github.com/z-------------/CPod
+contact: https://github.com/snapcrafters/cumulonimbus/issues
+issues: https://github.com/snapcrafters/cumulonimbus/issues
+source-code: https://github.com/snapcrafters/cumulonimbus
+icon: snap/gui/cumulonimbus.png
+version: '1.28.2'
+
+grade: stable
+confinement: strict
+base: core24
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+
+parts:
+  cpod:
+    plugin: dump
+    source: https://github.com/z-------------/CPod/releases/download/v${SNAPCRAFT_PROJECT_VERSION}/CPod_${SNAPCRAFT_PROJECT_VERSION}_amd64.deb
+    
+    stage-packages:
+      - libnspr4
+      - libnss3
+      - libxss1
+      - libxtst6
+
+  cleanup:
+    after: [cpod]
+    plugin: nil
+    build-snaps: [gnome-42-2204]
+    override-prime: |
+      set -eux
+      cd /snap/gnome-42-2204/current
+      find . -type f,l -exec rm -f $CRAFT_PRIME/{} \;
+      for CRUFT in bug lintian man; do
+        rm -rf $CRAFT_PRIME/usr/share/$CRUFT
+      done
+      find $CRAFT_PRIME/usr/share/doc/ -type f -not -name 'copyright' -delete
+   
+  libgconf:
+    plugin: dump
+    source: https://ftp.debian.org/debian/pool/main/g/gconf/libgconf-2-4_3.2.6-8_amd64.deb 
+     
+apps:
+  cumulonimbus:
+    extensions: [gnome]
+    command: opt/CPod/cpod
+    desktop: usr/share/applications/cpod.desktop
+    plugs:
+      - bluez
+      - browser-support
+      - gsettings
+      - home
+      - mount-observe
+      - network
+      - opengl
+      - audio-playback

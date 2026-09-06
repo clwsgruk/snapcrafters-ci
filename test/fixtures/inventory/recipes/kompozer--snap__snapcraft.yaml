@@ -1,0 +1,123 @@
+name: kompozer
+version: "0.8"
+summary: KompoZer
+description: |
+  KompoZer is a WYSIWYG HTML editor, with strict and transitional DTD, HTML4.01, XHTML 1.0, and CSS 2.0 support.
+  
+  KompoZer has not been in active development since 2010, and the latest version is KompoZer 0.8 beta 3 using the Gecko 1.8.1 engine. It is still usable for mostly offline Web development and design, with partial support for more modern standards. This snaps preserves the last available version, allows KompoZer to be used on modern operating systems.
+  
+  This snap is maintained by the Snapcrafters community, and is not necessarily endorsed or officially maintained by the upstream developers.
+
+grade: stable
+confinement: strict
+base: core18
+
+architectures:
+  - build-on: amd64
+
+parts:
+  kompozer-main:
+    plugin: dump
+    source: https://launchpad.net/ubuntu/+archive/primary/+files/kompozer_0.8~b3.dfsg.1-0.1ubuntu2_amd64.deb
+    override-pull: |
+      snapcraftctl pull
+    stage-packages:
+      - libatk1.0-0
+      - libc6
+      - libcairo2
+      - libfontconfig1
+      - libfreetype6 
+      - libgdk-pixbuf2.0-0
+      - libglib2.0-0
+      - libgtk2.0-0
+      - libnspr4
+      - libnss3
+      - libpango1.0-0
+      - libstdc++6
+      - libx11-6
+      - libxft2
+      - libxinerama1
+      - libxrender1
+      - libxt6
+      - zlib1g
+  kompozer-data:
+    plugin: dump
+    source: https://launchpad.net/ubuntu/+archive/primary/+files/kompozer-data_0.8~b3.dfsg.1-0.1ubuntu2_all.deb
+    override-pull: |
+      snapcraftctl pull
+      ln -sf ../../../../etc/kompozer/profile usr/share/kompozer/defaults/profile
+      ln -sf ../../../../etc/kompozer/pref usr/share/kompozer/defaults/syspref
+  kompozer-dev:
+    plugin: dump
+    source: https://launchpad.net/ubuntu/+archive/primary/+files/kompozer-dev_0.8~b3.dfsg.1-0.1ubuntu2_all.deb
+  libidl-old:
+    plugin: dump
+    source: https://launchpad.net/ubuntu/+archive/primary/+files/libidl0_0.8.14-1_amd64.deb  
+  libpng-old:
+    plugin: dump
+    source: https://launchpad.net/ubuntu/+archive/primary/+files/libpng12-0_1.2.54-1ubuntu1_amd64.deb
+    override-pull: |
+      snapcraftctl pull
+      ln -sf ../../../lib/x86_64-linux-gnu/libpng12.so.0 usr/lib/x86_64-linux-gnu/libpng12.so.0
+
+  desktop-gtk2:
+    build-packages:
+      - build-essential
+      - libgtk2.0-dev
+    make-parameters:
+      - FLAVOR=gtk2
+    plugin: make
+    source: https://github.com/ubuntu/snapcraft-desktop-helpers.git
+    source-subdir: gtk
+    stage-packages:
+      - libxkbcommon0
+      - ttf-ubuntu-font-family
+      - dmz-cursor-theme
+      - light-themes
+      - adwaita-icon-theme
+      - gnome-themes-standard
+      - shared-mime-info
+      - libgtk2.0-0
+      - libgdk-pixbuf2.0-0
+      - libglib2.0-bin
+      - libgtk2.0-bin
+      - unity-gtk2-module
+      - locales-all
+      - libappindicator1
+      - xdg-user-dirs
+      - ibus-gtk
+      - libibus-1.0-5
+    organize:
+      usr/lib/$SNAPCRAFT_ARCH_TRIPLET/gtk-2.0: usr/lib/gtk-2.0
+      usr/lib/$SNAPCRAFT_ARCH_TRIPLET/gtk-3.0: usr/lib/gtk-3.0
+
+plugs:
+  gtk-2-engines:
+    default-provider: gtk2-common-themes:gtk-2-engines
+    interface: content
+    target: $SNAP/lib/gtk-2.0
+  gtk-2-themes:
+    default-provider: gtk-common-themes:gtk-2-themes
+    interface: content
+    target: $SNAP/share/themes
+  icon-themes:
+    default-provider: gtk-common-themes:icon-themes
+    interface: content
+    target: $SNAP/share/icons
+
+apps:
+  kompozer:
+    command: usr/lib/kompozer/kompozer-bin
+    plugs:
+      - home
+      - removable-media
+      - desktop
+      - desktop-legacy
+      - x11
+      - unity7
+      # - network
+    environment:
+      GTK_EXE_PREFIX: $SNAP/usr
+      GTK_DATA_PREFIX: $SNAP
+      GTK_PATH: $SNAP/lib/gtk-2.0
+      XDG_DATA_DIRS: $SNAP/share:$XDG_DATA_DIRS

@@ -1,0 +1,67 @@
+name: ruff
+version: 0.16.6
+summary: An extremely fast Python linter, written in Rust.
+# noinspection YAMLSchemaValidation
+# https://youtrack.jetbrains.com/issue/PY-58754
+description: |
+  Ruff aims to be orders of magnitude faster than alternative tools while integrating more
+  functionality behind a single, common interface.
+
+  - ⚡️ 10-100x faster than existing linters (like Flake8) and formatters (like Black)
+  - 🐧 Installable via `snap`
+  - 🛠️ `pyproject.toml` support
+  - 🤝 Python 3.12 compatibility
+  - ⚖️ Drop-in parity with Flake8, isort, and Black
+  - 📦 Built-in caching, to avoid re-analyzing unchanged files
+  - 🔧 Fix support, for automatic error correction (e.g., automatically remove unused imports)
+  - 📏 Over 700 built-in rules, with native re-implementations of popular Flake8 plugins, like flake8-bugbear
+  - ⌨️ First-party editor integrations for VS Code and more
+  - 🌎 Monorepo-friendly, with hierarchical and cascading configuration
+
+confinement: strict
+base: core24
+# Performance difference with xz vs lzo is small in this case, but provides
+# a ~40% reduction in file size for a very frequently updating snap.
+compression: xz
+contact: https://github.com/snapcrafters/ruff/issues
+issues:
+  - https://github.com/snapcrafters/ruff/issues
+  - https://github.com/astral-sh/ruff/issues
+source-code: https://github.com/astral-sh/ruff
+website: https://github.com/astral-sh/ruff
+
+platforms:
+  amd64:
+  arm64:
+  # Disabled until we can fix https://github.com/snapcrafters/ruff/issues/117
+  # armhf:
+  ppc64el:
+  riscv64:
+  s390x:
+
+parts:
+  ruff:
+    plugin: rust
+    rust-path:
+      - crates/ruff
+    source: https://github.com/astral-sh/ruff
+    source-type: git
+    source-tag: $SNAPCRAFT_PROJECT_VERSION
+    source-depth: 1
+    build-environment:
+      # See: https://github.com/lengau/uv-snap/issues/10
+      - to arm64:
+        - JEMALLOC_SYS_WITH_LG_PAGE: 16
+      - to ppc64el:
+        - JEMALLOC_SYS_WITH_LG_PAGE: 16
+    stage:
+      - bin/ruff
+    organize:
+      ruff: bin/ruff
+
+apps:
+  ruff:
+    command: bin/ruff
+    plugs:
+      - home
+      - removable-media

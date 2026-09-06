@@ -36,6 +36,10 @@ run = "./node_modules/.bin/vp test run test/smoke"
 [tasks.build]
 run = "bun scripts/build.ts"
 
+[tasks.inventory]
+description = "Refresh the read-only immutable Snapcrafters recipe inventory"
+run = "bun scripts/inventory.ts"
+
 [tasks."check-dist"]
 run = "bun scripts/check-dist.ts"
 

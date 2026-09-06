@@ -1,0 +1,82 @@
+name: inadyn
+adopt-info: inadyn
+summary: Internet Automated Dynamic DNS Client
+description: |
+  Inadyn is a small and simple Dynamic DNS, DDNS, client with HTTPS support.
+  Commonly available in many GNU/Linux distributions, used in off the shelf
+  routers and Internet gateways to automate the task of keeping your Internet
+  name in sync with your public¹ IP address. It can also be used in installations
+  with redundant (backup) connections to the Internet.
+base: core20
+confinement: strict
+grade: stable
+
+apps:
+  inadyn:
+    command-chain:
+      - usr/local/bin/snapcraft-preload
+    command: usr/sbin/inadyn -f $SNAP_DATA/inadyn.conf --cache-dir $SNAP_DATA/cache -P $SNAP_DATA/inadyn.pid
+    plugs: [network, network-observe]
+  daemon:
+    command-chain:
+      - usr/local/bin/snapcraft-preload
+    command: usr/sbin/inadyn -n -s -f $SNAP_DATA/inadyn.conf --cache-dir $SNAP_DATA/cache -P $SNAP_DATA/inadyn.pid
+    plugs: [network, network-observe]
+    daemon: simple
+  configpath:
+    command: bin/configpath
+
+parts:
+  snapcraft-preload:
+      source: https://github.com/sergiusens/snapcraft-preload.git
+      plugin: cmake
+      build-packages:
+        - on amd64:
+          - gcc-multilib
+          - g++-multilib
+  libconfuse:
+    plugin: autotools
+    source: https://github.com/martinh/libconfuse/releases/download/v3.2.1/confuse-3.2.1.tar.xz
+    autotools-configure-parameters: ['--prefix=/usr', '--disable-examples', '--disable-static']
+    build-packages:
+      - gettext
+      - pkg-config
+    prime:
+      - -usr/include
+      - -usr/lib/pkgconfig
+      - -usr/share/doc
+
+  inadyn:
+    after: [libconfuse, snapcraft-preload]
+    plugin: autotools
+    source: https://github.com/troglobit/inadyn.git
+    source-type: git
+    override-pull: |
+      snapcraftctl pull
+      last_committed_tag="$(git describe --tags --abbrev=0)"
+      last_released_tag="$(snap info $SNAPCRAFT_PROJECT_NAME | awk '$1 == "latest/beta:" { print $2 }')"
+      # If the latest tag from the upstream project has not been released to
+      # beta, build that tag instead of master.
+      if [ "${last_committed_tag}" != "${last_released_tag}" ]; then
+        git fetch
+        git checkout "${last_committed_tag}"
+        snapcraftctl set-version "${last_committed_tag#v}"
+      else
+        snapcraftctl set-version "$(git rev-parse --short HEAD)"
+      fi
+    autotools-configure-parameters: ['--prefix=/usr', '--sysconfdir=/etc']
+    override-build: |
+      snapcraftctl build
+      echo '#!/bin/bash' > $SNAPCRAFT_PART_INSTALL/bin/configpath
+      echo 'echo $SNAP_DATA/inadyn.conf' >> $SNAPCRAFT_PART_INSTALL/bin/configpath
+      chmod +x $SNAPCRAFT_PART_INSTALL/bin/configpath
+    build-packages:
+      - libgnutls28-dev
+      - pkg-config
+    stage-packages:
+      - iproute2
+      - libatm1
+      - libgnutls30
+    prime:
+      - -usr/share/doc
+

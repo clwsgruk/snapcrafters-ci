@@ -1,0 +1,168 @@
+name: s4a
+title: S4A - Scratch for Arduino
+summary: Scratch for Arduino boards
+version: "1.6"
+description: |
+  S4A is a Scratch modification that allows for simple programming of the Arduino open source hardware platform. It provides new blocks for managing sensors and actuators connected to Arduino. There is also a sensors report board similar to the PicoBoard one.
+
+  The main aim of the project is attracting people to the programming world. The goal is also to provide a high level interface to Arduino programmers with functionalities such as interacting with a set of boards through user events.
+
+  **Setup**
+
+  In order to upload code an arduino board over USB, you need to add your user to the `dailout` group and connect the snap to the `raw-usb` socket. Open a terminal window, run the following commands an *reboot* your computer.
+
+  > `sudo usermod -a -G dialout $USER`
+
+  Now restart your computer and you're good to go!
+
+  S4A can also use recorded sounds and images from the webcam in programs. In order to use this, you also need to run the following commands. 
+
+  > `sudo snap connect s4a:audio-record`
+
+  > `sudo snap connect s4a:camera`
+
+  **Supported boards**
+  
+  * Arduino Diecimila
+  * Arduino Duemilanove
+  * Arduino Uno
+
+  *Other boards have not been tested but might also work*
+
+  **Connectivity**
+
+  Components have to be connected in a particular way. S4A allows for 6 analog inputs (analog pins), 2 digital inputs (digital pins 2 and 3), 3 analog outputs (digital pins 5, 6 and 9), 3 digital outputs (pins 10, 11 and 13) and 4 special outputs to connect Parallax continuous rotation servomotors (digital pins 4, 7, 8 and 12).
+
+  You can manage a board wirelessly by attaching an RF module to it, such as Xbee.
+
+  S4A allows you to control as many boards as USB ports you have.
+license: MIT
+website: http://s4a.cat/
+contact: https://github.com/snapcrafters/s4a/issues
+issues: https://github.com/snapcrafters/s4a/issues
+source-code: https://github.com/snapcrafters/s4a
+icon: snap/gui/s4a.png
+
+base: core18
+confinement: strict
+
+architectures:
+ - build-on: amd64
+   run-on:   amd64
+
+apps:
+  s4a:
+    command: s4a
+    environment:
+      LC_ALL: "C.UTF-8"
+      # Fallback to XWayland if running in a Wayland session.
+      DISABLE_WAYLAND: 1
+    command-chain:
+      - bin/launcher
+      - bin/desktop-launch
+    plugs:
+      - x11
+      - unity7
+      - home
+      - network
+      - raw-usb
+      - serial-port
+      - audio-playback
+      - audio-record
+      - camera
+    desktop: usr/share/applications/s4a.desktop
+
+parts:
+  i386:
+    plugin: nil
+    override-build: |
+      sudo dpkg --add-architecture i386
+      sudo apt-get update  
+  s4a:
+    after: 
+      - i386
+      - glib-only
+    plugin: dump
+    source: http://s4a.cat/downloads/S4A16.deb
+    source-type: deb
+    stage-packages:
+      - libsm6:i386
+      - libatk1.0-0:i386
+      - libbsd0:i386
+      - libc6:i386
+      - libcairo2:i386
+      - libgcc1:i386
+      - libgdk-pixbuf2.0-0:i386
+      - libglib2.0-0:i386
+      - libglu1-mesa:i386
+      - libgtk2.0-0:i386
+      - libpango-1.0-0:i386
+      - libpulse0:i386
+      - libx11-6:i386
+      - libxau6:i386
+      - libxcb1:i386
+      - libxdmcp6:i386
+      - libxml2:i386
+      - libxrandr2:i386
+      - libv4l-0:i386
+    override-build: |
+      snapcraftctl build
+      sed -i 's|Icon=s4a|Icon=${SNAP}/usr/share/icons/hicolor/128x128/apps/s4a.png|' ${SNAPCRAFT_PART_INSTALL}/usr/share/applications/s4a.desktop
+      echo "Keywords=Arduino" >> ${SNAPCRAFT_PART_INSTALL}/usr/share/applications/s4a.desktop
+      rm -rf $SNAPCRAFT_PART_INSTALL/lib/x86_64-linux-gnu
+      rm -rf $SNAPCRAFT_PART_INSTALL/usr/lib/x86_64-linux-gnu
+      rm -rf $SNAPCRAFT_PART_INSTALL/usr/share/bug
+      rm -rf $SNAPCRAFT_PART_INSTALL/usr/share/doc
+      rm -rf $SNAPCRAFT_PART_INSTALL/usr/share/doc-base
+      rm -rf $SNAPCRAFT_PART_INSTALL/usr/share/lintian
+      rm -rf $SNAPCRAFT_PART_INSTALL/usr/share/man
+    stage:
+      - -usr/bin/update-mime-database
+
+  glib-only:
+    after: [i386]
+    source: https://github.com/ubuntu/snapcraft-desktop-helpers.git
+    source-subdir: glib-only
+    plugin: make
+    build-packages:
+      - libglib2.0-dev
+    stage-packages:
+      - libglib2.0-bin:i386
+      - shared-mime-info:i386
+  launcher:
+    plugin: dump
+    source: scripts
+    organize:
+      'launcher': bin/
+
+  # https://snapcraft-utils-library.readthedocs.io/en/latest/lib/cleanup.html
+  cleanup:
+    after:  # Make this part run last; list all your other parts here
+      - s4a
+      - glib-only
+    plugin: nil
+    build-snaps:  # List all content-snaps and base snaps you're using here
+      - core18
+    override-prime: |
+      set -eux
+      for snap in "core18"; do  # List all content-snaps and base snaps you're using here
+        cd "/snap/$snap/current" && find . -type f,l -exec rm -f "$SNAPCRAFT_PRIME/{}" \;
+      done
+
+layout:
+  /usr/bin/s4a_squeak_vm:
+    symlink: $SNAP/usr/bin/s4a_squeak_vm
+  /usr/lib/s4a:
+    symlink: $SNAP/usr/lib/s4a
+  /usr/lib/squeak:
+    symlink: $SNAP/usr/lib/squeak
+
+plugs:
+  icon-themes:
+    interface: content
+    target: $SNAP/share/icons
+    default-provider: gtk-common-themes
+  sound-themes:
+    interface: content
+    target: $SNAP/share/sounds
+    default-provider: gtk-common-themes

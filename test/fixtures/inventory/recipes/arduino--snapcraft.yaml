@@ -1,0 +1,174 @@
+# name: arduino-mhall119   # uncomment for arduino-mhall119 builds
+name: arduino
+title: Arduino IDE
+version: 1.8.19
+summary: Write code and upload it to your Arduino-compatible board.
+description: |
+  Arduino is an open-source physical computing platform based on a simple I/O board and a development environment that implements the Processing/Wiring language. Arduino can be used to develop stand-alone interactive objects or can be connected to software on your computer (e.g. Flash, Processing and MaxMSP). The boards can be assembled by hand or purchased preassembled at https://arduino.cc
+
+  **Setup**
+
+  In order to upload code an arduino board over USB, you need to add your user to the `dialout` group. Open a terminal window, run the following command and *reboot* your computer.
+
+  > `sudo usermod -a -G dialout $USER`
+
+  Now restart your computer and you're good to go!
+  
+  If you have one of the following boards, you need to grant specific permissions to your user for accessing directly the USB. This issue is more detailed [here](https://github.com/snapcrafters/arduino/issues/10#issuecomment-716683018)
+  
+  - Arduino Uno WiFi Rev2, ATMEGA328
+  
+  For granting this direct access:
+  
+  ```
+  echo "SUBSYSTEM==\"usb\", MODE=\"0660\", GROUP=\"$(id -gn)\"" | sudo tee /etc/udev/rules.d/00-usb-permissions.rules
+  udevadm control --reload-rules
+  ```
+
+  **Python 3 support**
+
+  This version of Arduino IDE runs in a sandbox for improved security and stability. As a result, it does not have access to the Python libraries on your device.
+
+  Python 3 and the `serial` library are installed inside of the sandbox so they can be used by plugins. If a plugin needs additional Python 3 libraries, you can install them using the `arduino.pip` command. For example, the following command installs the `requests` library inside of the sandbox so the Arduino IDE can use it.
+
+  > `arduino.pip install requests`
+
+  Python 2 is currently not supported in this package because it reached end of life on January 1st 2020. If you have hardware that _requires_ Python 2 support, please let us know.
+  
+  **Are you having issues?**
+
+  Let us know by creating a new issue here: https://github.com/snapcrafters/arduino/issues 
+license: GPL-2.0
+icon: snap/gui/arduino.png
+grade: stable
+
+base: core18
+confinement: strict
+compression: lzo      # improves startup time for large snaps
+
+architectures:
+  - build-on: amd64
+  - build-on: armhf
+  - build-on: arm64
+
+environment:
+  PYTHONPATH: $PYTHONPATH:$SNAP/lib/python3.6/site-packages
+
+apps:
+  arduino:
+    extensions:
+      - gnome-3-28
+    command: arduino-snap
+    command-chain:
+      - set-environment
+      - check-permissions
+      # - warn-unsupported  # uncomment for arduino-mhall119 builds
+    environment:
+      # Fallback to XWayland if running in a Wayland session.
+      DISABLE_WAYLAND: 1
+    plugs:
+      - unity7
+      - home
+      - removable-media
+      - network
+      - serial-port
+      - raw-usb
+      - network-bind  # For OTA updates      
+  pip:
+    command: usr/bin/python -m pip
+    command-chain:
+      - set-environment
+    environment:
+      PIP_USER: 1
+    plugs:
+      - network
+
+parts:
+  upstream:
+    source: https://github.com/arduino/Arduino/releases/download/$SNAPCRAFT_PROJECT_VERSION/arduino-$SNAPCRAFT_PROJECT_VERSION.tar.xz
+    source-type: tar
+    plugin: ant
+    ant-buildfile: build/build.xml
+    override-build: |
+      set -ex
+      snapcraftctl build
+      cp -a  $SNAPCRAFT_PART_BUILD/build/linux/work/* $SNAPCRAFT_PART_INSTALL
+    stage-packages:
+      - openjdk-11-jre  # the ant plugin adds the headless jre instead of the full jre.
+      - libusb-0.1-4
+    prime:
+      - -usr/lib/jvm/java-11-openjdk-amd64/lib/security/blacklisted.certs # broken symlink; bug in the debian package
+      - -usr/lib/jvm/java-11-openjdk-armhf/lib/security/blacklisted.certs # broken symlink; bug in the debian package
+      - -usr/lib/jvm/java-11-openjdk-arm64/lib/security/blacklisted.certs # broken symlink; bug in the debian package
+
+  launcher:
+    plugin: dump
+    source: scripts
+    stage-packages:
+      - yad
+
+  # Newer libusb is needed for some arduino packages. See https://github.com/snapcrafters/arduino/issues/18  
+  libusb-1-x-x:
+    plugin: autotools
+    source: https://github.com/libusb/libusb/archive/v1.0.24.tar.gz
+    build-packages:
+      - libudev-dev
+
+  # Get a recent version of lsusb. The version in bionic accesses `usb.ids`
+  # using a hardcoded path, which is incorrect in a snap. Recent versions use
+  # udev's hardware database instead.
+  usbutils-git:
+    plugin: autotools
+    source: https://github.com/gregkh/usbutils/archive/refs/tags/v013.tar.gz
+    after:
+      - libusb-1-x-x
+
+  dark-arduino-theme:
+    plugin: dump
+    source: https://github.com/jeffThompson/DarkArduinoTheme.git
+    build-packages:
+      - zip
+    override-build: |
+      snapcraftctl build
+      mkdir -p $SNAPCRAFT_PART_INSTALL/lib/theme/
+      cd theme
+      zip -r $SNAPCRAFT_PART_INSTALL/lib/theme/dark-arduino-theme.zip *
+    stage:
+      - lib/theme/dark-arduino-theme.zip
+
+  # Python 3 is required for certain plugins and they expect python to point to python3.
+  # See https://github.com/snapcrafters/arduino/issues/5
+  python3:
+    source: ""
+    plugin: python
+    python-packages:
+      - pyserial
+      - pip
+    override-prime: |
+      set -ex
+      snapcraftctl prime
+      echo '#!/bin/bash\npython3 "$@"\n' > $SNAPCRAFT_PRIME/usr/bin/python
+      chmod a+x $SNAPCRAFT_PRIME/usr/bin/python
+
+  # This part removes all the files in this snap which already exist in
+  # connected content and base snaps. Since these files will be available
+  # at runtime from the content and base snaps, they do not need to be
+  # included in this snap itself.
+  #
+  # More info: https://snapcraft-utils-library.readthedocs.io/en/latest/lib/cleanup.html 
+  #
+  cleanup:
+    after:  # Make this part run last; list all your other parts here
+      - upstream
+      - launcher
+      - dark-arduino-theme
+      - python3
+    plugin: nil
+    build-snaps:  # List all content-snaps and base snaps you're using here
+      - core18
+      - gnome-3-28-1804
+    override-prime: |
+      set -eux
+      for snap in "core18" "gnome-3-28-1804" ; do  # List all content-snaps and base snaps you're using here
+        cd "/snap/$snap/current" && find . -type f,l -exec rm -f "$SNAPCRAFT_PRIME/{}" \;
+      done

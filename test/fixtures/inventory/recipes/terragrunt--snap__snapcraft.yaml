@@ -1,0 +1,38 @@
+name: terragrunt
+version: 1.1.4
+base: core24
+summary: Orchestration tool that allows IaC written in OpenTofu/Terraform to scale.
+description: |
+  Snap for Terragrunt: a thin wrapper for Terraform that provides extra tools 
+  for working with multiple Terraform modules, remote state, and locking.
+icon: snap/gui/terragrunt.png
+contact: https://github.com/snapcrafters/terragrunt/issues
+issues: https://github.com/snapcrafters/terragrunt/issues
+source-code: https://github.com/snapcrafters/terragrunt
+website: https://terragrunt.com/
+license: MIT
+
+confinement: classic
+
+apps:
+  terragrunt:
+    command: bin/terragrunt
+    environment:
+      PATH: $SNAP/bin:$PATH
+
+platforms:
+  amd64:
+  armhf:
+  arm64:
+  s390x:
+  ppc64el:
+
+parts:
+  terragrunt:
+    source: https://github.com/gruntwork-io/terragrunt.git
+    source-type: git
+    source-tag: "v$SNAPCRAFT_PROJECT_VERSION"
+    plugin: go
+    build-snaps:
+      - go/1.26/stable
+

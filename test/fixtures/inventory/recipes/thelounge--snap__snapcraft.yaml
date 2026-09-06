@@ -1,0 +1,154 @@
+name: thelounge
+adopt-info: thelounge
+summary:  Modern web IRC client designed for self-hosting.
+description: |
+ * **Modern features brought to IRC.** Push notifications, link previews, new message markers, and more bring IRC to the 21st century.
+ * **Always connected.** Remains connected to IRC servers while you are offline.
+ * **Cross platform.** It doesn't matter what OS you use, it just works wherever Node.js runs.
+ * **Responsive interface.** The client works smoothly on every desktop, smartphone and tablet.
+ * **Synchronized experience.** Always resume where you left off no matter what device.
+
+ ## Default port
+
+ By default thelounge listens on TCP port 9000.
+
+ ## Create users
+
+ After installing run the following in a terminal/console:
+
+ `sudo thelounge add $USER`
+
+ Replace `$USER` with your preferred Lounge username. You will be prompted to add a password once you've authenticated for sudo. When you have added your username navigate to http://localhost:9000/ (replace localhost with your server IP or hostname if you are on a different machine) and login with your new username and password.
+
+ ## Enable https
+
+ **For this to work, port 80 on your device must be Internet accessible.**
+
+ Run the following in a terminal/console:
+
+ `sudo thelounge.cert-generate`
+
+ Enter your email address, agree to the terms of service and enter your
+ domain when prompted.
+
+ Update the `https` stanza in thelounge configuration, replacing `example.org` with your domain.
+
+ `sudo nano /var/snap/thelounge/current/home/config.js`
+
+ The `https` stanza should look something like this:
+
+ ```
+ https: {
+        enable: true,
+        key: "/var/snap/thelounge/common/letsencrypt/live/example.org/privkey.pem",
+        certificate: "/var/snap/thelounge/common/letsencrypt/live/example.org/fullchain.pem",
+        ca: "",
+ },
+ ```
+
+ Restart thelounge to enable https.
+
+ `sudo snap restart thelounge`
+ 
+
+base: core22
+grade: stable
+confinement: strict
+
+architectures:
+  - build-on: amd64
+  - build-on: armhf
+  - build-on: arm64
+
+environment:
+  THELOUNGE_HOME: /var/thelounge
+  AUGEAS_LENS_LIB: $SNAP/usr/share/augeas/lenses/dist
+
+layout:
+  /var/thelounge:
+    bind: $SNAP_DATA/home
+
+apps:
+  lounged:
+    command: bin/thelounge start
+    daemon: simple
+    plugs:
+    - network
+    - network-bind
+  thelounge:
+    command: bin/thelounge
+    plugs:
+    - network
+    - network-bind
+  cert-generate:
+    command: bin/certbot certonly --standalone --logs-dir $SNAP_COMMON/letsencrypt/log --config-dir $SNAP_COMMON/letsencrypt/ --work-dir $SNAP_COMMON/letsencrypt/ --no-eff-email
+    plugs:
+      - network
+      - network-bind
+  cert-renew:
+    command: bin/certbot -q renew --logs-dir $SNAP_COMMON/letsencrypt/log --config-dir $SNAP_COMMON/letsencrypt/ --work-dir $SNAP_COMMON/letsencrypt/ --no-eff-email
+    daemon: oneshot
+    plugs:
+      - network
+      - network-bind
+    passthrough:
+        # Run approximately twice a day with randomization
+        timer: 00:00~24:00/2
+  cert-renew-manual:
+    command: bin/certbot -q renew --logs-dir $SNAP_COMMON/letsencrypt/log --config-dir $SNAP_COMMON/letsencrypt/ --work-dir $SNAP_COMMON/letsencrypt/ --no-eff-email
+    plugs:
+      - network
+      - network-bind
+
+parts:
+  certbot:
+    plugin: python
+    source: .
+    python-packages:
+      - setuptools-rust>=0.11.4
+      - certbot
+    build-packages:
+      - libffi-dev
+      - libcurl4-openssl-dev
+      - libssl-dev
+      - python3-dev
+
+  npm-deps:
+    plugin: npm
+    source: npm-deps
+    npm-include-node: true
+    npm-node-version: '20'
+    prime: [-lib/node_modules/npm_deps]
+
+  thelounge:
+    after: [npm-deps]
+    source: https://github.com/thelounge/thelounge.git
+    plugin: npm
+    npm-include-node: false
+    override-pull: |
+      craftctl default
+      last_committed_tag="$(git describe --tags --abbrev=0 --match 'v*' --exclude '*-pre.*' --exclude '*-rc.*')"
+      last_released_tag="$(snap info $SNAPCRAFT_PROJECT_NAME | awk '$1 == "beta:" { print $2 }')"
+      # If the latest tag from the upstream project has not been released to
+      # beta, build that tag instead of master.
+      if [ "${last_committed_tag}" != "${last_released_tag}" ]; then
+        git fetch
+        git checkout "${last_committed_tag}"
+        craftctl set version="${last_committed_tag#v}"
+      else
+        craftctl set version="$(git rev-parse --short HEAD)"
+      fi
+    override-build: |
+      export NODE_ENV=
+      corepack enable
+      yarn set version classic
+      yarn --non-interactive --frozen-lockfile --cache-folder .yarn-cache --ignore-scripts install
+      npx update-browserslist-db@latest
+      NODE_ENV=production yarn --non-interactive --frozen-lockfile --cache-folder .yarn-cache --offline --ignore-scripts build && \
+        craftctl default
+    build-packages:
+    - build-essential
+    - python3
+    prime:
+    - -**/.*.swp # Exclude rogue vim swap files from node-tar package
+

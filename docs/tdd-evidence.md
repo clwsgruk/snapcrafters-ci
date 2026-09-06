@@ -32,3 +32,16 @@ mutable sibling references, and public metadata drift.
 - `mise run test:integration -- runtime` — GREEN: 2 files, 11 tests; abort-before-spawn,
   TERM→KILL process-group handling, listener cleanup, bounded logs, redaction, both streams,
   timeout, and ownership confinement passed.
+
+## Inventory correction and Phase 3 project parsing
+
+- `mise run test:contract -- inventory` — RED: the 32-consumer subset had no full inventory
+  JSON/source fixtures.
+- `mise run inventory` — PASS: paginated 118 public repositories, selected all 87
+  non-archived/non-disabled repositories, recursively captured 80 recipe YAML blobs at immutable
+  commit/blob SHAs.
+- `mise run test:contract -- inventory` — RED: the complete inventory exposed active `i386`
+  architecture entries omitted from the initial consumer subset.
+- `mise run test:contract -- inventory` — GREEN: 2 files, 2 tests; all 87 repositories and all
+  80 exact source blobs verified, with every observed declared schema normalized and all 14 omitted
+  declarations rejected in `get-architectures` policy.

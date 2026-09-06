@@ -1,0 +1,75 @@
+name: marktext
+version: 0.17.1
+license: MIT
+icon: images/logo.png
+summary: MarkText, a simple, elegant, cross-platform markdown editor.
+description: |
+  MarkText is a cross-platform, next generation markdown editor that
+  focuses on speed and usability. It has features such as:
+
+  - Realtime preview (WYSIWYG) and a clean and simple interface to get a distraction-free writing experience.
+  - Support CommonMark Spec, GitHub Flavored Markdown Spec and selective support Pandoc markdown.
+  - Markdown extensions such as math expressions (KaTeX), front matter and emojis.
+  - Support paragraphs and inline style shortcuts to improve your writing efficiency.
+  - Output HTML and PDF files.
+  - Various themes: Cadmium Light, Material Dark etc.
+  - Various editing modes: Source Code mode, Typewriter mode, Focus mode.
+  - Paste images directly from clipboard.
+
+  Completely free and open-source forever.
+
+base: core22
+grade: stable
+confinement: strict
+compression: lzo
+
+architectures:
+  - build-on: amd64
+
+parts:
+  marktext:
+    plugin: dump
+    source:
+      - on amd64: https://github.com/marktext/marktext/releases/download/v$SNAPCRAFT_PROJECT_VERSION/marktext-amd64.deb
+    source-type: deb
+    override-build: |
+      craftctl default
+      sed -i 's|Icon=marktext|Icon=/usr/share/icons/hicolor/256x256/apps/marktext\.png|' ${CRAFT_PART_INSTALL}/usr/share/applications/marktext.desktop
+    stage-packages:
+      - libxkbfile1
+      - libnspr4
+      - libnss3
+    prime:
+      - -opt/MarkText/chrome-sandbox
+
+  cleanup:
+    after: [marktext]
+    plugin: nil
+    build-snaps: [gnome-42-2204]
+    override-prime: |
+      set -eux
+      cd /snap/gnome-42-2204/current
+      find . -type f,l -exec rm -f ${CRAFT_PRIME}/{} \;
+
+apps:
+  marktext:
+    extensions: [gnome]
+    command: opt/MarkText/marktext --no-sandbox
+    desktop: usr/share/applications/marktext.desktop
+    environment:
+      TMPDIR: $XDG_RUNTIME_DIR
+    plugs:
+      - shmem
+      - gsettings
+      - home
+      - network
+      - opengl
+      - removable-media
+      - unity7
+      - wayland
+      - x11
+
+plugs:
+  shmem:
+    interface: shared-memory
+    private: true

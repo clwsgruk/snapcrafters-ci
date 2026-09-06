@@ -1,0 +1,64 @@
+name: terraform
+version: 1.16.1
+summary: Terraform enables you to create, change, and improve infrastructure.
+license: BUSL-1.1
+contact: https://github.com/jnsgruk/terraform/issues
+issues: https://github.com/jnsgruk/terraform/issues
+source-code: https://github.com/jnsgruk/terraform
+website: https://terraform.io
+description: |
+  Terraform enables you to safely and predictably create, change, and improve
+  infrastructure. It is an open source tool that codifies APIs into
+  declarative configuration files that can be shared amongst team members,
+  treated as code, edited, reviewed, and versioned.
+
+  **Are you having issues?**
+
+  Let us know by creating a new issue here:
+  https://github.com/snapcrafters/terraform/issues
+
+  **Authors**
+
+  This snap is maintained by the Snapcrafters community, and is not
+  necessarily endorsed or officially maintained by the upstream developers.
+base: core24
+grade: stable
+confinement: classic
+compression: lzo
+icon: snap/gui/terraform.png
+
+apps:
+  terraform:
+    command: terraform
+
+platforms:
+  amd64:
+  armhf:
+  arm64:
+  s390x:
+  ppc64el:
+
+parts:
+  terraform:
+    plugin: nil
+    source: https://github.com/hashicorp/terraform
+    source-type: git
+    source-tag: "v$SNAPCRAFT_PROJECT_VERSION"
+    build-environment:
+      - CGO_ENABLED: "0"
+      - GOFLAGS: "-mod=readonly"
+      - LDFLAGS: "-s -w"
+    override-build: |
+      # Determine the correct go version from the go.mod
+      go_version="$(grep -Po "^go \K1.[0-9]{2}" go.mod)"
+      snap install go --classic --channel "${go_version}/stable"
+
+      export LDFLAGS="${LDFLAGS} -X 'github.com/hashicorp/terraform/version.Prerelease='"
+      export LDFLAGS="${LDFLAGS} -X 'github.com/hashicorp/terraform/version.Version=$(cat version/VERSION)'"
+      export LDFLAGS="${LDFLAGS} -X 'github.com/hashicorp/terraform/version.dev=no'"
+
+      go mod download
+      go build -ldflags "${LDFLAGS}"
+      cp terraform $SNAPCRAFT_PART_INSTALL/terraform
+    stage:
+      - terraform

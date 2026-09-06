@@ -2,7 +2,13 @@ import { defineConfig } from "vite-plus";
 
 export default defineConfig({
   fmt: {
-    ignorePatterns: ["node_modules/**", "**/dist/**", "coverage/**"],
+    ignorePatterns: [
+      "node_modules/**",
+      "**/dist/**",
+      "coverage/**",
+      "test/fixtures/inventory/active-recipes.json",
+      "test/fixtures/inventory/recipes/**",
+    ],
     printWidth: 99,
     sortPackageJson: false,
   },

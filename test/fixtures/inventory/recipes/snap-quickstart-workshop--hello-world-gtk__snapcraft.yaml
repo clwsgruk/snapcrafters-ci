@@ -1,0 +1,33 @@
+name: hello-world-gtk
+version: '0.1'
+summary: Gtk Hello World example
+description: A simple Gtk example
+
+base: core24
+confinement: strict
+
+apps:
+  hello-world-gtk:
+    extensions: [gnome]
+    command: src/hello-world-gtk
+    plugs:
+      - removable-media
+
+slots:
+  session-dbus-interface:
+    interface: dbus
+    name: org.gtk.example
+    bus: session
+
+parts:
+  hello-world-gtk:
+    plugin: dump
+    source: .
+    override-build: |
+      set -eux
+      cd src
+      gcc $(pkg-config --cflags gtk4) -o hello-world-gtk hello-world-gtk.c $(pkg-config --libs gtk4)
+      cd ..
+      craftctl default
+    build-packages:
+      - pkgconf

@@ -1,0 +1,1901 @@
+{
+  "capturedAt": "2026-09-06",
+  "selection": "Every non-archived, non-disabled public repository in snapcrafters",
+  "repositories": [
+    {
+      "repository": "snapcrafters/.github",
+      "branch": "main",
+      "commit": "73fb24c9c2ac2e88e786e200dec201deb8b624bc"
+    },
+    {
+      "repository": "snapcrafters/alacritty",
+      "branch": "candidate",
+      "commit": "f9dcc990e19bf047f91f336c6b7f2b92d22d92b8"
+    },
+    {
+      "repository": "snapcrafters/android-studio",
+      "branch": "candidate",
+      "commit": "d3b7f671c96d8af5992b9a4d920b41d09abf8c3b"
+    },
+    {
+      "repository": "snapcrafters/android-studio-canary",
+      "branch": "candidate",
+      "commit": "c6fe42a4a92e25040a59377951021942cbaf25d9"
+    },
+    {
+      "repository": "snapcrafters/arduino",
+      "branch": "master",
+      "commit": "bbe53009af8f4efa98cc13d3be6f3842013e77e5"
+    },
+    {
+      "repository": "snapcrafters/audacity",
+      "branch": "candidate",
+      "commit": "238df5c19e6ac4462ad4df41ecc19380343ed4db"
+    },
+    {
+      "repository": "snapcrafters/axel",
+      "branch": "candidate",
+      "commit": "2ee5649d9901453f48e4ff6675af1bd349c0da9e"
+    },
+    {
+      "repository": "snapcrafters/blog-posts",
+      "branch": "main",
+      "commit": "a022d8a7667e6324432157cbab52eed20d8aa604"
+    },
+    {
+      "repository": "snapcrafters/branding",
+      "branch": "main",
+      "commit": "9a12d5534336f4331b5bfccf9aaf9f56c39f5ff4"
+    },
+    {
+      "repository": "snapcrafters/bridge-designer",
+      "branch": "master",
+      "commit": "2fed83fbd6f369b3bb27245684dea3fc9a09939a"
+    },
+    {
+      "repository": "snapcrafters/cassandra",
+      "branch": "master",
+      "commit": "ff04ed3b8addecfccffc9160e569d5db02af62ca"
+    },
+    {
+      "repository": "snapcrafters/ci",
+      "branch": "main",
+      "commit": "cb43fba979fbb7388ec44f37b1e70d6cdb8edb8c"
+    },
+    {
+      "repository": "snapcrafters/ci-screenshots",
+      "branch": "main",
+      "commit": "04dbd01992ff2235aeb1ee5b62412e59dd0fad57"
+    },
+    {
+      "repository": "snapcrafters/ci-workshop",
+      "branch": "main",
+      "commit": "5bc9567a810c08584a048c167006cf1cae6cc5bb"
+    },
+    {
+      "repository": "snapcrafters/climate-trail",
+      "branch": "master",
+      "commit": "e6c1fd194425a3d9ce0850ea0bafc9e4f223dc04"
+    },
+    {
+      "repository": "snapcrafters/codespell",
+      "branch": "candidate",
+      "commit": "ac5b639199d28754c9a560c77c2c7a3f6ab11e80"
+    },
+    {
+      "repository": "snapcrafters/corsixth",
+      "branch": "master",
+      "commit": "c3a31862d06c435d87e823cfb6586c1ccc3c7372"
+    },
+    {
+      "repository": "snapcrafters/cryptool",
+      "branch": "main",
+      "commit": "10366204262f34c8aae33dc98d9f45403c4262fe"
+    },
+    {
+      "repository": "snapcrafters/cumulonimbus",
+      "branch": "candidate",
+      "commit": "4a59a9615cd011e31828a447bf11dc28999b656a"
+    },
+    {
+      "repository": "snapcrafters/ddgr",
+      "branch": "candidate",
+      "commit": "ce1e4ecebace82421d487a11e57d0a77e3901f60"
+    },
+    {
+      "repository": "snapcrafters/discord",
+      "branch": "candidate",
+      "commit": "80e65300496569600543d53e131e97b2ecf42cf1"
+    },
+    {
+      "repository": "snapcrafters/dosbox-x",
+      "branch": "master",
+      "commit": "b2ddf0f556563cfa12b2f77579cf47c4524a0b63"
+    },
+    {
+      "repository": "snapcrafters/duckmarines",
+      "branch": "master",
+      "commit": "92522cf4f0afff69ad848113eaafbf7c379ec9ed"
+    },
+    {
+      "repository": "snapcrafters/ffmpeg",
+      "branch": "master",
+      "commit": "53af5531ac37c2dd7256a8a54bca03912e4603a4"
+    },
+    {
+      "repository": "snapcrafters/ffmpeg-2204-sdk",
+      "branch": "2204",
+      "commit": "19e896618f5822a6bf5b8e270333abfe99f8ce86"
+    },
+    {
+      "repository": "snapcrafters/ffmpeg-2404-sdk",
+      "branch": "2404",
+      "commit": "3108a8d15f59691725ae89ced71e315301ada544"
+    },
+    {
+      "repository": "snapcrafters/fkill",
+      "branch": "master",
+      "commit": "82d3823cd6bf66ebde6b8230296ff3db9b43026c"
+    },
+    {
+      "repository": "snapcrafters/flightgear",
+      "branch": "master",
+      "commit": "be258f91429b83d3e6eb681cc7c1edfe0e90865e"
+    },
+    {
+      "repository": "snapcrafters/get-iplayer",
+      "branch": "candidate",
+      "commit": "c30ec7f43fabd62e458ca22b7330969c8769ebe9"
+    },
+    {
+      "repository": "snapcrafters/ghvmctl",
+      "branch": "candidate",
+      "commit": "6150c50646550024648331f570702998c245fbdc"
+    },
+    {
+      "repository": "snapcrafters/hello-snap-travis-ci",
+      "branch": "master",
+      "commit": "6bb178ad07ab278a7a7d9b1cd257160c61bf983f"
+    },
+    {
+      "repository": "snapcrafters/helm",
+      "branch": "candidate",
+      "commit": "d5402e99a2d47902dc57b3926531386e09bb374a"
+    },
+    {
+      "repository": "snapcrafters/inadyn",
+      "branch": "master",
+      "commit": "9880700854afba5f2707bd24d85e970428ea2b77"
+    },
+    {
+      "repository": "snapcrafters/irssi",
+      "branch": "master",
+      "commit": "e58bd1e22f716cdbf5e16d37c694deffc6c663b8"
+    },
+    {
+      "repository": "snapcrafters/jenkins",
+      "branch": "candidate",
+      "commit": "7cd075e3e59327f19f523397267436d1f3142cfd"
+    },
+    {
+      "repository": "snapcrafters/kompozer",
+      "branch": "master",
+      "commit": "e449a83e0f836b62c7e48351e0cb1ffcf2357314"
+    },
+    {
+      "repository": "snapcrafters/links",
+      "branch": "master",
+      "commit": "c80f3fc16a0c2224f70623f6dccee0de59106fd2"
+    },
+    {
+      "repository": "snapcrafters/luanti",
+      "branch": "candidate",
+      "commit": "5bb64d3ec93c7b5e72c561a83cc23c35697a865c"
+    },
+    {
+      "repository": "snapcrafters/magic-wormhole",
+      "branch": "master",
+      "commit": "651490c2191168a9762eb6fc93c1b205c8b38979"
+    },
+    {
+      "repository": "snapcrafters/marktext",
+      "branch": "master",
+      "commit": "1a9af61d28f995c871422ef3a035b69fd1d76027"
+    },
+    {
+      "repository": "snapcrafters/mattermost-desktop",
+      "branch": "candidate",
+      "commit": "01c334153efd250a1db49accb57d3199d3d5c6a6"
+    },
+    {
+      "repository": "snapcrafters/mdl",
+      "branch": "master",
+      "commit": "bd59734bd58e44e441e5b94c600f14b7b31f7278"
+    },
+    {
+      "repository": "snapcrafters/mosaic",
+      "branch": "candidate",
+      "commit": "1514f86253514ec375ff263f23c9e3c67343085d"
+    },
+    {
+      "repository": "snapcrafters/mrrescue",
+      "branch": "master",
+      "commit": "a9dd847da3cb9bb10b9f38c81d32586053964ed6"
+    },
+    {
+      "repository": "snapcrafters/mumble",
+      "branch": "master",
+      "commit": "769452383f1c9f628bf379edbeb2dd99f1330191"
+    },
+    {
+      "repository": "snapcrafters/mutt",
+      "branch": "candidate",
+      "commit": "2bec7b33900052bb200ed1cc8360c0a033fbd3ae"
+    },
+    {
+      "repository": "snapcrafters/nano",
+      "branch": "candidate",
+      "commit": "27575caba66e683b71395575ea22d3e8f74a3d0d"
+    },
+    {
+      "repository": "snapcrafters/obs-studio",
+      "branch": "candidate",
+      "commit": "c3f35786b7bf1408e985a13b3f16450f89b26770"
+    },
+    {
+      "repository": "snapcrafters/offlineimap",
+      "branch": "master",
+      "commit": "49146604147e137be7a71f59cbf7879a4f1dd8d9"
+    },
+    {
+      "repository": "snapcrafters/opentoonz",
+      "branch": "master",
+      "commit": "490e8316ee2554c4296fd47821adb47b9e4fc39e"
+    },
+    {
+      "repository": "snapcrafters/opentoonz-morevna",
+      "branch": "master",
+      "commit": "212e491bd4591dc2bde2aded37c3838de5719aa2"
+    },
+    {
+      "repository": "snapcrafters/opentyrian",
+      "branch": "candidate",
+      "commit": "9db93843e8adedf7bcbe1702839fb1168cb11954"
+    },
+    {
+      "repository": "snapcrafters/patch-desktop-file-name",
+      "branch": "main",
+      "commit": "08f32531c26a132a3f7f2408d1d9a5c49843db84"
+    },
+    {
+      "repository": "snapcrafters/photoscape",
+      "branch": "master",
+      "commit": "5d45b10403d4eaee9824be7fc5fb87cc2fa4a7c8"
+    },
+    {
+      "repository": "snapcrafters/pogo",
+      "branch": "candidate",
+      "commit": "d8b14ee814ce3c2baa40d9c8edd51058e87e9e77"
+    },
+    {
+      "repository": "snapcrafters/proton-authenticator-snap",
+      "branch": "candidate",
+      "commit": "83d37bdf19dafd08ca72b39ef9084119b9e7ad40"
+    },
+    {
+      "repository": "snapcrafters/proton-pass-snap",
+      "branch": "candidate",
+      "commit": "ead20fb2a787cad9baba8e02036c2d5ab3e16acc"
+    },
+    {
+      "repository": "snapcrafters/protonmail-bridge-snap",
+      "branch": "candidate",
+      "commit": "f67529f2ebd6f365ac8a608d94797513eec7938a"
+    },
+    {
+      "repository": "snapcrafters/pyradio",
+      "branch": "candidate",
+      "commit": "05d5bf9095f62286a7ddb79900861cef182af1a0"
+    },
+    {
+      "repository": "snapcrafters/qtctl",
+      "branch": "master",
+      "commit": "eb6f8c473d8ce87b468f175acc2cb8792994d522"
+    },
+    {
+      "repository": "snapcrafters/ruff",
+      "branch": "candidate",
+      "commit": "73fa95b4ef318618d83af92ec85af8890fea4307"
+    },
+    {
+      "repository": "snapcrafters/s4a",
+      "branch": "master",
+      "commit": "04c9dfb87438bbc65a4dce8689f76c12c3ee008d"
+    },
+    {
+      "repository": "snapcrafters/scummvm",
+      "branch": "master",
+      "commit": "3197177b61df0d3abc6cdfde3557eca1ded04330"
+    },
+    {
+      "repository": "snapcrafters/sdlpop",
+      "branch": "master",
+      "commit": "d950a27631d1cf1c75fbf7a53f03e1f8e2102ea3"
+    },
+    {
+      "repository": "snapcrafters/sentry",
+      "branch": "master",
+      "commit": "cef1ff1a070a8f949e9d7d5d17a6a983b40d1f7c"
+    },
+    {
+      "repository": "snapcrafters/signal-desktop",
+      "branch": "candidate",
+      "commit": "8e68f1ac9fed2dd7accd582bf80b81e0b1486bd2"
+    },
+    {
+      "repository": "snapcrafters/simplenote",
+      "branch": "candidate",
+      "commit": "98f6d75235a49d0f9247b2bae2adff944037c8c8"
+    },
+    {
+      "repository": "snapcrafters/snap-quickstart-workshop",
+      "branch": "main",
+      "commit": "8866781164086718888827427922545996093346"
+    },
+    {
+      "repository": "snapcrafters/snap-repo-template",
+      "branch": "master",
+      "commit": "a6a46b34517073c6499eb0ecde532568aa680847"
+    },
+    {
+      "repository": "snapcrafters/snapcrafters.org",
+      "branch": "main",
+      "commit": "16b33ff3df6ab1968069fe2c9a39626eca7370c5"
+    },
+    {
+      "repository": "snapcrafters/sommelier",
+      "branch": "master",
+      "commit": "ab6a30936931d358bd67117e879570ff91010d82"
+    },
+    {
+      "repository": "snapcrafters/sommelier-core",
+      "branch": "master",
+      "commit": "0c75afb30e7a6c991a48ebf448b135eeed197960"
+    },
+    {
+      "repository": "snapcrafters/spelunky",
+      "branch": "master",
+      "commit": "019cefb88d4531f2dd879dbe1fcbe9c2b269faaf"
+    },
+    {
+      "repository": "snapcrafters/sublime-merge",
+      "branch": "candidate",
+      "commit": "ee180d77d3b720ea14ea0d3f42caf317787069d3"
+    },
+    {
+      "repository": "snapcrafters/sublime-text",
+      "branch": "candidate",
+      "commit": "32833a59c0e7704cc8a104cebd5f3dbada63e8cc"
+    },
+    {
+      "repository": "snapcrafters/tcpie",
+      "branch": "master",
+      "commit": "fdddb59c2848bc975c7d432baad5a186bd6aa74f"
+    },
+    {
+      "repository": "snapcrafters/term2048",
+      "branch": "master",
+      "commit": "16dce936e4fef607d9e47cd2579a010c37ceebdf"
+    },
+    {
+      "repository": "snapcrafters/terraform",
+      "branch": "candidate",
+      "commit": "9e846fca102d3d6112e8856e810db045ddb5b7e5"
+    },
+    {
+      "repository": "snapcrafters/terragrunt",
+      "branch": "candidate",
+      "commit": "e29eeda6bde0b4a806886b6241738baf83120cfe"
+    },
+    {
+      "repository": "snapcrafters/thelounge",
+      "branch": "master",
+      "commit": "cf6cc3a24d9e48b593263df227d69d32ef0ba996"
+    },
+    {
+      "repository": "snapcrafters/tmnationsforever",
+      "branch": "master",
+      "commit": "bd8b28de3bdf44193701eee07e0c066fcf4ba5e6"
+    },
+    {
+      "repository": "snapcrafters/tokenator",
+      "branch": "main",
+      "commit": "045e4367428ddb087437a902699515960e473f3a"
+    },
+    {
+      "repository": "snapcrafters/unifi",
+      "branch": "master",
+      "commit": "9d62f16094c34a0c6fe8a5371e0c02500513927c"
+    },
+    {
+      "repository": "snapcrafters/webkitgtk-sdk",
+      "branch": "2404",
+      "commit": "4998e8e3825043e7b1df3522cf5be431f9560a05"
+    },
+    {
+      "repository": "snapcrafters/wethr",
+      "branch": "master",
+      "commit": "830ec042cf43221911bf648991d502cfdb785bab"
+    },
+    {
+      "repository": "snapcrafters/wire",
+      "branch": "master",
+      "commit": "b7c3c8621fe49d99d256a336bfb022d1e42e3cf6"
+    },
+    {
+      "repository": "snapcrafters/xonotic",
+      "branch": "master",
+      "commit": "6c907b2a90c80fb9de9cc1e30974c1ef4156f139"
+    }
+  ],
+  "recipes": [
+    {
+      "repository": "snapcrafters/alacritty",
+      "commit": "f9dcc990e19bf047f91f336c6b7f2b92d22d92b8",
+      "path": "snap/snapcraft.yaml",
+      "blob": "9106d695b0c5371c53e07c320c9aea90bcf0e1fd",
+      "fixture": "alacritty--snap__snapcraft.yaml",
+      "name": "alacritty",
+      "base": "core22",
+      "version": "0.17.0",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "amd64"
+        },
+        {
+          "build-on": "armhf"
+        },
+        {
+          "build-on": "arm64"
+        },
+        {
+          "build-on": "s390x"
+        },
+        {
+          "build-on": "ppc64el"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/android-studio-canary",
+      "commit": "c6fe42a4a92e25040a59377951021942cbaf25d9",
+      "path": "snap/snapcraft.yaml",
+      "blob": "37897fe91d91a9c0a62cb106fba428738f653a9a",
+      "fixture": "android-studio-canary--snap__snapcraft.yaml",
+      "name": "android-studio-canary",
+      "base": "core22",
+      "version": "2026.2.1.4",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "amd64"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/android-studio",
+      "commit": "d3b7f671c96d8af5992b9a4d920b41d09abf8c3b",
+      "path": "snap/snapcraft.yaml",
+      "blob": "0fe6d0be507cf08a1cb31c3a275a9dde219183ef",
+      "fixture": "android-studio--snap__snapcraft.yaml",
+      "name": "android-studio",
+      "base": "core22",
+      "version": "2026.1.4.7-quail4",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "amd64"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/arduino",
+      "commit": "bbe53009af8f4efa98cc13d3be6f3842013e77e5",
+      "path": "snapcraft.yaml",
+      "blob": "8c2d17420730a8c64fd8d418a084da0f4855074e",
+      "fixture": "arduino--snapcraft.yaml",
+      "name": "arduino",
+      "base": "core18",
+      "version": "1.8.19",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "amd64"
+        },
+        {
+          "build-on": "armhf"
+        },
+        {
+          "build-on": "arm64"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/audacity",
+      "commit": "238df5c19e6ac4462ad4df41ecc19380343ed4db",
+      "path": "snap/snapcraft.yaml",
+      "blob": "d1c077701b5036601ebc0bcee12b595b14e6c8e8",
+      "fixture": "audacity--snap__snapcraft.yaml",
+      "name": "audacity",
+      "base": "core24",
+      "version": "3.7.9",
+      "adoptInfo": "audacity",
+      "architectures": null,
+      "platforms": {
+        "amd64": null,
+        "arm64": null
+      }
+    },
+    {
+      "repository": "snapcrafters/axel",
+      "commit": "2ee5649d9901453f48e4ff6675af1bd349c0da9e",
+      "path": "snap/snapcraft.yaml",
+      "blob": "2b1f2c354bda25145cd5bc7a7171922c69ac50d2",
+      "fixture": "axel--snap__snapcraft.yaml",
+      "name": "axel",
+      "base": "core22",
+      "version": "2.17.14",
+      "adoptInfo": "axel",
+      "architectures": [
+        {
+          "build-on": "amd64"
+        },
+        {
+          "build-on": "arm64"
+        },
+        {
+          "build-on": "armhf"
+        },
+        {
+          "build-on": "ppc64el"
+        },
+        {
+          "build-on": "s390x"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/bridge-designer",
+      "commit": "2fed83fbd6f369b3bb27245684dea3fc9a09939a",
+      "path": "snap/snapcraft.yaml",
+      "blob": "93b6863772cb477e4e04ac9ac9a981c29e3c1fcb",
+      "fixture": "bridge-designer--snap__snapcraft.yaml",
+      "name": "bridge-designer",
+      "base": "core18",
+      "version": "v16j243",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "amd64"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/cassandra",
+      "commit": "ff04ed3b8addecfccffc9160e569d5db02af62ca",
+      "path": "snap/snapcraft.yaml",
+      "blob": "90b8c915c96719181b0dcaa4eca152309ffc8690",
+      "fixture": "cassandra--snap__snapcraft.yaml",
+      "name": "cassandra",
+      "base": "core18",
+      "version": null,
+      "adoptInfo": "cassandra",
+      "architectures": null,
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/climate-trail",
+      "commit": "e6c1fd194425a3d9ce0850ea0bafc9e4f223dc04",
+      "path": "snap/snapcraft.yaml",
+      "blob": "42f74e6efd6477c64081b462bad58c3a835d7ba5",
+      "fixture": "climate-trail--snap__snapcraft.yaml",
+      "name": "climate-trail",
+      "base": "core18",
+      "version": "2.1",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "amd64",
+          "run-on": "amd64"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/codespell",
+      "commit": "ac5b639199d28754c9a560c77c2c7a3f6ab11e80",
+      "path": "snap/snapcraft.yaml",
+      "blob": "3109482838511823c27d126e2df6b2a831871f80",
+      "fixture": "codespell--snap__snapcraft.yaml",
+      "name": "codespell",
+      "base": "core24",
+      "version": "2.4.3",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null,
+        "arm64": null,
+        "armhf": null,
+        "ppc64el": null,
+        "riscv64": null,
+        "s390x": null
+      }
+    },
+    {
+      "repository": "snapcrafters/corsixth",
+      "commit": "c3a31862d06c435d87e823cfb6586c1ccc3c7372",
+      "path": "snap/snapcraft.yaml",
+      "blob": "94045a2d9a125fec5ae2e7a1a3d9e23cac38f791",
+      "fixture": "corsixth--snap__snapcraft.yaml",
+      "name": "corsixth",
+      "base": "core24",
+      "version": null,
+      "adoptInfo": "corsixth",
+      "architectures": null,
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/cryptool",
+      "commit": "10366204262f34c8aae33dc98d9f45403c4262fe",
+      "path": "snap/snapcraft.yaml",
+      "blob": "0823da5f7c64f4e42c27b4d508fa470676942a5b",
+      "fixture": "cryptool--snap__snapcraft.yaml",
+      "name": "cryptool",
+      "base": "core18",
+      "version": "1.4.42",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "amd64"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/cumulonimbus",
+      "commit": "4a59a9615cd011e31828a447bf11dc28999b656a",
+      "path": "snap/snapcraft.yaml",
+      "blob": "9ecdf6d920e846370211be70899f5ff3ae059fd2",
+      "fixture": "cumulonimbus--snap__snapcraft.yaml",
+      "name": "cumulonimbus",
+      "base": "core24",
+      "version": "1.28.2",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": {
+          "build-on": [
+            "amd64"
+          ],
+          "build-for": [
+            "amd64"
+          ]
+        }
+      }
+    },
+    {
+      "repository": "snapcrafters/ddgr",
+      "commit": "ce1e4ecebace82421d487a11e57d0a77e3901f60",
+      "path": "snap/snapcraft.yaml",
+      "blob": "3c990dc593bbea018f08bf1d3bd1ddf7268b9e21",
+      "fixture": "ddgr--snap__snapcraft.yaml",
+      "name": "ddgr",
+      "base": "core22",
+      "version": "2.2",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "amd64"
+        },
+        {
+          "build-on": "arm64"
+        },
+        {
+          "build-on": "armhf"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/discord",
+      "commit": "80e65300496569600543d53e131e97b2ecf42cf1",
+      "path": "snap/snapcraft.yaml",
+      "blob": "cc86913427d6ebaee30cd9cbc5e708b1e04908f2",
+      "fixture": "discord--snap__snapcraft.yaml",
+      "name": "discord",
+      "base": "core22",
+      "version": "1.0.156",
+      "adoptInfo": null,
+      "architectures": [
+        "amd64"
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/dosbox-x",
+      "commit": "b2ddf0f556563cfa12b2f77579cf47c4524a0b63",
+      "path": "snap/snapcraft.yaml",
+      "blob": "11d953565a22abb87871d80aeaeaf3bf36773932",
+      "fixture": "dosbox-x--snap__snapcraft.yaml",
+      "name": "dosbox-x",
+      "base": "core22",
+      "version": null,
+      "adoptInfo": "dosbox-x",
+      "architectures": [
+        {
+          "build-on": "i386"
+        },
+        {
+          "build-on": "amd64"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/duckmarines",
+      "commit": "92522cf4f0afff69ad848113eaafbf7c379ec9ed",
+      "path": "snap/snapcraft.yaml",
+      "blob": "c3ab81c363d15598919267f688b35f1540cc697b",
+      "fixture": "duckmarines--snap__snapcraft.yaml",
+      "name": "duckmarines",
+      "base": "core20",
+      "version": null,
+      "adoptInfo": "duckmarines",
+      "architectures": [
+        {
+          "build-on": "amd64"
+        },
+        {
+          "build-on": "i386"
+        },
+        {
+          "build-on": "armhf"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/ffmpeg-2204-sdk",
+      "commit": "19e896618f5822a6bf5b8e270333abfe99f8ce86",
+      "path": "ffmpeg-2204-sdk/snapcraft.yaml",
+      "blob": "1b0604d1949f19f85b9eec3862d4c027117c30e7",
+      "fixture": "ffmpeg-2204-sdk--ffmpeg-2204-sdk__snapcraft.yaml",
+      "name": "ffmpeg-2204-sdk",
+      "base": "core22",
+      "version": "8.1",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "amd64"
+        },
+        {
+          "build-on": "arm64"
+        },
+        {
+          "build-on": "armhf"
+        },
+        {
+          "build-on": "ppc64el"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/ffmpeg-2204-sdk",
+      "commit": "19e896618f5822a6bf5b8e270333abfe99f8ce86",
+      "path": "ffmpeg-2204/snapcraft.yaml",
+      "blob": "d68428efd2393c2ef15a4e33252dea5f341a36fe",
+      "fixture": "ffmpeg-2204-sdk--ffmpeg-2204__snapcraft.yaml",
+      "name": "ffmpeg-2204",
+      "base": "core22",
+      "version": "8.1",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "amd64"
+        },
+        {
+          "build-on": "arm64"
+        },
+        {
+          "build-on": "armhf"
+        },
+        {
+          "build-on": "ppc64el"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/ffmpeg-2404-sdk",
+      "commit": "3108a8d15f59691725ae89ced71e315301ada544",
+      "path": "ffmpeg-2404-sdk/snapcraft.yaml",
+      "blob": "2f6248571a765474fce29ff8415bbaaa4bb617b1",
+      "fixture": "ffmpeg-2404-sdk--ffmpeg-2404-sdk__snapcraft.yaml",
+      "name": "ffmpeg-2404-sdk",
+      "base": "core24",
+      "version": "7.1.5",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null,
+        "arm64": null,
+        "armhf": null,
+        "ppc64el": null,
+        "riscv64": null,
+        "s390x": null
+      }
+    },
+    {
+      "repository": "snapcrafters/ffmpeg-2404-sdk",
+      "commit": "3108a8d15f59691725ae89ced71e315301ada544",
+      "path": "ffmpeg-2404/snapcraft.yaml",
+      "blob": "268528062d01cc87f1150e4bfafa4d8e460c126d",
+      "fixture": "ffmpeg-2404-sdk--ffmpeg-2404__snapcraft.yaml",
+      "name": "ffmpeg-2404",
+      "base": "core24",
+      "version": "7.1.5",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null,
+        "arm64": null,
+        "armhf": null,
+        "ppc64el": null,
+        "riscv64": null,
+        "s390x": null
+      }
+    },
+    {
+      "repository": "snapcrafters/ffmpeg",
+      "commit": "53af5531ac37c2dd7256a8a54bca03912e4603a4",
+      "path": "snap/snapcraft.yaml",
+      "blob": "5303d2253d101205f062c58daaecfbb35c84cd72",
+      "fixture": "ffmpeg--snap__snapcraft.yaml",
+      "name": "ffmpeg",
+      "base": "core24",
+      "version": "ffmpeg-2404",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null,
+        "ppc64el": null,
+        "arm64": null,
+        "armhf": null
+      }
+    },
+    {
+      "repository": "snapcrafters/fkill",
+      "commit": "82d3823cd6bf66ebde6b8230296ff3db9b43026c",
+      "path": "snap/snapcraft.yaml",
+      "blob": "047125c757c3bc6e0956c04034187fa97dbc29d8",
+      "fixture": "fkill--snap__snapcraft.yaml",
+      "name": "fkill",
+      "base": "core20",
+      "version": null,
+      "adoptInfo": "fkill",
+      "architectures": null,
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/flightgear",
+      "commit": "be258f91429b83d3e6eb681cc7c1edfe0e90865e",
+      "path": "snap/snapcraft.yaml",
+      "blob": "4555b28981b81219a14232bb73c8c6bb5f0d667c",
+      "fixture": "flightgear--snap__snapcraft.yaml",
+      "name": "flightgear",
+      "base": "core24",
+      "version": "2024.1.5",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/get-iplayer",
+      "commit": "c30ec7f43fabd62e458ca22b7330969c8769ebe9",
+      "path": "snap/snapcraft.yaml",
+      "blob": "b09f7539b7d08bce6ddc14291956520ee88cfd15",
+      "fixture": "get-iplayer--snap__snapcraft.yaml",
+      "name": "get-iplayer",
+      "base": "core24",
+      "version": "3.36",
+      "adoptInfo": "get-iplayer",
+      "architectures": null,
+      "platforms": {
+        "amd64": null,
+        "arm64": null,
+        "armhf": null,
+        "ppc64el": null,
+        "s390x": null
+      }
+    },
+    {
+      "repository": "snapcrafters/ghvmctl",
+      "commit": "6150c50646550024648331f570702998c245fbdc",
+      "path": "snap/snapcraft.yaml",
+      "blob": "c07d0a27a676b9913e6e495111606195b952eb30",
+      "fixture": "ghvmctl--snap__snapcraft.yaml",
+      "name": "ghvmctl",
+      "base": "core22",
+      "version": "0.4.1",
+      "adoptInfo": null,
+      "architectures": [
+        "amd64"
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/hello-snap-travis-ci",
+      "commit": "6bb178ad07ab278a7a7d9b1cd257160c61bf983f",
+      "path": "snap/snapcraft.yaml",
+      "blob": "201d7364939d18c65bc040e850ce5a3c079155e6",
+      "fixture": "hello-snap-travis-ci--snap__snapcraft.yaml",
+      "name": "hello-travis-ci",
+      "base": "core18",
+      "version": "2.10",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/helm",
+      "commit": "d5402e99a2d47902dc57b3926531386e09bb374a",
+      "path": "snap/snapcraft.yaml",
+      "blob": "00260a45e729af765e851a6563bac6dc05cf65c7",
+      "fixture": "helm--snap__snapcraft.yaml",
+      "name": "helm",
+      "base": "core24",
+      "version": "4.2.4",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null,
+        "armhf": null,
+        "arm64": null,
+        "s390x": null
+      }
+    },
+    {
+      "repository": "snapcrafters/inadyn",
+      "commit": "9880700854afba5f2707bd24d85e970428ea2b77",
+      "path": "snap/snapcraft.yaml",
+      "blob": "4129f0df2cb399f7420a64251ac3541c6eb93fb0",
+      "fixture": "inadyn--snap__snapcraft.yaml",
+      "name": "inadyn",
+      "base": "core20",
+      "version": null,
+      "adoptInfo": "inadyn",
+      "architectures": null,
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/irssi",
+      "commit": "e58bd1e22f716cdbf5e16d37c694deffc6c663b8",
+      "path": "snap/snapcraft.yaml",
+      "blob": "09a5e1f601cde2786af09028ea6752a4ac9535e7",
+      "fixture": "irssi--snap__snapcraft.yaml",
+      "name": "irssi",
+      "base": "core18",
+      "version": null,
+      "adoptInfo": "irssi",
+      "architectures": null,
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/jenkins",
+      "commit": "7cd075e3e59327f19f523397267436d1f3142cfd",
+      "path": "snap/snapcraft.yaml",
+      "blob": "59e08881dd23f54b6a8b3cd21f197defab6b5445",
+      "fixture": "jenkins--snap__snapcraft.yaml",
+      "name": "jenkins",
+      "base": "core22",
+      "version": "2.580",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "amd64"
+        },
+        {
+          "build-on": "arm64"
+        },
+        {
+          "build-on": "armhf"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/kompozer",
+      "commit": "e449a83e0f836b62c7e48351e0cb1ffcf2357314",
+      "path": "snap/snapcraft.yaml",
+      "blob": "cb8523603f932573733ab9997adc86e881f49934",
+      "fixture": "kompozer--snap__snapcraft.yaml",
+      "name": "kompozer",
+      "base": "core18",
+      "version": "0.8",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "amd64"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/links",
+      "commit": "c80f3fc16a0c2224f70623f6dccee0de59106fd2",
+      "path": "snap/snapcraft.yaml",
+      "blob": "4df18ff4a892c6c0a1709660ca5774279ed9a611",
+      "fixture": "links--snap__snapcraft.yaml",
+      "name": "links",
+      "base": "core20",
+      "version": null,
+      "adoptInfo": "links",
+      "architectures": null,
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/luanti",
+      "commit": "5bb64d3ec93c7b5e72c561a83cc23c35697a865c",
+      "path": "snap/snapcraft.yaml",
+      "blob": "8ee4a1cbad407b601828abf1269457e01a2b400c",
+      "fixture": "luanti--snap__snapcraft.yaml",
+      "name": "luanti",
+      "base": "core24",
+      "version": "5.17.0",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null,
+        "armhf": null,
+        "arm64": null
+      }
+    },
+    {
+      "repository": "snapcrafters/magic-wormhole",
+      "commit": "651490c2191168a9762eb6fc93c1b205c8b38979",
+      "path": "snap/snapcraft.yaml",
+      "blob": "b4a37c1b08f8788d00e3992ff38c9903979911ce",
+      "fixture": "magic-wormhole--snap__snapcraft.yaml",
+      "name": "wormhole",
+      "base": "core24",
+      "version": null,
+      "adoptInfo": "wormhole",
+      "architectures": null,
+      "platforms": {
+        "amd64": null,
+        "arm64": null,
+        "armhf": null,
+        "ppc64el": null,
+        "riscv64": null,
+        "s390x": null
+      }
+    },
+    {
+      "repository": "snapcrafters/marktext",
+      "commit": "1a9af61d28f995c871422ef3a035b69fd1d76027",
+      "path": "snap/snapcraft.yaml",
+      "blob": "345d2c117477504d4e0291c6e986d2ddc2f1c61f",
+      "fixture": "marktext--snap__snapcraft.yaml",
+      "name": "marktext",
+      "base": "core22",
+      "version": "0.17.1",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "amd64"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/mattermost-desktop",
+      "commit": "01c334153efd250a1db49accb57d3199d3d5c6a6",
+      "path": "snap/snapcraft.yaml",
+      "blob": "fc7a465a3ef87982bc3f5de961d57c9308fd111a",
+      "fixture": "mattermost-desktop--snap__snapcraft.yaml",
+      "name": "mattermost-desktop",
+      "base": "core24",
+      "version": "6.3.0",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null,
+        "arm64": null
+      }
+    },
+    {
+      "repository": "snapcrafters/mdl",
+      "commit": "bd59734bd58e44e441e5b94c600f14b7b31f7278",
+      "path": "snap/snapcraft.yaml",
+      "blob": "afdc840065d2227326932ea45bd08ee1817bb820",
+      "fixture": "mdl--snap__snapcraft.yaml",
+      "name": "mdl",
+      "base": "core18",
+      "version": null,
+      "adoptInfo": "mdl",
+      "architectures": null,
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/mosaic",
+      "commit": "1514f86253514ec375ff263f23c9e3c67343085d",
+      "path": "snap/snapcraft.yaml",
+      "blob": "fc8fe513f45146cc9a182ed05ad22a9c6bd171c9",
+      "fixture": "mosaic--snap__snapcraft.yaml",
+      "name": "mosaic",
+      "base": "core22",
+      "version": "2.7",
+      "adoptInfo": null,
+      "architectures": [
+        "amd64",
+        "arm64",
+        "armhf",
+        "ppc64el",
+        "riscv64",
+        "s390x"
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/mrrescue",
+      "commit": "a9dd847da3cb9bb10b9f38c81d32586053964ed6",
+      "path": "snap/snapcraft.yaml",
+      "blob": "32a72dacdd182367bb7676302dc8fe9ea852ed86",
+      "fixture": "mrrescue--snap__snapcraft.yaml",
+      "name": "mrrescue",
+      "base": "core20",
+      "version": null,
+      "adoptInfo": "mrrescue",
+      "architectures": [
+        {
+          "build-on": "amd64"
+        },
+        {
+          "build-on": "i386"
+        },
+        {
+          "build-on": "armhf"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/mumble",
+      "commit": "769452383f1c9f628bf379edbeb2dd99f1330191",
+      "path": "snap/snapcraft.yaml",
+      "blob": "34013dc2ca7a4b2789edbba05d8891ae62f7d224",
+      "fixture": "mumble--snap__snapcraft.yaml",
+      "name": "mumble",
+      "base": "core22",
+      "version": "1.5.613",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/mutt",
+      "commit": "2bec7b33900052bb200ed1cc8360c0a033fbd3ae",
+      "path": "snap/snapcraft.yaml",
+      "blob": "5e447b2965fd73937cac99d4bafce4cd9de7dba2",
+      "fixture": "mutt--snap__snapcraft.yaml",
+      "name": "mutt",
+      "base": "core24",
+      "version": "2-4-2-rel",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null,
+        "armhf": null,
+        "arm64": null,
+        "s390x": null,
+        "ppc64el": null
+      }
+    },
+    {
+      "repository": "snapcrafters/nano",
+      "commit": "27575caba66e683b71395575ea22d3e8f74a3d0d",
+      "path": "snap/snapcraft.yaml",
+      "blob": "2255a39fb1787103ddc0d171a673ede5ab5f91c9",
+      "fixture": "nano--snap__snapcraft.yaml",
+      "name": "nano",
+      "base": "core24",
+      "version": "9.2",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null,
+        "arm64": null,
+        "armhf": null
+      }
+    },
+    {
+      "repository": "snapcrafters/obs-studio",
+      "commit": "c3f35786b7bf1408e985a13b3f16450f89b26770",
+      "path": "snap/snapcraft.yaml",
+      "blob": "beab692a9bbcdf143cf1632f945d1be8f016faa4",
+      "fixture": "obs-studio--snap__snapcraft.yaml",
+      "name": "obs-studio",
+      "base": "core24",
+      "version": "32.2.0",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null
+      }
+    },
+    {
+      "repository": "snapcrafters/offlineimap",
+      "commit": "49146604147e137be7a71f59cbf7879a4f1dd8d9",
+      "path": "snap/snapcraft.yaml",
+      "blob": "7dc9e1e06ff636210e90af688466f27147d0decc",
+      "fixture": "offlineimap--snap__snapcraft.yaml",
+      "name": "offlineimap",
+      "base": "core18",
+      "version": null,
+      "adoptInfo": "offlineimap",
+      "architectures": null,
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/opentoonz-morevna",
+      "commit": "212e491bd4591dc2bde2aded37c3838de5719aa2",
+      "path": "snap/snapcraft.yaml",
+      "blob": "f0a3c8a3a02646f366381d75127ae26618b22d2b",
+      "fixture": "opentoonz-morevna--snap__snapcraft.yaml",
+      "name": "opentoonz-morevna",
+      "base": "core18",
+      "version": "1.4.0",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "amd64"
+        },
+        {
+          "build-on": "i386"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/opentoonz",
+      "commit": "490e8316ee2554c4296fd47821adb47b9e4fc39e",
+      "path": "snap/snapcraft.yaml",
+      "blob": "89f8a40c6ca535141d153ce3944a2469414e5a57",
+      "fixture": "opentoonz--snap__snapcraft.yaml",
+      "name": "opentoonz",
+      "base": "core24",
+      "version": "1.7.1",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null
+      }
+    },
+    {
+      "repository": "snapcrafters/opentyrian",
+      "commit": "9db93843e8adedf7bcbe1702839fb1168cb11954",
+      "path": "snap/snapcraft.yaml",
+      "blob": "136a488fb2ff837109e6a7c7d8fa9e0e01e6bf89",
+      "fixture": "opentyrian--snap__snapcraft.yaml",
+      "name": "opentyrian",
+      "base": "core22",
+      "version": "2.1.20221123",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "amd64"
+        },
+        {
+          "build-on": "arm64"
+        },
+        {
+          "build-on": "armhf"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/photoscape",
+      "commit": "5d45b10403d4eaee9824be7fc5fb87cc2fa4a7c8",
+      "path": "snap/snapcraft.yaml",
+      "blob": "341d7e574b6a321f35a51f1b2c090adad43e1f81",
+      "fixture": "photoscape--snap__snapcraft.yaml",
+      "name": "photoscape",
+      "base": "core18",
+      "version": "3.7-1",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "amd64"
+        },
+        {
+          "build-on": "i386"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/pogo",
+      "commit": "d8b14ee814ce3c2baa40d9c8edd51058e87e9e77",
+      "path": "snap/snapcraft.yaml",
+      "blob": "69c12a41842a0009098dfb86e061cde938663188",
+      "fixture": "pogo--snap__snapcraft.yaml",
+      "name": "pogo",
+      "base": "core22",
+      "version": "1.0.1",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "amd64"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/proton-authenticator-snap",
+      "commit": "83d37bdf19dafd08ca72b39ef9084119b9e7ad40",
+      "path": "snap/snapcraft.yaml",
+      "blob": "eb560b2f72badd9e14440208156cb07f5e933625",
+      "fixture": "proton-authenticator-snap--snap__snapcraft.yaml",
+      "name": "proton-authenticator",
+      "base": "core24",
+      "version": "1.1.4",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null
+      }
+    },
+    {
+      "repository": "snapcrafters/proton-pass-snap",
+      "commit": "ead20fb2a787cad9baba8e02036c2d5ab3e16acc",
+      "path": "snap/snapcraft.yaml",
+      "blob": "38ae8f60600088b14f8ccd6fdc84ca0e69fba2e2",
+      "fixture": "proton-pass-snap--snap__snapcraft.yaml",
+      "name": "proton-pass",
+      "base": "core24",
+      "version": "1.38.0",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null
+      }
+    },
+    {
+      "repository": "snapcrafters/protonmail-bridge-snap",
+      "commit": "f67529f2ebd6f365ac8a608d94797513eec7938a",
+      "path": "snap/snapcraft.yaml",
+      "blob": "39ed663921360d79c943e23c598b460a7f469049",
+      "fixture": "protonmail-bridge-snap--snap__snapcraft.yaml",
+      "name": "protonmail-bridge",
+      "base": "core24",
+      "version": "3.25.0",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null
+      }
+    },
+    {
+      "repository": "snapcrafters/pyradio",
+      "commit": "05d5bf9095f62286a7ddb79900861cef182af1a0",
+      "path": "snap/snapcraft.yaml",
+      "blob": "5d374eac5d32346ed16f738789ffb202dcabe9fc",
+      "fixture": "pyradio--snap__snapcraft.yaml",
+      "name": "pyradio",
+      "base": "core24",
+      "version": "0.9.3.11.31",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null,
+        "arm64": null,
+        "armhf": null
+      }
+    },
+    {
+      "repository": "snapcrafters/ruff",
+      "commit": "73fa95b4ef318618d83af92ec85af8890fea4307",
+      "path": "snap/snapcraft.yaml",
+      "blob": "a162a4784adaa1535d28c7ea1459ff14457bb614",
+      "fixture": "ruff--snap__snapcraft.yaml",
+      "name": "ruff",
+      "base": "core24",
+      "version": "0.16.6",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null,
+        "arm64": null,
+        "ppc64el": null,
+        "riscv64": null,
+        "s390x": null
+      }
+    },
+    {
+      "repository": "snapcrafters/s4a",
+      "commit": "04c9dfb87438bbc65a4dce8689f76c12c3ee008d",
+      "path": "snapcraft.yaml",
+      "blob": "f4d7ed8de04b142b2b534ed4bbe8796df3b15339",
+      "fixture": "s4a--snapcraft.yaml",
+      "name": "s4a",
+      "base": "core18",
+      "version": "1.6",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "amd64",
+          "run-on": "amd64"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/scummvm",
+      "commit": "3197177b61df0d3abc6cdfde3557eca1ded04330",
+      "path": "snap/snapcraft.yaml",
+      "blob": "349c5ea0ccecf12034b57bc5b3266892b14e2e7f",
+      "fixture": "scummvm--snap__snapcraft.yaml",
+      "name": "scummvm",
+      "base": "core20",
+      "version": null,
+      "adoptInfo": "scummvm",
+      "architectures": [
+        {
+          "build-on": "amd64"
+        },
+        {
+          "build-on": "arm64"
+        },
+        {
+          "build-on": "armhf"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/sdlpop",
+      "commit": "d950a27631d1cf1c75fbf7a53f03e1f8e2102ea3",
+      "path": "snap/snapcraft.yaml",
+      "blob": "3110d6f1b9527ac11d471cac23e7f0d75e90efb5",
+      "fixture": "sdlpop--snap__snapcraft.yaml",
+      "name": "sdlpop",
+      "base": "core22",
+      "version": null,
+      "adoptInfo": "sdlpop",
+      "architectures": [
+        {
+          "build-on": "amd64"
+        },
+        {
+          "build-on": "arm64"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/sentry",
+      "commit": "cef1ff1a070a8f949e9d7d5d17a6a983b40d1f7c",
+      "path": "snap/snapcraft.yaml",
+      "blob": "e9a1fa1e9ff6603d2dbb9091baa3fec20db462e8",
+      "fixture": "sentry--snap__snapcraft.yaml",
+      "name": "sentry",
+      "base": "core20",
+      "version": "23.6.2",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "i386"
+        },
+        {
+          "build-on": "amd64"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/signal-desktop",
+      "commit": "8e68f1ac9fed2dd7accd582bf80b81e0b1486bd2",
+      "path": "snap/snapcraft.yaml",
+      "blob": "6e4ece9eafabe4511efea021518aa804bbdf09bb",
+      "fixture": "signal-desktop--snap__snapcraft.yaml",
+      "name": "signal-desktop",
+      "base": "core24",
+      "version": "8.26.0",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null,
+        "arm64": null
+      }
+    },
+    {
+      "repository": "snapcrafters/simplenote",
+      "commit": "98f6d75235a49d0f9247b2bae2adff944037c8c8",
+      "path": "snap/snapcraft.yaml",
+      "blob": "1fc91e8f713d92ae49226334329fca6229135693",
+      "fixture": "simplenote--snap__snapcraft.yaml",
+      "name": "simplenote",
+      "base": "core24",
+      "version": "2.27.1",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": {
+          "build-on": [
+            "amd64"
+          ],
+          "build-for": [
+            "amd64"
+          ]
+        },
+        "arm64": {
+          "build-on": [
+            "arm64"
+          ],
+          "build-for": [
+            "arm64"
+          ]
+        }
+      }
+    },
+    {
+      "repository": "snapcrafters/snap-quickstart-workshop",
+      "commit": "8866781164086718888827427922545996093346",
+      "path": "hello-world-gtk/snapcraft.yaml",
+      "blob": "046c8e643617f711c2cc929eb9444f555538ed20",
+      "fixture": "snap-quickstart-workshop--hello-world-gtk__snapcraft.yaml",
+      "name": "hello-world-gtk",
+      "base": "core24",
+      "version": "0.1",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/snap-quickstart-workshop",
+      "commit": "8866781164086718888827427922545996093346",
+      "path": "yq/snapcraft.yaml",
+      "blob": "bbc7f4a16b944f08e025e06741fd9eeff273c5d0",
+      "fixture": "snap-quickstart-workshop--yq__snapcraft.yaml",
+      "name": "yq",
+      "base": "core24",
+      "version": "v4.47.1",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null
+      }
+    },
+    {
+      "repository": "snapcrafters/snap-repo-template",
+      "commit": "a6a46b34517073c6499eb0ecde532568aa680847",
+      "path": "snap/snapcraft.yaml",
+      "blob": "ffe8dfa14ac95783fe0d83b8b1c371cf2259f9a9",
+      "fixture": "snap-repo-template--snap__snapcraft.yaml",
+      "name": "my-snap-name",
+      "base": "core22",
+      "version": "0.1",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/sommelier",
+      "commit": "ab6a30936931d358bd67117e879570ff91010d82",
+      "path": "snapcraft.yaml",
+      "blob": "5e8f3d1124f25fad8c2c54551b986074f025f52e",
+      "fixture": "sommelier--snapcraft.yaml",
+      "name": "sommelier",
+      "base": "core18",
+      "version": "1.0",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "amd64"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/spelunky",
+      "commit": "019cefb88d4531f2dd879dbe1fcbe9c2b269faaf",
+      "path": "snap/snapcraft.yaml",
+      "blob": "5c61819704d5aa5a339df45b44ea50fd9d3bea82",
+      "fixture": "spelunky--snap__snapcraft.yaml",
+      "name": "spelunky",
+      "base": null,
+      "version": "1.1.3",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "amd64",
+          "run-on": [
+            "amd64",
+            "i386"
+          ]
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/sublime-merge",
+      "commit": "ee180d77d3b720ea14ea0d3f42caf317787069d3",
+      "path": "snap/snapcraft.yaml",
+      "blob": "bc247fb2ba69a13274b584793a17ff88ef2862e8",
+      "fixture": "sublime-merge--snap__snapcraft.yaml",
+      "name": "sublime-merge",
+      "base": "core24",
+      "version": "2125",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null,
+        "arm64": null
+      }
+    },
+    {
+      "repository": "snapcrafters/sublime-text",
+      "commit": "32833a59c0e7704cc8a104cebd5f3dbada63e8cc",
+      "path": "snap/snapcraft.yaml",
+      "blob": "4b0e3013043dde1093ce4f99620f4b954a135015",
+      "fixture": "sublime-text--snap__snapcraft.yaml",
+      "name": "sublime-text",
+      "base": "core24",
+      "version": "4200",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null,
+        "arm64": null
+      }
+    },
+    {
+      "repository": "snapcrafters/tcpie",
+      "commit": "fdddb59c2848bc975c7d432baad5a186bd6aa74f",
+      "path": "snap/snapcraft.yaml",
+      "blob": "55806ed32d3cfdb34b1e49c3e179c3a22249ac51",
+      "fixture": "tcpie--snap__snapcraft.yaml",
+      "name": "tcpie",
+      "base": "core18",
+      "version": null,
+      "adoptInfo": "tcpie",
+      "architectures": [
+        {
+          "build-on": "amd64"
+        },
+        {
+          "build-on": "armhf"
+        },
+        {
+          "build-on": "arm64"
+        },
+        {
+          "build-on": "s390x"
+        },
+        {
+          "build-on": "ppc64el"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/term2048",
+      "commit": "16dce936e4fef607d9e47cd2579a010c37ceebdf",
+      "path": "snap/snapcraft.yaml",
+      "blob": "a9120bce95e14debda56f378cb18cb262ae65be3",
+      "fixture": "term2048--snap__snapcraft.yaml",
+      "name": "term2048",
+      "base": "core22",
+      "version": "0.2.6",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/terraform",
+      "commit": "9e846fca102d3d6112e8856e810db045ddb5b7e5",
+      "path": "snap/snapcraft.yaml",
+      "blob": "c00ad150fe7568b91a61378765abf38f36c520a6",
+      "fixture": "terraform--snap__snapcraft.yaml",
+      "name": "terraform",
+      "base": "core24",
+      "version": "1.16.1",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null,
+        "armhf": null,
+        "arm64": null,
+        "s390x": null,
+        "ppc64el": null
+      }
+    },
+    {
+      "repository": "snapcrafters/terragrunt",
+      "commit": "e29eeda6bde0b4a806886b6241738baf83120cfe",
+      "path": "snap/snapcraft.yaml",
+      "blob": "c7e0fdb1391056469b03b039684f7fcb6a5c670b",
+      "fixture": "terragrunt--snap__snapcraft.yaml",
+      "name": "terragrunt",
+      "base": "core24",
+      "version": "1.1.4",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null,
+        "armhf": null,
+        "arm64": null,
+        "s390x": null,
+        "ppc64el": null
+      }
+    },
+    {
+      "repository": "snapcrafters/thelounge",
+      "commit": "cf6cc3a24d9e48b593263df227d69d32ef0ba996",
+      "path": "snap/snapcraft.yaml",
+      "blob": "b98616f2e0e212fcb4b780a5de8f8819e36899e1",
+      "fixture": "thelounge--snap__snapcraft.yaml",
+      "name": "thelounge",
+      "base": "core22",
+      "version": null,
+      "adoptInfo": "thelounge",
+      "architectures": [
+        {
+          "build-on": "amd64"
+        },
+        {
+          "build-on": "armhf"
+        },
+        {
+          "build-on": "arm64"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/tmnationsforever",
+      "commit": "bd8b28de3bdf44193701eee07e0c066fcf4ba5e6",
+      "path": "snapcraft.yaml",
+      "blob": "b08a8c5338460ffe7f1c09d175a4def003930b18",
+      "fixture": "tmnationsforever--snapcraft.yaml",
+      "name": "tmnationsforever",
+      "base": "core18",
+      "version": "2.11.26",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "amd64"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/unifi",
+      "commit": "9d62f16094c34a0c6fe8a5371e0c02500513927c",
+      "path": "snap/snapcraft.yaml",
+      "blob": "68adfa5a0ec62502a991dea7121c492711f5cce4",
+      "fixture": "unifi--snap__snapcraft.yaml",
+      "name": "unifi",
+      "base": "core18",
+      "version": "5.13.29",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "arm64"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/webkitgtk-sdk",
+      "commit": "4998e8e3825043e7b1df3522cf5be431f9560a05",
+      "path": "webkitgtk-6-gnome-2404-sdk/snapcraft.yaml",
+      "blob": "e4dea1a4c733f56054f42e330410e9d6ee94a7f0",
+      "fixture": "webkitgtk-sdk--webkitgtk-6-gnome-2404-sdk__snapcraft.yaml",
+      "name": "webkitgtk-6-gnome-2404-sdk",
+      "base": "core24",
+      "version": "2.53.4",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null,
+        "arm64": null,
+        "armhf": null,
+        "ppc64el": null
+      }
+    },
+    {
+      "repository": "snapcrafters/webkitgtk-sdk",
+      "commit": "4998e8e3825043e7b1df3522cf5be431f9560a05",
+      "path": "webkitgtk-6-gnome-2404/snapcraft.yaml",
+      "blob": "89ef0f35c5560d5f6f433e4917361fc4d0781053",
+      "fixture": "webkitgtk-sdk--webkitgtk-6-gnome-2404__snapcraft.yaml",
+      "name": "webkitgtk-6-gnome-2404",
+      "base": "core24",
+      "version": "2.53.4",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null,
+        "arm64": null,
+        "armhf": null,
+        "ppc64el": null
+      }
+    },
+    {
+      "repository": "snapcrafters/wethr",
+      "commit": "830ec042cf43221911bf648991d502cfdb785bab",
+      "path": "snap/snapcraft.yaml",
+      "blob": "7aa686881b3a102826444bf13ef30f480efc0850",
+      "fixture": "wethr--snap__snapcraft.yaml",
+      "name": "wethr",
+      "base": "core20",
+      "version": null,
+      "adoptInfo": "wethr",
+      "architectures": [
+        {
+          "build-on": "amd64"
+        },
+        {
+          "build-on": "armhf"
+        },
+        {
+          "build-on": "arm64"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/wire",
+      "commit": "b7c3c8621fe49d99d256a336bfb022d1e42e3cf6",
+      "path": "snap/snapcraft.yaml",
+      "blob": "a3cf1a1695ec66c5bfa74ce5c6b15ad7d0020902",
+      "fixture": "wire--snap__snapcraft.yaml",
+      "name": "wire",
+      "base": "core18",
+      "version": "latest",
+      "adoptInfo": null,
+      "architectures": [
+        {
+          "build-on": "amd64"
+        }
+      ],
+      "platforms": null
+    },
+    {
+      "repository": "snapcrafters/xonotic",
+      "commit": "6c907b2a90c80fb9de9cc1e30974c1ef4156f139",
+      "path": "snap/snapcraft.yaml",
+      "blob": "1ef745663d4784f04cef2b49a8aef635527251ba",
+      "fixture": "xonotic--snap__snapcraft.yaml",
+      "name": "xonotic",
+      "base": "core24",
+      "version": "0.8.6",
+      "adoptInfo": null,
+      "architectures": null,
+      "platforms": {
+        "amd64": null,
+        "arm64": null
+      }
+    }
+  ]
+}

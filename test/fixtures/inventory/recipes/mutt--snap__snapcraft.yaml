@@ -1,0 +1,151 @@
+name: mutt
+title: Mutt
+version: 2-4-2-rel
+summary: Mutt is a sophisticated text-based Mail User Agent
+description: |
+  Mutt is a sophisticated text-based Mail User Agent. Some highlights
+    * MIME support (including RFC1522 encoding/decoding of 8-bit message
+      headers and UTF-8 support).
+    * PGP/MIME support (RFC 2015).
+    * Advanced IMAP client supporting SSL encryption and SASL authentication.
+    * POP3 support.
+    * ESMTP support.
+    * Message threading (both strict and non-strict).
+    * Keybindings are configurable, default keybindings are much like ELM;
+      Mush and PINE-like ones are provided as examples.
+    * Handles MMDF, MH and Maildir in addition to regular mbox format.
+    * Messages may be (indefinitely) postponed.
+    * Colour support.
+    * Highly configurable through easy but powerful rc file.
+    * Support for compressed mailboxes.
+    * An optional Sidebar.
+
+  **Are you having issues?**
+
+  Let us know by creating a new issue here:
+  https://github.com/snapcrafters/mutt/issues
+
+  **Authors**
+
+  This snap is maintained by the Snapcrafters community, and is not
+  necessarily endorsed or officially maintained by the upstream developers.
+
+contact: https://github.com/snapcrafters/mutt/issues
+issues: https://github.com/snapcrafters/mutt/issues
+source-code:
+  - https://gitlab.com/muttmua/mutt
+  - https://github.com/snapcrafters/mutt
+website: https://mutt.org
+icon: snap/mutt.png
+
+base: core24
+grade: stable
+confinement: strict
+
+platforms:
+  amd64:
+  armhf:
+  arm64:
+  s390x:
+  ppc64el:
+
+apps:
+  mutt:
+    environment:
+      TERMINFO_DIRS: $SNAP/lib/terminfo:$SNAP/usr/share/terminfo
+    command: bin/mutt-wrapper
+    plugs:
+      - network
+      - home
+      - dot-mutt
+
+plugs:
+  dot-mutt:
+    interface: personal-files
+    write:
+      - $HOME/.mutt
+      - $HOME/.muttrc
+      - $HOME/.config/mutt
+
+parts:
+  mutt:
+    plugin: autotools
+    source: https://gitlab.com/muttmua/mutt.git
+    source-type: git
+    source-tag: mutt-$SNAPCRAFT_PROJECT_VERSION
+    autotools-configure-parameters:
+      - --enable-compressed
+      - --enable-debug
+      - --enable-fcntl
+      - --enable-hcache
+      - --enable-gpgme
+      - --enable-lua
+      - --enable-imap
+      - --enable-smtp
+      - --enable-pop
+      - --enable-sidebar
+      - --enable-nntp
+      - --disable-dotlock
+      - --disable-fmemopen
+      - --with-curses
+      - --with-gnutls
+      - --with-gss
+      - --with-idn
+      - --with-mixmaster
+      - --with-sasl
+      - --without-gdbm
+      - --without-bdb
+      - --without-qdbm
+    build-packages:
+      - docbook-xml
+      - docbook-xsl
+      - gawk
+      - gettext
+      - libgnutls28-dev
+      - libgpgme-dev
+      - libidn-dev
+      - libkrb5-dev
+      - libncurses-dev
+      - libsasl2-dev
+      - libtokyocabinet-dev
+      - pkg-config
+      - w3m
+      - xsltproc
+      - zlib1g-dev
+    stage:
+      - -usr/local/bin/mutt_dotlock
+    stage-packages:
+      - emacs-nox
+      - libassuan0
+      - libgpgme11t64
+      - libgpm2
+      - libidn12
+      - libsasl2-2
+      - libtokyocabinet9t64
+      - locales-all
+      - nano
+      - vim
+      - vim-tiny
+
+  terminfos:
+    plugin: nil
+    override-pull: |
+      wget -q https://raw.githubusercontent.com/alacritty/alacritty/master/extra/alacritty.info
+    build-packages:
+      - wget
+    stage-packages:
+      - ncurses-bin
+      - ncurses-base
+      - terminfo
+      - foot-terminfo
+      - kitty-terminfo
+    override-stage: |
+      craftctl default
+      tic -xe alacritty,alacritty-direct $CRAFT_PART_SRC/alacritty.info -o .
+      mkdir -p $CRAFT_PRIME/lib/terminfo/a/
+      cp a/alacritty* $CRAFT_PRIME/lib/terminfo/a/
+
+  local-parts:
+    plugin: dump
+    source: ./snap/local
+    source-type: local

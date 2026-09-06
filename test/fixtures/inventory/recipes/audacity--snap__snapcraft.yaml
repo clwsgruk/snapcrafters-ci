@@ -1,0 +1,367 @@
+name: audacity
+version: 3.7.9
+adopt-info: audacity
+description: |
+  Audacity® is a free, easy-to-use, multi-track audio editor and recorder for Windows,
+  Mac OS X, GNU/Linux and other operating systems. The interface is translated into
+  many languages.
+
+  You can use Audacity to:
+  * Record live audio
+  * Convert tapes and records into digital recordings or CDs
+  * Edit WAV, AIFF, FLAC, MP2, MP3 or Ogg Vorbis sound files
+  * Cut, copy, splice or mix sounds together
+  * Change the speed or pitch of a recording
+  * Apply a wide range of other effects to audio recordings
+
+  This snap also includes OpenVINO™ AI plugins for music separation, noise suppression,
+  music generation and continuation, transcription, and super resolution. These plugins
+  can only be run on Intel hardware (CPU, GPU, and NPU) and a user must be in the render
+  Unix group in order to run on Intel accelerators (GPU and NPU). To ease the installation
+  of the AI models, the snap also includes a model management command that can be run using:
+
+  sudo audacity.fetch-models
+
+  For Intel NPU support, make sure to also run the following prior to running Audacity:
+
+  sudo snap install intel-npu-driver
+  sudo snap connect audacity:npu-libs intel-npu-driver:npu-libs
+
+website: https://www.audacityteam.org/
+contact: https://github.com/snapcrafters/audacity/issues
+issues: https://github.com/snapcrafters/audacity/issues
+source-code: https://github.com/snapcrafters/audacity
+license: MIT
+
+grade: stable
+confinement: strict
+base: core24
+compression: lzo
+
+platforms:
+ amd64:
+ arm64:
+
+layout:
+  /usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/alsa-lib:
+    bind: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/alsa-lib
+  /usr/lib/x86_64-linux-gnu/audacity:
+    bind: $SNAP/usr/lib/x86_64-linux-gnu/audacity
+  /usr/share/alsa:
+    bind: $SNAP/usr/share/alsa
+  /usr/share/audacity:
+    bind: $SNAP/usr/share/audacity
+  /usr/share/locale:
+    bind: $SNAP/usr/share/locale
+  $SNAP/usr/lib/openvino-models:
+    bind: $SNAP_COMMON/models/openvino-models
+  /etc/gitconfig:
+    bind-file: $SNAP_DATA/etc/gitconfig
+  /usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/intel-opencl:
+    bind: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/intel-opencl
+
+package-repositories:
+  - type: apt
+    ppa: kobuk-team/intel-graphics
+    key-id: 0C0E6AF955CE463C03FC51574D098D70AFBE5E1F
+
+plugs:
+  ffmpeg-2404:
+    interface: content
+    target: ffmpeg-platform
+    default-provider: ffmpeg-2404
+  intel-npu:
+    interface: custom-device
+    custom-device: intel-npu-device
+  npu-libs:
+    interface: content
+    content: npu-libs-2404
+    target: $SNAP/npu-libs
+
+apps:
+  audacity:
+    extensions: [gnome]
+    command: usr/bin/audacity
+    command-chain:
+    - snap/command-chain/alsa-launch
+    desktop: usr/share/applications/audacity.desktop
+    common-id: org.audacityteam.Audacity
+    plugs:
+      - alsa
+      - audio-playback
+      - audio-record
+      - home
+      - intel-npu
+      - jack1
+      - network
+      - network-bind
+      - npu-libs
+      - pulseaudio
+      - removable-media
+      - unity7
+    environment:
+      LD_LIBRARY_PATH: $SNAP/usr/local/lib:$SNAP/usr/local/whisper.cpp/lib:$SNAP/usr/local/libtorch/lib:$SNAP/usr/runtime/lib/intel64:$SNAP/npu-libs:$SNAP/ffmpeg-platform/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR
+      OCL_ICD_VENDORS: $SNAP/etc/OpenCL/vendors
+      PATH: $SNAP/ffmpeg-platform/usr/bin:$PATH
+
+  fetch-models:
+    command: usr/bin/fetch-models
+    plugs:
+      - network
+    environment:
+      GIT_EXEC_PATH: $SNAP/usr/lib/git-core
+      GIT_TEMPLATE_DIR: $SNAP/usr/share/git-core/templates
+
+parts:
+  alsa-mixin:
+    plugin: dump
+    source: https://github.com/diddlesnaps/snapcraft-alsa.git
+    source-subdir: snapcraft-assets
+    build-packages:
+      - libasound2-dev
+    stage-packages:
+      - libasound2t64
+      - libasound2-plugins
+      - yad
+
+  openvino-tokenizers-extension:
+    source-type: git
+    source: https://github.com/openvinotoolkit/openvino_tokenizers
+    source-tag: 2024.6.0.0
+    plugin: cmake
+    cmake-parameters:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_PREFIX=/usr
+    build-packages:
+      - libtbb-dev
+    build-snaps:
+      - openvino-toolkit-2404/2024/stable
+    build-environment:
+      - OpenVINO_DIR: /snap/openvino-toolkit-2404/current/usr/lib/x86_64-linux-gnu/cmake
+    override-build: |
+      if [ "$CRAFT_ARCH_BUILD_FOR" == "amd64" ]; then
+        craftctl default
+      fi
+
+  libtorch:
+    plugin: nil
+    build-packages:
+      - wget
+      - unzip
+    override-build: |
+      if [ "$CRAFT_ARCH_BUILD_FOR" == "amd64" ]; then
+        wget https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-2.4.1%2Bcpu.zip
+        mkdir -p ${CRAFT_PART_INSTALL}/usr/local
+        unzip libtorch-cxx11-abi-shared-with-deps-2.4.1+cpu.zip -d ${CRAFT_PART_INSTALL}/usr/local
+        strip --strip-unneeded ${CRAFT_PART_INSTALL}/usr/local/libtorch/lib/*.so
+        strip --strip-unneeded ${CRAFT_PART_INSTALL}/usr/local/libtorch/lib/*.a
+      fi
+
+  intel-graphics:
+    plugin: nil
+    stage-packages:
+      - to amd64:
+        - libigc-tools
+        - libigc2
+        - libigdfcl2
+        - intel-ocloc
+        - intel-opencl-icd
+        - libze1
+        - libze-intel-gpu1
+        - libigdgmm12
+        # Note, these -dev packages deliver development sym links that
+        # may be dynamically loaded by Intel compute runtime drivers.
+        - libigc-dev
+        - libigdfcl-dev
+    prime:
+      - -usr/include
+      - -usr/share
+    organize:
+      # move ligigdgmm so it is not removed by mesa-2404 cleanup step in the gnome/GPU extension
+      usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libigdgmm.so*: usr/local/lib/
+
+  whisper.cpp:
+    after:
+      - libtorch
+    source-type: git
+    source: https://github.com/ggerganov/whisper.cpp
+    source-tag: v1.5.4
+    plugin: cmake
+    override-build: |
+      if [ "$CRAFT_ARCH_BUILD_FOR" == "amd64" ]; then
+        cmake ${CRAFT_PART_SRC} -DWHISPER_OPENVINO=ON
+        make -j $(nproc)
+        cmake --install . --config Release --prefix ${CRAFT_PART_INSTALL}/usr/local/whisper.cpp
+      fi
+    build-snaps:
+      - openvino-toolkit-2404/2024/stable
+    build-environment:
+      - LIBTORCH_ROOTDIR: $CRAFT_STAGE/usr/local/libtorch
+      - OpenVINO_DIR: /snap/openvino-toolkit-2404/current/usr/lib/x86_64-linux-gnu/cmake
+
+  audacity:
+    after:
+      - alsa-mixin
+      - openvino-tokenizers-extension
+      - libtorch
+      - whisper.cpp
+    plugin: cmake
+    source: https://github.com/audacity/audacity.git
+    source-tag: Audacity-$SNAPCRAFT_PROJECT_VERSION
+    parse-info: [usr/share/metainfo/audacity.appdata.xml]
+    override-pull: |
+      craftctl default
+      sed -i -E 's|Icon=.*|Icon=/usr/share/icons/hicolor/scalable/apps/audacity.svg|' src/audacity.desktop.in
+      sed -i -E 's|Exec=env GDK_BACKEND=x11 UBUNTU_MENUPROXY=0 |Exec=|' src/audacity.desktop.in
+      # mod-opus broken with "Error: inappropriate ioctl for device". This disables it.
+      sed -i '/mod-opus/d' libraries/lib-module-manager/ModuleSettings.cpp
+      if [ "$CRAFT_ARCH_BUILD_FOR" == "amd64" ]; then
+        sed -i '/mod-opus/d' libraries/lib-module-manager/ModuleSettings.cpp
+        sed -i '/"mod-aup",/a\      "mod-openvino",' libraries/lib-module-manager/ModuleSettings.cpp
+        git clone --depth 1 --branch v3.7.1-R4.2 https://github.com/intel/openvino-plugins-ai-audacity.git
+        cp -r openvino-plugins-ai-audacity/mod-openvino ${CRAFT_PART_SRC}/modules/
+        sed -i '/   sharing/a\    mod-openvino' ${CRAFT_PART_SRC}/modules/CMakeLists.txt
+      fi
+    cmake-parameters:
+      - -DCMAKE_INSTALL_PREFIX=/usr
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DAUDACITY_BUILD_LEVEL=2
+      - -Daudacity_obey_system_dependencies=On
+      - -Daudacity_conan_enabled=Off
+      - -Daudacity_lib_preference=system
+      - -Daudacity_has_networking=Off
+      - -Daudacity_has_sentry_reporting=Off
+      - -Daudacity_has_crashreports=Off
+      - -Daudacity_has_updates_check=Off
+      - -Daudacity_use_ffmpeg=loaded
+      - -Daudacity_has_vst3=Off
+      - -Daudacity_has_tests=Off
+      - -DwxBUILD_TOOLKIT=gtk3
+    build-environment:
+      - PATH: /snap/bin:$PATH
+      - CFLAGS: -O2 -pipe
+      - CXXFLAGS: -O2 -pipe
+      - LIBTORCH_ROOTDIR: $CRAFT_STAGE/usr/local/libtorch
+      - OpenVINO_DIR: /snap/openvino-toolkit-2404/current/usr/lib/x86_64-linux-gnu/cmake
+      - WHISPERCPP_ROOTDIR: $CRAFT_STAGE/usr/local/whisper.cpp
+    build-packages:
+      - build-essential
+      - cmake
+      - curl
+      - gettext
+      - jq
+      - libavcodec-dev
+      - libavformat-dev
+      - libavutil-dev
+      - libcurl4-openssl-dev
+      - libexpat1-dev
+      - libflac++-dev
+      - libflac-dev
+      - libgstreamer-plugins-base1.0-dev
+      - libgstreamer-plugins-good1.0-dev
+      - libgstreamer1.0-dev
+      - libgtk-3-dev
+      - libid3tag0-dev
+      - libjack-jackd2-dev
+      - libjpeg-turbo8-dev
+      - liblilv-dev
+      - libmad0-dev
+      - libmp3lame-dev
+      - libmpg123-dev
+      - libogg-dev
+      - libopus-dev
+      - libopusfile-dev
+      - libportmidi-dev
+      - libportsmf-dev
+      - libpulse-dev
+      - libsbsms-dev
+      - libserd-dev
+      - libsndfile1-dev
+      - libsord-dev
+      - libsoundtouch-dev
+      - libsoxr-dev
+      - libsqlite3-dev
+      - libsratom-dev
+      - libsuil-dev
+      - libtwolame-dev
+      - libvorbis-dev
+      - libwavpack-dev
+      - libwxgtk3.2-dev
+      - lv2-dev
+      - nasm
+      - ocl-icd-opencl-dev
+      - portaudio19-dev
+      - python3-pip
+      - rapidjson-dev
+      - re2c
+      - uuid-dev
+      - vamp-plugin-sdk
+      - wget
+      - zlib1g
+      - zlib1g-dev
+    build-snaps:
+      - openvino-toolkit-2404/2024/stable
+    stage-packages:
+      - libavcodec60
+      - libavformat60
+      - libavutil58
+      - libcurl4
+      - libdouble-conversion3
+      - libexpat1
+      - libflac12t64
+      - libflac++10
+      - libgl1
+      - libglvnd0
+      - libglx0
+      - libgstreamer-plugins-base1.0-0
+      - libgstreamer-plugins-good1.0-0
+      - libgstreamer1.0-0
+      - libid3tag0
+      - libjack-jackd2-0
+      - libjpeg-turbo8
+      - liblilv-0-0
+      - libmad0
+      - libmp3lame0
+      - libopus0
+      - libogg0
+      - libpcre2-16-0
+      - libportaudio2
+      - libportmidi0
+      - libportsmf0t64
+      - libpulse0
+      - libqt5core5a
+      - libqt5gui5
+      - libqt5widgets5
+      - libsbsms10
+      - libserd-0-0
+      - libsndfile1
+      - libsord-0-0
+      - libsoundtouch1
+      - libsoxr0
+      - libsqlite3-0
+      - libsratom-0-0
+      - libsuil-0-0
+      - libtwolame0
+      - libuuid1
+      - libvamp-hostsdk3v5
+      - libvamp-sdk2v5
+      - libvorbis0a
+      - libvorbisenc2
+      - libwxgtk3.2-1t64
+      - zlib1g
+    stage-snaps:
+      - openvino-toolkit-2404/2024/stable
+
+  fetch-models:
+    plugin: dump
+    source: bin/
+    organize:
+      fetch-models: usr/bin/fetch-models
+    # fetch-models exits immediately if not run on Intel hardware,
+    # thus we don't need these packages in the part for arm64
+    stage-packages:
+      - to amd64:
+        - git
+        - git-lfs
+        - unzip
+        - wget

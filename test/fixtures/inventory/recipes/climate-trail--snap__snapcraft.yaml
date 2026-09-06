@@ -1,0 +1,75 @@
+base: core18
+name: climate-trail
+title: The Climate Trail
+summary: Surviving The Climate Apocalypse
+version: "2.1"
+description: |
+  The Climate Trail is a completely free (no ads, no in-app purchases) multi-platform game.
+
+  The game is about climate refugees fleeing ever worsening conditions after inaction on climate has rendered much of the USA (and the world) uninhabitable.  The game combines the adventure and play of the journey north with visual novel elements, where characters reveal how and why this climate apocalypse unfolded.
+
+  Like the game? Support the developer by paying what you think is fair on itch.io: https://deepstategames.itch.io/the-climate-trail-10
+
+  This snap is maintained by the Snapcrafters community, and is not necessarily
+  endorsed or officially maintained by the upstream developers.
+icon: snap/gui/climate-trail.png
+license: Proprietary
+
+architectures:
+ - build-on: amd64
+   run-on:   amd64
+
+grade: stable
+confinement: strict
+
+apps:
+  climate-trail:
+    extensions:
+      - gnome-3-28
+    command: ClimateTrail.sh
+    environment:
+      RENPY_LOG_BASE: $SNAP_USER_DATA
+    plugs:
+      - opengl
+      - audio-playback
+      - pulseaudio  # audio playback support for snapd < 2.41
+      - screen-inhibit-control
+      - joystick
+      - network
+
+parts:
+  climate-trail:
+    after:
+      - climate-trail-dependencies
+    plugin: dump
+    source: ClimateTrail-$SNAPCRAFT_PROJECT_VERSION-linux.tar.bz2
+    organize:
+      'ClimateTrail-$SNAPCRAFT_PROJECT_VERSION-linux/' : './'
+
+  climate-trail-dependencies:
+    plugin: nil
+    stage-packages:
+        # OpenGL support
+      - libgl1-mesa-dri
+      - libgl1-mesa-glx
+      - libglu1-mesa
+        # For audio playback
+      - libpulse0
+        # Renpy dependencies
+      - libxmu6
+      - libxi6
+
+  # https://snapcraft-utils-library.readthedocs.io/en/latest/lib/cleanup.html
+  cleanup:
+    after:  # Make this part run last; list all your other parts here
+      - climate-trail
+      - climate-trail-dependencies
+    plugin: nil
+    build-snaps:  # List all content-snaps and base snaps you're using here
+      - core18
+      - gnome-3-28-1804
+    override-prime: |
+      set -eux
+      for snap in "core18" "gnome-3-28-1804"; do  # List all content-snaps and base snaps you're using here
+        cd "/snap/$snap/current" && find . -type f,l -exec rm -f "$SNAPCRAFT_PRIME/{}" \;
+      done

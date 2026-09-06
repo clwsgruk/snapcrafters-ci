@@ -1,0 +1,144 @@
+name: alacritty
+version: 0.17.0
+summary: A cross-platform, GPU enhanced terminal emulator.
+description: |
+  Alacritty is a modern terminal emulator that comes with sensible defaults, but allows for
+  extensive configuration. By integrating with other applications, rather than reimplementing their
+  functionality, it manages to provide a flexible set of features with high performance
+
+  **Authors**
+
+  This snap is maintained by the Snapcrafters community, and is not necessarily endorsed or
+  officially maintained by the upstream developers.
+
+icon: snap/alacritty.png
+website: https://alacritty.org
+contact: https://github.com//snapcrafters/alacritty/issues
+issues: https://github.com//snapcrafters/alacritty/issues
+source-code: https://github.com/alacritty/discord
+
+base: core22
+grade: stable
+confinement: classic
+compression: lzo
+
+architectures:
+  - build-on: amd64
+  - build-on: armhf
+  - build-on: arm64
+  - build-on: s390x
+  - build-on: ppc64el
+
+apps:
+  alacritty:
+    command: bin/alacritty
+    command-chain:
+      - bin/desktop-launch
+      - bin/custom-wrapper
+    common-id: io.alacritty.Alacritty
+    completer: usr/share/bash-completion/completions/alacritty
+    desktop: usr/share/applications/Alacritty.desktop
+    environment:
+      LC_ALL: C.UTF-8
+
+parts:
+  desktop-glib-only:
+    source: https://github.com/ubuntu/snapcraft-desktop-helpers.git
+    source-subdir: glib-only
+    plugin: make
+    build-attributes:
+      - enable-patchelf
+    build-packages:
+      - libglib2.0-dev
+    stage-packages:
+      - libglib2.0-bin
+
+  mesa:
+    plugin: nil
+    stage-packages:
+      - libglu1-mesa
+      - libgl1-mesa-dri
+      - libgl1-mesa-glx
+      - libegl-mesa0
+      - libegl1
+      - libegl1-mesa
+      - libglx-mesa0
+    build-attributes:
+      - enable-patchelf
+    stage:
+      # The libraries in .../dri need no-patchelf, so they come from the mesa-unpatched part
+      - -usr/lib/${SNAPCRAFT_ARCH_TRIPLET}/dri
+
+  mesa-gl1-dri:
+    plugin: nil
+    stage-packages:
+      - libgl1-mesa-dri
+    build-attributes:
+      - no-patchelf
+    stage:
+      # Only the libraries in .../dri need to not be patched, the rest come from the mesa part
+      # Otherwise snapcraft may strip the build ID and cause the driver to crash
+      - usr/lib/${SNAPCRAFT_ARCH_TRIPLET}/dri
+
+  custom-wrapper:
+    plugin: dump
+    source: snap/local/
+    organize:
+      custom-wrapper: bin/
+
+  alacritty:
+    plugin: rust
+    source: https://github.com/alacritty/alacritty.git
+    source-tag: v$SNAPCRAFT_PROJECT_VERSION
+    parse-info:
+      - extra/linux/org.alacritty.Alacritty.appdata.xml
+    rust-path:
+      - alacritty
+    build-attributes:
+      - enable-patchelf
+    build-packages:
+      - cmake
+      - pkg-config
+      - libfreetype6-dev
+      - libfontconfig1-dev
+      - libxcb-xfixes0-dev
+      - python3
+      - libegl1-mesa-dev # necessary for nvidia users on wayland
+      - libxcb-render0-dev
+      - libxcb-shape0-dev
+      - libxcb1-dev
+      - libgl1-mesa-dev
+      - cargo
+    stage-packages:
+      - libtinfo6
+      - libncursesw6
+      - libfontconfig1
+      - libfreetype6
+      - libpng16-16
+      - libxau6
+      - libxcursor1
+      - libxcb-render0
+      - libxcb-shape0
+      - libxcb-xfixes0
+      - libxcb1
+      - libxdmcp6
+      - libxi6
+      - libxrandr2
+      - libffi7
+      - libxkbcommon0
+      - libxkbcommon-x11-0
+      - libnss-sss
+      - libwayland-egl1
+    override-build: |
+      craftctl default
+
+      mkdir -p $CRAFT_PART_INSTALL/usr/share/applications \
+          $CRAFT_PART_INSTALL/usr/share/icons \
+          $CRAFT_PART_INSTALL/usr/share/bash-completion/completions
+
+      cp extra/linux/Alacritty.desktop $CRAFT_PART_INSTALL/usr/share/applications/Alacritty.desktop
+      cp extra/logo/compat/alacritty-term+scanlines.png $CRAFT_PART_INSTALL/usr/share/icons/Alacritty.png
+      cp extra/completions/alacritty.bash $CRAFT_PART_INSTALL/usr/share/bash-completion/completions/alacritty
+
+      sed -i 's|Icon=.*|Icon=${SNAP}/usr/share/icons/Alacritty.png|g' \
+          $CRAFT_PART_INSTALL/usr/share/applications/Alacritty.desktop

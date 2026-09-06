@@ -1,0 +1,103 @@
+name: luanti
+version: 5.17.0
+
+summary: Open source voxel game engine (formerly minetest)
+description: |
+  An open source voxel game engine. Play one of our many games, mod a game to your liking,
+  make your own game, or play on a multiplayer server.
+
+  **Authors**
+
+  This snap package is maintained by the Snapcrafters community.
+  It is not necessarily endorsed or officially supported by the
+  developers of the application itself.
+
+license: LGPL-2.1-or-later
+website: https://luanti.org
+contact: https://github.com/snapcrafters/luanti/issues
+issues: https://github.com/snapcrafters/luanti/issues
+source-code: https://github.com/snapcrafters/luanti
+icon: snap/gui/luanti.svg
+
+base: core24
+compression: lzo
+grade: stable
+confinement: strict
+
+platforms:
+  amd64:
+  armhf:
+  arm64:
+
+apps:
+  luanti:
+    extensions: [gnome]
+    environment:
+      HOME: "$SNAP_USER_COMMON"
+      DISABLE_WAYLAND: 1
+    command: usr/bin/luanti
+    plugs:
+      - audio-playback
+      - desktop
+      - desktop-legacy
+      - joystick
+      - home
+      - network
+      - network-bind
+      - opengl
+      - pulseaudio
+      - removable-media
+      - screen-inhibit-control
+      - wayland
+      - x11
+
+parts:
+  luanti:
+    plugin: cmake
+    source: https://github.com/luanti-org/luanti.git
+    source-tag: $SNAPCRAFT_PROJECT_VERSION
+    cmake-parameters:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_PREFIX=/usr
+      - -DRUN_IN_PLACE=FALSE
+    build-packages:
+      - cmake
+      - g++
+      - gcc
+      - gettext
+      - imagemagick
+      - libbz2-dev
+      - libcurl4-gnutls-dev
+      - libfreetype6-dev
+      - libglu1-mesa-dev
+      - libjpeg-dev
+      - libjsoncpp-dev
+      - libleveldb-dev
+      - libluajit-5.1-dev
+      - libogg-dev
+      - libopenal-dev
+      - libpng-dev
+      - libpulse-dev
+      - libsdl2-dev
+      - libsqlite3-dev
+      - libvorbis-dev
+      - libx11-dev
+      - libzstd-dev
+      - zlib1g-dev
+    stage-packages:
+      - libsdl2-2.0-0
+      - libxss1
+      - libdecor-0-0
+      - libopenal1
+      - libsamplerate0
+      - libsndio7.0
+      - libjsoncpp25
+      - libleveldb1d
+      - libluajit-5.1-2
+      - libsnappy1v5
+    prime:
+      - -usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libpulse-simple.so.0.1.1
+      - -usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libicutest.so.74.2
+      - -usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libicuio.so.74.2
+      - -usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libicutu.so.74.2
+      - -usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libicui18n.so.74.2

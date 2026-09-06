@@ -1,0 +1,175 @@
+name: cassandra
+# Set the version during the build based on a tag name
+adopt-info: cassandra
+base: core18
+summary: Manage massive amounts of data, fast, without losing sleep
+description: |
+  Apache Cassandra is an open source NoSQL distributed database trusted by
+  thousands of companies for scalability and high availability without
+  compromising performance. Linear scalability and proven fault-tolerance on
+  commodity hardware or cloud infrastructure make it a good platform for
+  mission-critical data.
+
+confinement: strict
+grade: devel
+
+apps:
+    cassandra:
+        command: wrapper-cassandra
+        daemon: forking
+        # mount-observe needs to be manually connected post-install:
+        # `sudo snap connect cassandra:mount-observe ubuntu-core:mount-observe`
+        plugs:
+          - network
+          - network-bind
+          # Needed for checking available space in the data directories
+          # (java.io.File.getTotalSpace).
+          - mount-observe
+    nodetool:
+        command: wrapper-nodetool
+        plugs:
+          - network
+
+    # Helpers. These will go away when snapd provides a config interface.
+    # Deployment tools can use these to avoid hardcoding paths.
+    config-get:
+        # cassandra.config-get: fetch a configuration file from CASSANDRA_CONF.
+        command: config-get
+    config-set:
+        # cassandra.config-set: place a configuration file in CASSANDRA_CONF.
+        command: config-set
+    env-get:
+        # cassandra.env-get: print the value of an environment variable,
+        # e.g. CASSANDRA_DATA.
+        command: env-get
+parts:
+    cassandra:
+        plugin: ant
+        ant-properties:
+            dist.dir: $SNAPCRAFT_PART_INSTALL
+        ant-build-targets:
+            - artifacts
+        source: https://github.com/apache/cassandra
+        source-type: git
+        ant-openjdk-version: "8"
+        build-environment:
+            - ANT_OPTS: "$ANT_OPTS -Xmx4g"
+        override-build: |
+            # Hacky trick to handle proxy settings for resolver-ant-tasks
+            # https://bugs.launchpad.net/launchpad-buildd/+bug/1702130
+            # https://maven.apache.org/resolver-ant-tasks/
+            if [ -n ${http_proxy} -a -n ${https_proxy} ]; then
+                mkdir -p $HOME/.m2
+                http_port=$(echo $http_proxy | rev | cut -d':' -f 1 | rev)
+                http_host=$(echo $http_proxy | sed "s;:${http_port}$;;")
+                http_port=$(echo $http_port | sed 's;/;;g')
+                https_port=$(echo $https_proxy | rev | cut -d':' -f 1 | rev)
+                https_host=$(echo $https_proxy | sed "s;:${https_port}$;;")
+                https_port=$(echo $https_port | sed 's;/;;g')
+                # remove http(s):// from hosts
+                http_host=$(echo $http_host | sed 's;^https\?://;;')
+                https_host=$(echo $https_host | sed 's;^https\?://;;')
+                non_proxy_hosts=$(echo $no_proxy | sed -e 's;https\?://;;g' -e 's/\s*,\s*/|/g')
+                non_proxy_hosts=${non_proxy_hosts:=localhost}
+                cat << EOF > $HOME/.m2/settings.xml
+            <?xml version="1.0" encoding="UTF-8"?>
+            <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+                      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                      xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+              <proxies>
+               <proxy>
+                  <id>launchpad-proxy-http</id>
+                  <active>true</active>
+                  <protocol>http</protocol>
+                  <host>${http_host}</host>
+                  <port>${http_port}</port>
+                  <nonProxyHosts>${non_proxy_hosts}</nonProxyHosts>
+                </proxy>
+               <proxy>
+                  <id>launchpad-proxy-https</id>
+                  <active>true</active>
+                  <protocol>https</protocol>
+                  <host>${https_host}</host>
+                  <port>${https_port}</port>
+                  <nonProxyHosts>${non_proxy_hosts}</nonProxyHosts>
+                </proxy>
+              </proxies>
+            </settings>
+            EOF
+                echo "Installed settings.xml:"
+                cat $HOME/.m2/settings.xml
+            fi
+            # make sure we will use openjdk 8 for the build
+            update-alternatives --set java $(update-alternatives --list java | grep 8-openjdk)
+            candidate_version="latest"
+            last_committed_tag="$(git describe --tags --abbrev=0)"
+            last_committed_tag_ver="$(echo $last_committed_tag | sed 's/cassandra-//')"
+            last_released_tag="$(snap info wethr | awk '$1 == "beta:" { print $2 }')"
+            # If the latest tag from the upstream project has not been released to
+            # beta, build that tag instead of master.
+            if [ "${last_committed_tag_ver}" != "${last_released_tag}" ]; then
+              git fetch
+              git checkout "${last_committed_tag}"
+              candidate_version="${last_committed_tag_ver}"
+            fi
+            snapcraftctl set-version "${candidate_version}"
+            sed -i 's/maxmemory="256m"/maxmemory="512m"/' build.xml
+            snapcraftctl build
+        override-stage: |
+            snapcraftctl stage
+            chmod +x usr/sbin/cassandra
+        build-packages:
+            - ant-optional
+            - build-essential
+            - python
+            - sed
+        stage-packages:
+            # Copy some packages into the stage directory to steal their
+            # pre-built binaries.
+            - mawk
+            - grep
+            # For free(1)
+            - procps
+        organize:
+            # Rename directories into their expected locations. Analogous to
+            # Debian's .install files.
+            conf: etc/cassandra
+            bin/cassandra: usr/sbin/cassandra
+            lib: usr/share/cassandra/lib
+            # Rename mawk to awk instead of shipping a symlink.
+            usr/bin/mawk: usr/bin/awk
+        prime:
+            # Files from the stage directory to include in the snap.
+            - bin/nodetool
+            - etc/cassandra
+            - usr/sbin/cassandra
+            - usr/share/cassandra/lib/*.jar
+            - usr/lib/jvm
+            # awk, grep, and free are needed by cassandra-env.sh
+            - usr/bin/awk
+            - bin/grep
+            - usr/bin/free
+    glue:
+        plugin: dump
+        source: .
+        organize:
+            # Snaps are confined within:
+            # - /snap/$name/$revision (RO mounted squashfs)
+            # - /var/snap/$name/$revision (RW area for persisting data,
+            #                              copied between upgrades)
+            #
+            # The following wrapper scripts set some environment variables to
+            # point Cassandra at the right locations for jars, the data
+            # directory, logs, etc.
+            wrapper-cassandra: bin/wrapper-cassandra
+            wrapper-nodetool: bin/wrapper-nodetool
+            # Helpers. Again, these will go away when snapd provides a config
+            # interface.
+            config-get: bin/config-get
+            config-set: bin/config-set
+            env-get: bin/env-get
+            common: bin/common
+        prime:
+            - bin/*
+
+# vim: set ai et sts=4 tabstop=4 sw=4:

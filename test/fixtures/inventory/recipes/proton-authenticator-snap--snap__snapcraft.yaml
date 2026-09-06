@@ -1,0 +1,48 @@
+name: proton-authenticator
+version: 1.1.4
+title: Proton Authenticator
+summary: Securely sync and backup your 2FA codes easily.
+description: |
+  Use Proton Authenticator on mobile and desktop. Sync your codes securely
+  across devices with your Proton account for easy access. Or back them up
+  locally or in the cloud for safe keeping. It's your choice.
+
+website: https://proton.me/authenticator
+contact: https://github.com/pedro-avalos/proton-authenticator-snap/issues
+issues: https://github.com/pedro-avalos/proton-authenticator-snap/issues
+
+base: core24
+grade: stable
+confinement: strict
+compression: lzo
+
+platforms:
+  amd64:
+
+apps:
+  proton-authenticator:
+    command: usr/bin/proton-authenticator
+    desktop: "usr/share/applications/Proton Authenticator.desktop"
+    common-id: me.proton.Authenticator
+    extensions:
+      - gnome
+    plugs:
+      - hardware-observe
+      - home
+      - network
+      - network-status
+      - password-manager-service
+      - removable-media
+      - u2f-devices
+      - unity7
+
+parts:
+  proton-authenticator:
+    source: https://proton.me/download/authenticator/linux/ProtonAuthenticator_${CRAFT_PROJECT_VERSION}_amd64.deb
+    source-type: deb
+    plugin: dump
+    source-checksum: sha512/f442dbf6c798586316f0e49cdfec999787cee3a0e1b42d43a868405e4f1f33496eb9e20a15209ad31595b26ac795eb7808bc10c341658c89732727bef5ca55de
+    override-pull: |
+      craftctl default
+      sed -i 's|Icon=.*|Icon=${SNAP}/usr/share/icons/hicolor/128x128/apps/proton-authenticator.png|g' \
+        usr/share/applications/Proton\ Authenticator.desktop

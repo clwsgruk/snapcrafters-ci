@@ -1,0 +1,19 @@
+name: term2048
+version: '0.2.6'
+summary: 2048 in your terminal
+description: |
+  term2048 is a terminal-based version of 2048.
+  Just like 2048, but in the terminal!
+grade: stable
+confinement: strict
+base: core22
+
+apps:
+  term2048:
+    command: bin/term2048
+
+parts:
+  term2048:
+    source: https://github.com/bfontaine/term2048.git
+    source-tag: 0.2.6
+    plugin: python

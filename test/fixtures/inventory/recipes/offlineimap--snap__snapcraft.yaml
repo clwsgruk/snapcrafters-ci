@@ -1,0 +1,49 @@
+name: offlineimap
+base: core18
+summary: OfflineIMAP
+description: |
+  OfflineIMAP is software that downloads your email mailbox(es) as local
+  Maildirs. OfflineIMAP will synchronize both sides via IMAP.
+
+adopt-info: offlineimap
+confinement: strict
+
+apps:
+  offlineimap:
+    command: bin/offlineimap
+    plugs:
+      - network
+      - home
+      - removable-media
+
+parts:
+  offlineimap:
+    plugin: python
+    python-version: python2
+    source: https://github.com/OfflineIMAP/offlineimap.git
+    # Cannot specify requirements.txt due to issues installing
+    # gssapi[kerberos], which we satisfy with python-gssapi.
+    # List remaining requirements in python-packages.
+    #requirements:
+    #  - requirements.txt
+    build-packages:
+      - python-gssapi
+    python-packages:
+      - portalocker[cygwin]
+      - rfc6555
+      - six
+    override-pull: |
+      snapcraftctl pull
+      last_committed_tag="$(git describe --tags --abbrev=0)"
+      # `snap info <name>` does not like when the <name> exists as directory
+      # so a little workaround by changing directory to /tmp
+      last_released_tag=v"$(cd /tmp; snap info offlineimap | awk '$1 == "latest/beta:" { print $2 }')"
+      # If the latest tag from the upstream project has not been released to
+      # beta, build that tag instead of master.
+      if [ "${last_committed_tag}" != "${last_released_tag}" ]; then
+        echo "checking out ${last_committed_tag}"
+        git fetch
+        git checkout "${last_committed_tag}"
+      fi
+      snapcraftctl set-version "$(echo $last_committed_tag | tr -d 'v')"
+      snapcraftctl set-grade "stable"

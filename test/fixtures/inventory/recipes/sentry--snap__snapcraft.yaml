@@ -1,0 +1,122 @@
+name: sentry
+version: '23.6.2'
+epoch: 3*  # based on https://develop.sentry.dev/self-hosted/releases/#hard-stops
+summary: Sentry is a modern error logging and aggregation platform
+description: |
+  Sentry's real-time error tracking gives you insight
+  into production deployments and information to reproduce
+  and fix crashes.
+grade: stable
+confinement: strict
+base: core20
+
+assumes:
+- command-chain
+- snapd2.38 # epochs
+
+architectures:
+  - build-on: i386
+  - build-on: amd64
+
+hooks:
+  post-refresh:
+    plugs:
+      - network # for database migrations
+    command-chain:
+      # maybe not needed/supported when we upgrade to core22
+      - "snap/command-chain/snapcraft-runner"
+
+plugs:
+  shared-memory:
+    private: true
+
+apps:
+  sentry:
+    command: bin/sentry
+    environment:
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+    plugs:
+      - home
+      - network
+      - network-bind
+  web:
+    daemon: simple
+    command: bin/sentry run web
+    environment:
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+    plugs:
+      - home
+      - network
+      - network-bind
+  worker:
+    daemon: simple
+    command: bin/sentry run worker
+    environment:
+      C_FORCE_ROOT: 1
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+    plugs:
+      - home
+      - network
+      - network-bind
+  cron:
+    command: bin/sentry run cron
+    environment:
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+    daemon: simple
+    plugs:
+      - home
+      - network
+      - network-bind
+
+parts:
+  sentry:
+    plugin: python
+    python-packages:
+      - googleapis-common-protos==1.52.0
+      - grpc-google-iam-v1==0.12.3
+      - grpcio==1.35.0
+      - hiredis==0.3.1
+      - lxml==4.6.3
+      - parsimonious==0.8.0
+      - petname==2.6
+      - pyrsistent==0.17.3
+      - setproctitle==1.1.9
+      - urllib3==1.24.2
+      - uwsgi==2.0.19.1
+      - wheel==0.36.2
+      - xmlsec==1.0.5
+      - sentry==$SNAPCRAFT_PROJECT_VERSION
+    build-packages:
+      - libssl-dev
+      - libffi-dev
+      - libjpeg-dev
+      - libpq-dev
+      - clang
+      - build-essential
+      - libxmlsec1-dev
+      - cargo
+      - pkg-config
+      - python3.8-dev
+      - python3.8-venv
+      - python3-pip
+      - libpython3.8-dev
+    stage-packages:
+      - libicu66
+      - libpython3.8
+      - libxml2
+      - libxmlsec1
+      - libxmlsec1-openssl
+      - libxslt1.1
+
+  docker-compose-yml:
+    plugin: dump
+    source: .
+    override-pull: |
+      snapcraftctl pull
+      sed -Ei "s|(image: getsentry/snuba):.*|\1:${SNAPCRAFT_PROJECT_VERSION}|" docker-compose.yml
+    stage:
+    - docker-compose.yml

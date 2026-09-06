@@ -1,0 +1,104 @@
+name: mrrescue
+summary: Arcade-style fire fighting game
+description: |
+ Mr. Rescue is an arcade styled 2D action game centered around evacuating
+ civilians from burning buildings.
+
+ The game features fast paced fire extinguishing action, intense boss battles,
+ a catchy soundtrack and lots of throwing people around in pseudo-randomly
+ generated buildings.
+adopt-info: mrrescue
+base: core20
+
+grade: stable
+confinement: strict
+
+architectures:
+  - build-on: amd64
+  - build-on: i386
+  - build-on: armhf
+
+parts:
+  love:
+    source: https://github.com/love2d/love.git
+    source-tag: "0.10.2"
+    override-pull: |
+      snapcraftctl pull
+      sed -i -e 's/luaL_reg/luaL_Reg/g' src/libraries/luasocket/libluasocket/*
+    override-build: |
+      ./platform/unix/automagic
+      snapcraftctl build
+    plugin: autotools
+    build-packages:
+      - build-essential
+      - autotools-dev
+      - automake
+      - libtool
+      - pkg-config
+      - libfreetype6-dev
+      - libluajit-5.1-dev
+      - libphysfs-dev
+      - libsdl2-dev
+      - libopenal-dev
+      - libogg-dev
+      - libvorbis-dev
+      - libmodplug-dev
+      - libmpg123-dev
+      - libtheora-dev
+    stage-packages:
+      - libdevil1c2
+      - libfreetype6
+      - libgcc1
+      - libgl1-mesa-glx
+      - libluajit-5.1-2
+      - libmodplug1
+      - libmpg123-0
+      - libopenal1
+      - libphysfs1
+      - libsdl2-2.0-0
+      - libstdc++6
+      - libtheora0
+      - libvorbisfile3
+
+  mrrescue:
+    plugin: nil
+    override-build: |
+      # Get the latest releases json
+      echo "Get GitHub releases..."
+      wget --quiet https://api.github.com/repos/SimonLarsen/mrrescue/releases/latest -O releases.json
+      # Get the version from the tag_name and the download URL.
+      VERSION=$(jq . releases.json | grep tag_name | cut -d'"' -f4 | sed s'/v//')
+      LOVE_URL=$(cat releases.json | jq -r ".assets[] | select(.name | test(\"love\")) | .browser_download_url")
+      echo "Downloading ${LOVE_URL}..."
+      wget --quiet "${LOVE_URL}" -O "${SNAPCRAFT_PART_INSTALL}/game.love"
+      rm -f releases.json 2>/dev/null
+      snapcraftctl set-version "$VERSION"
+    build-packages:
+      - jq
+      - sed
+      - wget
+  desktop-glib-only:
+    build-packages:
+    - libglib2.0-dev
+    plugin: make
+    source: https://github.com/ubuntu/snapcraft-desktop-helpers.git
+    source-subdir: glib-only
+    stage-packages:
+    - libglib2.0-bin
+
+apps:
+  mrrescue:
+    command-chain:
+      - bin/desktop-launch
+    command: usr/bin/love $SNAP/game.love
+    plugs:
+      - audio-playback
+      - desktop
+      - gsettings
+      - home
+      - joystick
+      - network
+      - opengl
+      - screen-inhibit-control
+      - wayland
+      - x11

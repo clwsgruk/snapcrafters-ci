@@ -1,0 +1,91 @@
+name: links
+adopt-info: links
+summary: Web browser running in text mode
+description: |
+  Links is a text mode WWW browser, similar to Lynx. It displays tables,
+  frames, downloads on background, uses HTTP/1.1 keepalive connections.
+
+grade: stable
+confinement: strict
+base: core20
+
+apps:
+  links:
+    command: links
+    plugs:
+      - home
+      - removable-media
+      - network
+      - network-bind
+
+parts:
+  links:
+    plugin: nil
+    # https://salsa.debian.org/debian/links2/blob/master/debian/control
+    build-packages:
+      - gcc
+      - libbz2-dev
+      - libevent-dev
+      - liblz-dev
+      - liblzma-dev
+      - libgpm-dev
+      - libssl-dev
+      - wget
+      - zlib1g-dev
+
+    stage-packages:
+      - libbz2-1.0
+      - liblzma5
+      - libevent-2.1-7
+      - libgpm2
+      - libpcre3
+      - liblz1
+      - zlib1g
+
+    override-pull: |
+      set -o nounset
+
+      latest_release_version="$(
+        wget \
+          --output-document=- \
+          http://links.twibright.com/download \
+          2>/dev/null \
+          | grep \
+            --only-matching \
+            --extended-regexp \
+            'href="links-.*.tar.bz2"' \
+          | cut --delimiter='"' --fields=2 \
+          | sort --version-sort --reverse \
+          | head --lines=1 \
+          | cut --characters=7- \
+          | sed 's/.tar.bz2//'
+      )"
+
+      printf -- \
+        'override-pull: Setting snap version to %s.\n' \
+        "${latest_release_version}"
+      snapcraftctl set-version \
+        "${latest_release_version}"
+
+      latest_release_tarball="http://links.twibright.com/download/links-${latest_release_version}.tar.bz2"
+
+      wget \
+        --output-document=- \
+        "${latest_release_tarball}" \
+        | tar \
+          --bzip2 \
+          --extract \
+          --strip-components=1
+
+    override-build: |
+      ./configure \
+        --with-ssl \
+        --without-svgalib \
+        --without-x \
+        --without-fb \
+        --without-directfb \
+        --without-libjpeg \
+        --without-librsvg \
+        --without-libtiff
+      make
+      cp links $SNAPCRAFT_PART_INSTALL

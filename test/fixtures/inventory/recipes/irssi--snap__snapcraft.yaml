@@ -1,0 +1,62 @@
+name: irssi
+adopt-info: irssi
+summary: The IRC client of the future 
+description: |
+  Irssi is a modular chat client that is most commonly known for its text mode 
+  user interface, but 80% of the code isn't text mode specific. Irssi comes 
+  with IRC support built in, and there are third party ICB, SILC, XMPP 
+  (Jabber), PSYC and Quassel protocol modules available.
+base: core18
+grade: stable
+confinement: strict
+
+apps:
+  irssi:
+    environment:
+        LC_ALL: "C.UTF-8"
+        PERL5LIB:  "$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/perl-base/:$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/perl5/5.26/:$SNAP/usr/share/perl5/:$SNAP/usr/share/perl/5.26.1/:$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/perl/5.26/:$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/perl/5.26.1/"
+        LD_LIBRARY_PATH: "$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/pulseaudio/"
+        HOME: "$SNAP_USER_COMMON"
+    command: irssi
+    plugs:
+      - network
+      - network-bind
+      - removable-media
+      - home
+
+parts:
+  irssi:
+    plugin: autotools
+    source: https://github.com/irssi/irssi.git
+    configflags: [--enable-ipv6, --with-bot, --with-proxy, --enable-true-color, --disable-static]
+    build-packages:
+      - libglib2.0-dev
+      - perl
+      - libperl-dev
+      - libncurses5-dev
+      - libssl-dev
+      - openssl
+    stage-packages:
+      - perl-base
+      - libperl5.26
+      - libdatetime-perl
+      - libwww-perl
+    override-build: |
+      last_committed_tag="$(git tag | grep -v dev | tail -n 1)"
+      last_released_tag="$(snap info irssi | awk '$1 == "latest/beta:" { print $2 }')"
+      # If the latest tag from the upstream project has not been released to
+      # beta, build that tag instead of master.
+      if [ "${last_committed_tag}" != "${last_released_tag}" ]; then
+        git fetch
+        git checkout "${last_committed_tag}"
+      fi
+      snapcraftctl set-version $(git describe --tags)
+      # Work around https://github.com/irssi/irssi/issues/1374
+      git apply $SNAPCRAFT_STAGE/irssi-1.4.1-botti-perl-link-fix.patch
+      snapcraftctl build
+    after: [patches]
+  patches:
+    source: patches
+    plugin: dump
+    prime:
+      - -*

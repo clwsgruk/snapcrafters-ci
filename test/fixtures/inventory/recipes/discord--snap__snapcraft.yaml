@@ -1,0 +1,147 @@
+name: discord
+title: Discord
+summary: Chat for Communities and Friends
+description: |
+  Discord is the easiest way to communicate over voice, video, and text. Chat, hang out, and stay close with your friends and communities.
+
+  Snaps are confined, as such Discord may be unable to perform some of the tasks it typically does when unconfined. This may result in the system log getting spammed with apparmor errors. Granting access to the system-observe interface when in the snap will enable the features, and thus reduce the logging.
+
+    snap connect discord:system-observe
+
+  **Authors**
+
+  This snap is maintained by the Snapcrafters community, and is not necessarily endorsed or officially maintained by the upstream developers.
+
+website: https://discord.com/
+contact: https://github.com//snapcrafters/discord/issues
+issues: https://github.com//snapcrafters/discord/issues
+source-code: https://github.com//snapcrafters/discord
+license: Proprietary
+icon: snap/discord.png
+version: 1.0.156
+
+base: core22 # Reverted to core22 as a temporary workaround for https://github.com/snapcrafters/discord/issues/233
+grade: stable
+confinement: strict
+compression: lzo
+
+assumes:
+  - snapd2.54
+
+architectures:
+  - amd64
+
+parts:
+  launcher:
+    plugin: dump
+    source: snap/local
+    source-type: local
+    stage:
+      - -bin/generate-discord-updater-manifest
+    stage-packages:
+      - jq
+
+  discord:
+    plugin: dump
+    source: https://dl.discordapp.net/apps/linux/${SNAPCRAFT_PROJECT_VERSION}/discord-${SNAPCRAFT_PROJECT_VERSION}.deb
+    source-type: deb
+    override-build: |
+      craftctl default
+
+      # Fix the .desktop file icon path for the snap.
+      sed -i 's|Icon=discord|Icon=/usr/share/discord/discord\.png|' ${CRAFT_PART_INSTALL}/usr/share/discord/discord.desktop
+
+      # The upstream .deb doesn't contain the actual Discord app — only a
+      # bootstrapper (updater_bootstrap) that normally downloads Discord into
+      # the user's home directory at runtime. Since snap confinement prevents
+      # that, we run the bootstrapper at build time against a pinned manifest.
+      python3 "${CRAFT_PROJECT_DIR}/snap/local/bin/generate-discord-updater-manifest" \
+        --version "${SNAPCRAFT_PROJECT_VERSION}" \
+        bootstrap \
+        --bootstrapper "${CRAFT_PART_INSTALL}/usr/share/discord/updater_bootstrap" \
+        --root "${CRAFT_PART_BUILD}/download" \
+        --module-lock "${CRAFT_PROJECT_DIR}/snap/local/discord-updater-modules.json"
+      cp -r ${CRAFT_PART_BUILD}/download/app-*/* "${CRAFT_PART_INSTALL}/usr/share/discord/"
+
+      # The bootstrapper downloads modules into versioned directories
+      # (e.g. modules/discord_desktop_core-1/discord_desktop_core/). At runtime,
+      # Discord would normally install these from bootstrap zip files into a
+      # writable location — but the snap filesystem is read-only.
+      # Setting standaloneModules=true in build_info.json tells Discord to load
+      # modules directly from resources/standalone_modules/ instead. The modules
+      # must be flattened (e.g. standalone_modules/discord_desktop_core/) for
+      # Node's require() to resolve them.
+
+      mkdir -p "${CRAFT_PART_INSTALL}/usr/share/discord/resources/standalone_modules"
+      for module_dir in "${CRAFT_PART_INSTALL}/usr/share/discord/modules"/*/; do
+        module=$(basename "$module_dir")
+        name="${module%-*}"
+        mv "$module_dir/$name" "${CRAFT_PART_INSTALL}/usr/share/discord/resources/standalone_modules/$name"
+      done
+      rm -rf "${CRAFT_PART_INSTALL}/usr/share/discord/modules"
+
+      # Krisp expects this directory to exist relative to the discord_krisp
+      # module. If absent, Krisp global init fails with error code -4:
+      # NoiseCancellerError.KRISP_INIT_ERROR_GLOBAL_INIT.
+      mkdir -p "${CRAFT_PART_INSTALL}/usr/share/discord/resources/standalone_modules/discord_krisp/KMS/logs"
+
+      jq '.standaloneModules = true' \
+        "${CRAFT_PART_INSTALL}/usr/share/discord/resources/build_info.json" \
+        > /tmp/build_info.json
+      mv /tmp/build_info.json "${CRAFT_PART_INSTALL}/usr/share/discord/resources/build_info.json"
+    build-packages:
+      - jq
+      - python3
+    stage-packages:
+      - libatomic1
+      - libc++1
+      - libnspr4
+      - libnss3
+      - libxss1
+      - xdg-utils
+    prime:
+      - -usr/share/discord/chrome-sandbox
+      - -usr/bin/xdg-open
+
+  patch-desktop-file-name:
+    after: [discord]
+    plugin: nil
+    build-snaps: [astral-uv]
+    override-build: |
+      uv run \
+        https://raw.githubusercontent.com/snapcrafters/patch-desktop-file-name/refs/heads/main/electron/patch-desktop-filename.py \
+        "${CRAFT_STAGE}/usr/share/discord/resources/app.asar"
+
+plugs:
+  shmem:
+    interface: shared-memory
+    private: true
+
+apps:
+  discord:
+    extensions: [gnome]
+    command: bin/launcher
+    command-chain: [bin/disable-updater]
+    autostart: discord-stable.desktop
+    desktop: usr/share/applications/discord.desktop
+    environment:
+      # Correct the TMPDIR path for Chromium Framework/Electron to
+      # ensure libappindicator has readable resources
+      TMPDIR: $XDG_RUNTIME_DIR
+      # Let Electron preload/renderer processes resolve bundled standalone
+      # updater modules such as discord_krisp with require('discord_krisp').
+      NODE_PATH: $SNAP/usr/share/discord/resources/standalone_modules
+    plugs:
+      - audio-playback
+      - audio-record
+      - camera
+      - home
+      - mount-observe
+      - network
+      - network-observe
+      - process-control
+      - removable-media
+      - screen-inhibit-control
+      - shmem
+      - system-observe
+      - unity7

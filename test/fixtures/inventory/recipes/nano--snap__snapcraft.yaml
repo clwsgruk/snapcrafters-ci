@@ -1,0 +1,147 @@
+%YAML 1.1
+---
+# Snapcraft Recipe for GNU nano
+# ------------------------------
+# This file is in the YAML data serialization format:
+# http://yaml.org
+# For the spec. of writing this file refer the following documentation:
+# * The snapcraft format
+#   https://docs.snapcraft.io/the-snapcraft-format/8337
+# * Snap Documentation
+#   https://docs.snapcraft.io
+# * Topics under the doc category in the Snapcraft Forum
+#   https://forum.snapcraft.io/c/doc
+# For support refer to the snapcraft section in the Snapcraft Forum:
+# https://forum.snapcraft.io/c/snapcraft
+
+name: nano
+summary: Small, friendly text editor inspired by Pico
+description: |
+  GNU nano is an easy-to-use text editor originally designed as a replacement
+  for Pico, the ncurses-based editor from the non-free mailer package Pine
+  (itself now available under the Apache License as Alpine).
+
+  However, GNU nano also implements many features missing in Pico, including:
+    - undo/redo
+    - line numbering
+    - syntax coloring
+    - soft-wrapping of overlong lines
+    - selecting text by holding Shift
+    - interactive search and replace (with regular expression support)
+    - a go-to line (and column) command
+    - support for multiple file buffers
+    - auto-indentation
+    - tab completion of filenames and search terms
+    - toggling features while running
+    - and full internationalization support
+
+  This snap is maintained by the Snapcrafters community and is not endorsed or officially maintained by the upstream developers.
+
+icon: snap/gui/nano.png
+
+version: "9.2"
+base: core24
+confinement: classic
+grade: stable
+
+platforms:
+  amd64:
+  arm64:
+  armhf:
+
+apps:
+  nano:
+    command: usr/local/bin/nano
+    command-chain: &common_cmd_chain
+    - bin/classic-launch
+    - bin/locales-launch
+    - bin/magic-launch
+    - bin/ncurses-launch
+    - bin/nano-launch
+    environment: &common_env
+      SNAP_ARCH_TRIPLET: $SNAPCRAFT_ARCH_TRIPLET
+
+  rnano:
+    command: usr/local/bin/rnano
+    command-chain: *common_cmd_chain
+    environment: *common_env
+
+parts:
+  # Launcher programs to fix problems at runtime
+  launchers:
+    source: snap/local/launchers
+    plugin: dump
+    organize:
+      '*-launch': bin/
+    stage-packages:
+    - dialog
+    build-attributes:
+      - enable-patchelf
+
+  # Launcher to set up the usual snap runtime environment
+  # https://forum.snapcraft.io/t/the-classic-launch-stage-snap/10441
+  classic-launch:
+    plugin: nil
+    stage-snaps:
+    - classic-launch
+
+  # Launcher for fixing libmagic applications
+  # https://forum.snapcraft.io/t/the-magic-launch-launcher-stage-snap/10442
+  magic-launch:
+    plugin: nil
+    stage-snaps:
+    - magic-launch
+
+  # Launcher for fixing the glibc locales(and gnu gettext I18N support)
+  # https://forum.snapcraft.io/t/the-locales-launch-stage-snap/10296
+  locales-launch:
+    plugin: nil
+    stage-snaps:
+    - locales-launch
+    stage-packages:
+    - libc-bin
+    - locales
+    build-attributes:
+      - enable-patchelf
+
+  # The ncurses-launch launcher: Fix ncurses applications in the snap runtime - doc - snapcraft.io
+  # https://forum.snapcraft.io/t/the-ncurses-launch-launcher-fix-ncurses-applications-in-the-snap-runtime/10444
+  ncurses-launch:
+    source: https://github.com/brlin-tw/ncurses-launch.git
+    source-tag: v1.0.0
+    stage-packages:
+      - ncurses-base
+    plugin: dump
+
+  # A minimal nanorc for this snap
+  rcfiles:
+    source: snap/local/rcfiles
+    plugin: dump
+    organize:
+      '*': rcfiles/
+
+  nano:
+    source: git://git.savannah.gnu.org/nano.git
+    source-tag: v9.2
+    plugin: autotools
+    autotools-configure-parameters:
+    - --datarootdir=/snap/$CRAFT_PROJECT_NAME/current/share
+    - --sysconfdir=/snap/$CRAFT_PROJECT_NAME/current/rcfiles
+    build-packages:
+    - gettext
+    - groff
+    - libmagic-dev
+    - libncurses-dev
+    - pkg-config
+    - texinfo
+    stage-packages:
+    - libmagic1t64
+    - libncursesw6
+    organize:
+      snap/$CRAFT_PROJECT_NAME/current: /
+    build-attributes:
+      - enable-patchelf
+    prime:
+      - -usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libformw.so*
+      - -usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libmenuw.so*
+      - -usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libpanelw.so*

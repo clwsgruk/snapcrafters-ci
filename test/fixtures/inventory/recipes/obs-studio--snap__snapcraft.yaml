@@ -1,0 +1,130 @@
+name: obs-studio
+summary: Live streaming and video recording software
+description: Free and open source software for video capturing, recording, and live
+  streaming.
+version: "32.2.0"
+base: core24
+grade: stable
+confinement: strict
+license: GPL-2.0
+compression: lzo
+
+platforms:
+  amd64:
+
+layout:
+  /usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/intel-opencl:
+    bind: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/intel-opencl
+  /usr/share/alsa:
+    bind: $SNAP/usr/share/alsa
+
+package-repositories:
+  - type: apt
+    ppa: obsproject/obs-studio
+    priority: prefer
+    key-id: BC7345F522079769F5BBE987EFC71127F425E228
+  - type: apt
+    ppa: kobuk-team/intel-graphics
+    priority: prefer
+    key-id: 0C0E6AF955CE463C03FC51574D098D70AFBE5E1F
+
+plugs:
+  intel-npu:
+    interface: custom-device
+    custom-device: intel-npu-device
+  npu-libs:
+    interface: content
+    content: npu-libs-2404
+    target: $SNAP/npu-libs
+  obs-plugins:
+    interface: content
+    target: $SNAP_DATA/obs-plugins-mounts
+
+parts:
+  launcher:
+    plugin: dump
+    source: snap/local
+
+  obs-studio:
+    plugin: nil
+    stage-packages:
+      - obs-studio
+      - libvlc5
+      - vlc-plugin-base
+      - libasound2-data
+
+  intel-graphics:
+    plugin: nil
+    stage-packages:
+      - intel-media-va-driver-non-free
+      - intel-metrics-discovery
+      - intel-ocloc
+      - intel-opencl-icd
+      - libigc2
+      - libigc-tools
+      - libigdfcl2
+      - libigdgmm12
+      - libmfx1
+      - libmfx-gen1
+      - libva-drm2
+      - libva-glx2
+      - libva-wayland2
+      - libva-x11-2
+      - libvpl2
+      - libze1
+      - libze-intel-gpu1
+      - ocl-icd-libopencl1
+      # Note, these -dev packages deliver development sym links that
+      # may be dynamically loaded by Intel compute runtime drivers.
+      - libigc-dev
+      - libigdfcl-dev
+    prime:
+      - -usr/include
+      - -usr/share
+
+apps:
+  obs-studio:
+    command: obs-wrapper
+    extensions: [gnome]
+    common-id: com.obsproject.Studio
+    environment:
+      QT_PLUGIN_PATH: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/qt6/plugins:$QT_PLUGIN_PATH
+      QT_QPA_PLATFORM_PLUGIN_PATH: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/qt6/plugins/platforms
+      LD_LIBRARY_PATH: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/pulseaudio:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/obs-plugins:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/obs-scripting:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/blas:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/lapack:$SNAP_DATA/obs-plugins/lib/:$SNAP_DATA/obs-plugins/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/intel-opencl:$SNAP/npu-libs
+      LIBVA_DRIVERS_PATH: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/dri:$LIBVA_DRIVERS_PATH
+      OBS_PLUGINS_PATH: $SNAP_DATA/obs-plugins/plugins/
+      OBS_PLUGINS_DATA_PATH: $SNAP_DATA/obs-plugins/data/
+      OCL_ICD_VENDORS: $SNAP/etc/OpenCL/vendors
+      HOME: $SNAP_USER_COMMON
+    plugs:
+      - alsa
+      - audio-playback
+      - audio-record
+      - avahi-control
+      - browser-support
+      - camera
+      - desktop
+      - desktop-legacy
+      - gsettings
+      - home
+      - hardware-observe
+      - jack1
+      - joystick
+      - kernel-module-observe
+      - network
+      - network-bind
+      - opengl
+      - password-manager-service
+      - process-control
+      - pulseaudio
+      - raw-usb
+      - removable-media
+      - screen-inhibit-control
+      - screencast-legacy
+      - system-observe
+      - unity7
+      - upower-observe
+      - wayland
+      - x11
+      - intel-npu
+      - npu-libs

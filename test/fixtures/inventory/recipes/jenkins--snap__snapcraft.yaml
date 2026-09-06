@@ -1,0 +1,85 @@
+name: jenkins
+title: Jenkins
+summary: Jenkins automation server -  Build great things at any scale
+description: |
+  Jenkins is the leading open-source automation server. Built with Java, it provides over 1000 plugins to support automating virtually anything, so that humans can actually spend their time doing things machines cannot.
+
+  **Authors**
+
+  This snap is maintained by the Snapcrafters community, and is not necessarily endorsed or officially maintained by the upstream developers.
+website: https://www.jenkins.io/
+contact: https://github.com/snapcrafters/jenkins/issues
+issues: https://github.com/snapcrafters/jenkins/issues
+source-code: https://github.com//snapcrafters/jenkins
+license: MIT
+icon: snap/local/jenkins.png
+version: '2.580'
+
+base: core22
+confinement: classic
+grade: stable
+
+architectures:
+  - build-on: amd64
+  - build-on: arm64
+  - build-on: armhf
+#  - build-on: riscv64
+
+apps:
+  jenkins:
+    environment:
+      XDG_DATA_HOME: "$SNAP/usr/share"
+      FONTCONFIG_PATH: "$SNAP/etc/fonts"
+      JAVA_HOME: "$SNAP/usr/lib/jvm/java-21-openjdk"
+      LD_LIBRARY_PATH: "$SNAP/usr/lib/${SNAPCRAFT_ARCH_TRIPLET}"
+    command: launch            
+    daemon: simple
+  config:
+    command: jenkins-config
+
+parts:
+  jenkins:
+    plugin: nil
+    source: https://github.com/jenkinsci/jenkins.git
+    source-tag: jenkins-$SNAPCRAFT_PROJECT_VERSION
+    stage-packages:
+      - fonts-dejavu-core
+      - libfontconfig1
+      - openjdk-21-jre-headless
+      - ca-certificates-java
+      - libharfbuzz0b
+    build-packages:
+      - libnss3
+      - ca-certificates-java
+    override-build: |
+      mv $CRAFT_PART_INSTALL/usr/lib/jvm/java-21-openjdk-* $CRAFT_PART_INSTALL/usr/lib/jvm/java-21-openjdk
+      rm $CRAFT_PART_INSTALL/usr/lib/jvm/java-21-openjdk/lib/security/cacerts
+      cp /etc/ssl/certs/java/cacerts $CRAFT_PART_INSTALL/usr/lib/jvm/java-21-openjdk/lib/security/cacerts
+      cp /etc/ssl/certs/java/cacerts $CRAFT_PART_INSTALL/etc/ssl/certs/java/cacerts
+    prime:
+      - -usr/lib/jvm/java-21-openjdk-*/lib/security/blacklisted.certs
+      - -usr/lib/jvm/java-11-openjdk-*/lib/security/blacklisted.certs
+
+  jenkins-war:
+    plugin: dump
+    source: http://mirrors.jenkins.io/war/latest/jenkins.war
+    source-type: file
+
+  config:
+    plugin: dump
+    source: snap/local
+    prime:
+        - jenkins-config
+        - launch
+
+  cleanup:
+    after: 
+      - jenkins
+    plugin: nil
+    build-snaps: 
+      - core22
+    override-prime: |
+      set -eux
+      for snap in "core22"; do  # List all content-snaps and base snaps you're using here
+        cd "/snap/$snap/current" && find . -type f,l -exec rm -f "$CRAFT_PRIME/{}" \;
+      done

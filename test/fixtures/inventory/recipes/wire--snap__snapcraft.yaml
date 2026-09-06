@@ -1,0 +1,100 @@
+name: wire
+version: 'latest'
+version-script: cat $SNAPCRAFT_STAGE/version
+summary: Secure and private chat with end-to-end encryption
+description: |
+  Text, voice, video and media on Wire are always end-to-end encrypted
+  1:1 and in groups, so all your conversations are secure and private.
+  Conversations are available on multiple devices and platforms without
+  weakening security.
+base: core18
+
+grade: stable
+confinement: strict
+compression: lzo
+
+architectures:
+  - build-on: amd64
+  
+parts:
+  bsi-trigger: # A non-built part, only used to trigger builds in build.snapcraft.io on upstream changes
+    plugin: nil
+    source: https://github.com/wireapp/wire-desktop.git
+
+  libappindicator:
+    plugin: nil
+    stage-packages:
+      - libappindicator3-1
+    prime:
+      - usr/lib/$SNAPCRAFT_ARCH_TRIPLET/libdbusmenu*.so*
+      - usr/lib/$SNAPCRAFT_ARCH_TRIPLET/libappindicator*.so*
+      - usr/lib/$SNAPCRAFT_ARCH_TRIPLET/libindicator*.so*
+
+  wire:
+    plugin: nil
+    override-build: |
+      snapcraftctl build
+      set -x
+      ARCHITECTURE=$(dpkg --print-architecture)
+      # Get the latest releases json
+      echo "Get GitHub releases..."
+      wget --quiet https://api.github.com/repos/wireapp/wire-desktop/releases -O releases.json
+      # Get the version from the tag_name and the download URL.
+      VERSION=$(jq . releases.json | grep tag_name | cut -d'"' -f4 | grep linux | head -n 1 | cut -d'/' -f2)
+      DEB_URL=$(grep browser_download releases.json | grep "${VERSION}" | grep "${ARCHITECTURE}" | grep deb | cut -d'"' -f4)
+      DEB=$(basename "${DEB_URL}")
+      echo "Downloading ${DEB_URL}..."
+      wget --quiet "${DEB_URL}" -O "${SNAPCRAFT_PART_INSTALL}/${DEB}"
+      echo "Unpacking ${DEB}..."
+      dpkg -x "${SNAPCRAFT_PART_INSTALL}/${DEB}" ${SNAPCRAFT_PART_INSTALL}
+      rm -f releases.json 2>/dev/null
+      rm -f "${SNAPCRAFT_PART_INSTALL}/${DEB}" 2>/dev/null
+      echo $VERSION > $SNAPCRAFT_STAGE/version
+      rm $SNAPCRAFT_PART_INSTALL/opt/Wire/chrome-sandbox
+      sed -i 's|Icon=.*|Icon=/usr/share/icons/hicolor/256x256/apps/wire-desktop\.png|g' ${SNAPCRAFT_PART_INSTALL}/usr/share/applications/wire-desktop.desktop
+    after:
+      - libappindicator
+    build-packages:
+      - dpkg
+      - jq
+      - sed
+      - wget
+    stage-packages:
+      - libnspr4
+      - libnss3
+      - libxss1
+  cleanup:
+    after: [wire]
+    plugin: nil
+    build-snaps: [ gnome-3-28-1804 ]
+    override-prime: |
+        set -eux
+        cd /snap/gnome-3-28-1804/current
+        find . -type f,l -exec rm -f $SNAPCRAFT_PRIME/{} \;
+
+apps:
+  wire:
+    extensions: [gnome-3-28]
+    command: opt/Wire/wire-desktop --no-sandbox
+    desktop: usr/share/applications/wire-desktop.desktop
+    environment:
+      # Correct the TMPDIR path for Chromium Framework/Electron to
+      # ensure libappindicator has readable resources
+      TMPDIR: $XDG_RUNTIME_DIR
+      # Coerce XDG_CURRENT_DESKTOP to Unity so that App Indicators
+      # are used and do not fall back to Notification Area applets
+      # or disappear completely.
+      XDG_CURRENT_DESKTOP: Unity
+      # Fallback to XWayland if running in a Wayland session.
+      DISABLE_WAYLAND: 1
+    plugs:
+      - browser-support
+      - camera
+      - home
+      - network
+      - network-bind
+      - opengl
+      - password-manager-service
+      - pulseaudio
+      - screen-inhibit-control
+      - unity7

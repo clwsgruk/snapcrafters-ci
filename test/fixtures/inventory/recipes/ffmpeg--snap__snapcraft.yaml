@@ -1,0 +1,225 @@
+name: ffmpeg
+version: ffmpeg-2404
+summary: A complete solution to record, convert and stream audio and video.
+description: |
+ FFmpeg is the leading multimedia framework, able to decode, encode,
+ transcode, mux, demux, stream, filter and play pretty much anything that
+ humans and machines have created. It supports the most obscure ancient formats
+ up to the cutting edge. No matter if they were designed by some standards
+ committee, the community or a corporation.
+
+base: core24
+grade: stable
+confinement: strict
+compression: lzo
+
+platforms:
+  amd64:
+  ppc64el:
+  arm64:
+  armhf:
+
+plugs:
+  ffmpeg-2404:
+    interface: content
+    target: $SNAP/ffmpeg-platform
+    default-provider: ffmpeg-2404
+
+  gpu-2404:
+    interface: content
+    target: $SNAP/gpu-2404
+    default-provider: mesa-2404
+
+layout:
+  /usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/alsa-lib:
+    symlink: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/alsa-lib
+  /usr/share/alsa:
+    symlink: $SNAP/usr/share/alsa
+  /usr/share/libdrm:
+    bind: $SNAP/gpu-2404/libdrm
+  /usr/share/drirc.d:
+    symlink: $SNAP/gpu-2404/drirc.d
+
+parts:
+  desktop-glib-only:
+    plugin: dump
+    source: snap/local/desktop-glib-only
+    build-packages:
+      - libglib2.0-dev
+    stage-packages:
+      - libglib2.0-bin
+      - shared-mime-info
+    organize:
+      desktop-launch: bin/
+
+  ffmpeg:
+    plugin: nil
+    source: https://github.com/FFmpeg/FFmpeg.git
+    stage-packages:
+      - libasound2t64
+      - libarchive13t64
+      - libcaca0
+      - libcairo2
+      - libdrm2
+      - libgomp1
+      - libfreetype6
+      - libldap2
+      - liblcms2-2
+      - libmpg123-0t64
+      - libogg0
+      - libopenjp2-7
+      - libopus0
+      - libpulse0
+      - libraw1394-11
+      - librsvg2-2
+      - libtwolame0
+      - libv4l-0t64
+      - libvpx9
+      - libxcb1
+      - libxcb-shm0
+      - libxcb-xfixes0
+      - libxcursor1
+      - libxi6
+      - libxkbcommon0
+      - libxrandr2
+      - libspeex1
+      - libtheora0
+      - libwebp7
+      - libwebpmux3
+    prime:
+      - -usr/include
+      - -usr/lib/pkgconfig
+
+  ffmpeg-wrapper:
+    plugin: dump
+    after: [ ffmpeg ]
+    source: snap/local/
+    stage-packages:
+      - mesa-utils
+      - mesa-utils-extra
+      - vainfo
+      - vdpauinfo
+    organize:
+      content-snap-executable-wrapper: bin/
+      ffmpeg-wrapper: bin/
+    stage:
+      - -desktop-glib-only
+
+  cleanup:
+    plugin: nil
+    after: [ ffmpeg-wrapper ]
+    override-prime: |
+      for CRUFT in usr/share/bug usr/share/lintian usr/share/man; do
+        rm -rf ${SNAPCRAFT_PRIME}/${CRUFT}
+      done
+      find ${SNAPCRAFT_PRIME}/usr/share/doc/ -type f -not -name 'copyright' -delete || true
+      rm ${SNAPCRAFT_PRIME}/usr/share/doc/*/*.gz 2>/dev/null || true
+      rm -rf ${SNAPCRAFT_PRIME}/usr/share/doc/*/examples || true
+      rm ${SNAPCRAFT_PRIME}/usr/share/doc/*/README* 2>/dev/null || true
+      find ${SNAPCRAFT_PRIME}/usr -type d -empty -delete || true
+
+  gpu-2404:
+    after:
+      - ffmpeg-wrapper
+    source: https://github.com/canonical/gpu-snap.git
+    plugin: dump
+    override-prime: |
+      craftctl default
+      ${CRAFT_PART_SRC}/bin/gpu-2404-cleanup mesa-2404
+      # Workaround for https://bugs.launchpad.net/snapd/+bug/2055273
+      mkdir -p "${CRAFT_PRIME}/gpu-2404"
+    prime:
+      - bin/gpu-2404-wrapper
+
+  ffmpeg-2404:
+    after:
+      - gpu-2404
+    source: https://github.com/snapcrafters/ffmpeg-2404-sdk.git
+    plugin: nil
+    override-prime: |
+      craftctl default
+
+      # Workaround for https://bugs.launchpad.net/snapd/+bug/2055273
+      mkdir -p "${CRAFT_PRIME}/ffmpeg-platform"
+
+      for command in ffmpeg ffprobe ffplay srt-ffplay srt-file-transmit \
+        srt-live-transmit srt-tunnel vainfo vdpauinfo eglinfo glxinfo; do
+        ln -sv --relative --force "${CRAFT_PRIME}/bin/content-snap-executable-wrapper" \
+          "${CRAFT_PRIME}/bin/${command}"
+      done
+
+apps:
+  ffmpeg:
+    command: bin/ffmpeg
+    command-chain: &command-chain
+      - bin/desktop-launch
+      - bin/gpu-2404-wrapper
+      - bin/ffmpeg-wrapper
+    environment: &environment
+      LD_LIBRARY_PATH: ${SNAP}/ffmpeg-platform/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}:${SNAP}/gpu-2404/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}:${SNAP}/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+    plugs: &plugs
+      - alsa
+      - audio-playback
+      - audio-record
+      - camera
+      - desktop
+      - hardware-observe
+      - home
+      - network-bind
+      - network
+      - opengl
+      - optical-drive
+      - pulseaudio
+      - removable-media
+      - wayland
+      - x11
+  ffprobe:
+    command: bin/ffprobe
+    command-chain: *command-chain
+    environment: *environment
+    plugs: *plugs
+  ffplay:
+    command: bin/ffplay
+    command-chain: *command-chain
+    environment: *environment
+    plugs: *plugs
+  srt-ffplay:
+    command: bin/srt-ffplay
+    command-chain: *command-chain
+    environment: *environment
+    plugs: *plugs
+  srt-file-transmit:
+    command: bin/srt-file-transmit
+    command-chain: *command-chain
+    environment: *environment
+    plugs: *plugs
+  srt-live-transmit:
+    command: bin/srt-live-transmit
+    command-chain: *command-chain
+    environment: *environment
+    plugs: *plugs
+  srt-tunnel:
+    command: bin/srt-tunnel
+    command-chain: *command-chain
+    environment: *environment
+    plugs: *plugs
+  vainfo:
+    command: bin/vainfo
+    command-chain: *command-chain
+    environment: *environment
+    plugs: *plugs
+  vdpauinfo:
+    command: bin/vdpauinfo
+    command-chain: *command-chain
+    environment: *environment
+    plugs: *plugs
+  eglinfo:
+    command: bin/eglinfo
+    command-chain: *command-chain
+    environment: *environment
+    plugs: *plugs
+  glxinfo:
+    command: bin/glxinfo
+    command-chain: *command-chain
+    environment: *environment
+    plugs: *plugs

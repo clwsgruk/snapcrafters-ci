@@ -1,0 +1,76 @@
+name: get-iplayer
+adopt-info: get-iplayer
+summary: CLI for downloading content from BBC iplayer
+description: |
+    Command Line tool for downloading tv and radio programmes from the last 30 days from the BBC iPlayer.
+version: "3.36"
+base: core24
+grade: stable 
+confinement: strict
+
+platforms:
+  amd64:
+  arm64:
+  armhf:
+  ppc64el:
+  s390x:
+
+# plugs:
+#   etc-get-iplayer-options:
+#     interface: system-files
+#     read:
+#       - /etc/get_iplayer/options
+
+apps:
+  get-iplayer:
+    command-chain:
+      - launcher
+    command: get_iplayer
+    plugs:
+      - network
+      - removable-media
+      - home
+      - opengl
+      #- etc-get-iplayer-options
+  get-iplayer-cgi:
+    command-chain:
+      - launcher
+    command: get_iplayer.cgi --getiplayer $SNAP/get_iplayer --ffmpeg $SNAP/usr/bin/ffmpeg --port 1935
+    plugs:
+      - network
+      - network-bind
+      - removable-media
+      - home
+      - opengl
+      #- etc-get-iplayer-options
+
+parts:
+    remove-symlink:
+        after: [get-iplayer]
+        plugin: nil
+        override-build: |
+          rm $SNAPCRAFT_STAGE/usr/share/perl5/XML/SAX/ParserDetails.ini
+          ln -s /snap/get-iplayer/current/etc/perl/XML/SAX/ParserDetails.ini $SNAPCRAFT_STAGE/usr/share/perl5/XML/SAX/ParserDetails.ini
+          snapcraftctl build
+    launcher:
+        plugin: dump
+        source: snap/local/scripts
+    get-iplayer:
+        source: https://github.com/get-iplayer/get_iplayer.git
+        source-tag: "v${SNAPCRAFT_PROJECT_VERSION}"
+        plugin: dump
+        stage-packages:
+        - perl-base
+        - libwww-perl
+        - liblwp-protocol-https-perl
+        - libmojolicious-perl
+        - libxml-simple-perl
+        - libxml-libxml-perl
+        - libcgi-pm-perl
+        - atomicparsley
+        - ffmpeg
+        - libdb5.3t64
+        - libpulse0
+        - libslang2
+        - libglut3.12
+        - libglu1-mesa

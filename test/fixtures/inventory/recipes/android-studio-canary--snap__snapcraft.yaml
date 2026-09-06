@@ -1,0 +1,30 @@
+name: android-studio-canary
+version: 2026.2.1.4
+summary: The IDE for Android (Canary build)
+description: |
+  Android Studio provides the fastest tools for building apps on every type
+  of Android device.
+
+  World-class code editing, debugging, performance tooling, a flexible build
+  system, and an instant build/deploy system all allow you to focus on
+  building unique and high quality apps.
+base: core22
+
+grade: stable
+confinement: classic
+compression: lzo
+architectures:
+  - build-on: amd64
+
+apps:
+  android-studio-canary:
+    command: bin/studio.sh
+    environment:
+      PULSE_SERVER: $XDG_RUNTIME_DIR/pulse/native
+
+parts:
+  android-studio-canary:
+    plugin: dump
+    source: https://edgedl.me.gvt1.com/android/studio/ide-zips/2026.2.1.4/android-studio-rabbit1-canary4-linux.tar.gz
+    build-attributes:
+      - no-patchelf
