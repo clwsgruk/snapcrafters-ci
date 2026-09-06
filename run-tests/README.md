@@ -4,16 +4,19 @@ Runs tests on a snap deployed from a specified channel and logs the result to th
 
 ## Usage
 
+Replace `REVIEWED_SHA` with a reviewed immutable action commit. See
+[behavior and recovery](../docs/operations.md) for supported runners and corrections.
+
 ```yaml
 # ...
 jobs:
   test:
     name: 🗒️ Test snap
     needs: call-for-testing
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: 🗒️ Run tests
-        uses: snapcrafters/ci/run-tests@main
+        uses: snapcrafters/ci/run-tests@REVIEWED_SHA
         with:
           issue-number: ${{ needs.call-for-testing.outputs.issue-number }}
           github-token: ${{ secrets.GITHUB_TOKEN }}

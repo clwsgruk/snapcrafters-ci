@@ -135,7 +135,7 @@ export async function publish(options: ReleaseOptions): Promise<Published> {
       filter: (path) =>
         !lstatSync(path).isSymbolicLink() &&
         ![".git", "node_modules"].includes(basename(path)) &&
-        !/\.(snap|comp|txt)$|^\.ci-release-/.test(basename(path)),
+        !/\.(snap|comp)$|^\.ci-release-/.test(basename(path)),
     });
     mkdirSync(join(home, ".local/share/snapcraft/provider/launchpad"), {
       recursive: true,

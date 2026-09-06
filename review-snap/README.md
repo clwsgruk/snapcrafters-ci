@@ -9,14 +9,17 @@ using the `plugs` and `slots` inputs.
 
 ## Usage
 
+Replace `REVIEWED_SHA` with a reviewed immutable action commit. See
+[behavior and recovery](../docs/operations.md) for supported runners and corrections.
+
 ```yaml
 # ...
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Review the built snap
-        uses: snapcrafters/ci/review-snap@main
+        uses: snapcrafters/ci/review-snap@REVIEWED_SHA
         with:
           snap: my-snap.snap
 ```

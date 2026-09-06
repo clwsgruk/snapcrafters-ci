@@ -8829,9 +8829,10 @@ var import_yauzl = __toESM(require_yauzl(), 1);
 var import_node_crypto = require("node:crypto");
 var api = "https://api.github.com";
 var ApiError = class extends Error {
-  constructor(status) {
+  constructor(status, conflict = false) {
     super(`GitHub request failed (${status})`);
     this.status = status;
+    this.conflict = conflict;
   }
 };
 async function bounded(response, max = 8 * 1024 * 1024) {
@@ -8865,7 +8866,15 @@ async function request(method, path, token, body, base = api, deadline = Date.no
     redirect: "error"
   });
   const bytes = await bounded(response);
-  if (!response.ok) throw new ApiError(response.status);
+  if (!response.ok) {
+    let conflict = false;
+    try {
+      const error = JSON.parse(bytes.toString("utf8"));
+      conflict = error.message === "Update is not a fast forward";
+    } catch {
+    }
+    throw new ApiError(response.status, conflict);
+  }
   return bytes.length ? JSON.parse(bytes.toString("utf8")) : {};
 }
 var marker = (value) => (0, import_node_crypto.createHash)("sha256").update(JSON.stringify(value)).digest("hex");
@@ -9007,7 +9016,7 @@ async function publish(options2) {
   try {
     (0, import_node_fs3.cpSync)(p.root, stage, {
       recursive: true,
-      filter: (path) => !(0, import_node_fs3.lstatSync)(path).isSymbolicLink() && ![".git", "node_modules"].includes((0, import_node_path2.basename)(path)) && !/\.(snap|comp|txt)$|^\.ci-release-/.test((0, import_node_path2.basename)(path))
+      filter: (path) => !(0, import_node_fs3.lstatSync)(path).isSymbolicLink() && ![".git", "node_modules"].includes((0, import_node_path2.basename)(path)) && !/\.(snap|comp)$|^\.ci-release-/.test((0, import_node_path2.basename)(path))
     });
     (0, import_node_fs3.mkdirSync)((0, import_node_path2.join)(home, ".local/share/snapcraft/provider/launchpad"), {
       recursive: true,

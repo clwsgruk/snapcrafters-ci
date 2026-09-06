@@ -8801,9 +8801,10 @@ async function main(action) {
 var import_node_crypto = require("node:crypto");
 var api = "https://api.github.com";
 var ApiError = class extends Error {
-  constructor(status) {
+  constructor(status, conflict = false) {
     super(`GitHub request failed (${status})`);
     this.status = status;
+    this.conflict = conflict;
   }
 };
 async function bounded(response, max = 8 * 1024 * 1024) {
@@ -8837,7 +8838,15 @@ async function request(method, path, token, body, base = api, deadline = Date.no
     redirect: "error"
   });
   const bytes = await bounded(response);
-  if (!response.ok) throw new ApiError(response.status);
+  if (!response.ok) {
+    let conflict = false;
+    try {
+      const error = JSON.parse(bytes.toString("utf8"));
+      conflict = error.message === "Update is not a fast forward";
+    } catch {
+    }
+    throw new ApiError(response.status, conflict);
+  }
   return bytes.length ? JSON.parse(bytes.toString("utf8")) : {};
 }
 async function pages(path, token, field, base = api) {
@@ -8859,19 +8868,26 @@ async function pages(path, token, field, base = api) {
 }
 var marker = (value) => (0, import_node_crypto.createHash)("sha256").update(JSON.stringify(value)).digest("hex");
 async function marked(path, body, id, token, base = api) {
-  const stamp = `<!-- snapcrafters-ci:${id} -->`;
-  const find = async () => (await pages(path, token, void 0, base)).find((item) => item.body?.includes(stamp));
+  const stamp = `<!-- snapcrafters-ci:${id} -->`, expectedBody = `${body.body || ""}
+${stamp}`;
+  const find = async () => {
+    const rows = await pages(
+      path.endsWith("/issues") ? `${path}?state=all` : path,
+      token,
+      void 0,
+      base
+    );
+    const matches = rows.filter((item) => item.body?.includes(stamp));
+    if (matches.length > 1 || matches.some(
+      (item) => item.body !== expectedBody || body.title !== void 0 && item.title !== body.title
+    ))
+      throw Error("Deterministic marker conflicts with existing content");
+    return matches[0];
+  };
   const existing = await find();
   if (existing) return existing;
   try {
-    return await request(
-      "POST",
-      path,
-      token,
-      { ...body, body: `${body.body || ""}
-${stamp}` },
-      base
-    );
+    return await request("POST", path, token, { ...body, body: expectedBody }, base);
   } catch (error) {
     const recovered = await find();
     if (recovered) return recovered;

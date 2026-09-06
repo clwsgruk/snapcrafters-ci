@@ -18,16 +18,19 @@ The action will also try to locate files that can be used during the review phas
 
 ## Usage
 
+Replace `REVIEWED_SHA` with a reviewed immutable action commit. See
+[behavior and recovery](../docs/operations.md) for supported runners and corrections.
+
 ```yaml
 # ...
 jobs:
   parse-snapcraft-yaml:
     name: 🖥 Parse the snapcraft yaml file
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Find and parse snapcraft.yaml
         id: snapcraft-yaml
-        uses: snapcrafters/ci/parse-snapcraft-yaml@main
+        uses: snapcrafters/ci/parse-snapcraft-yaml@REVIEWED_SHA
 ```
 
 ## API

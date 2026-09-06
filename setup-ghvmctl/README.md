@@ -9,13 +9,16 @@ on Github Actions runners is also included in this repository. It has three majo
 
 ## Usage
 
+Replace `REVIEWED_SHA` with a reviewed immutable action commit. See
+[behavior and recovery](../docs/operations.md) for supported runners and corrections.
+
 ```yaml
 jobs:
   test-snap:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Setup ghvmctl
-        uses: snapcrafters/ci/setup-ghvmctl@main
+        uses: snapcrafters/ci/setup-ghvmctl@REVIEWED_SHA
 
       - name: Prepare test environment
         run: |

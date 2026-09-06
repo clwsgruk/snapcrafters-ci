@@ -5,20 +5,10 @@ Following that, the snap is released to the specified channel automatically.
 
 ## Usage
 
-```yaml
-# ...
-jobs:
-  release:
-    name: 🚢 Release to latest/candidate
-    runs-on: ubuntu-latest
-    steps:
-      - name: 🚢 Release to latest/candidate
-        uses: snapcrafters/ci/release-to-candidate@main
-        with:
-          architecture: arm64
-          launchpad-token: ${{ secrets.LAUNCHPAD_TOKEN }}
-          store-token: ${{ secrets.STORE_TOKEN }}
-```
+Replace `REVIEWED_SHA` with a reviewed immutable action commit. See
+[behavior and recovery](../docs/operations.md) for supported runners and corrections.
+
+Use the complete, serialized [publishing examples](../docs/publishing.md).
 
 ## API
 

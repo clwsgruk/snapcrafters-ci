@@ -8,6 +8,7 @@ const actions = readdirSync(".").filter((p) => {
     return false;
   }
 });
+if (actions.length !== 12) throw Error("Expected exactly twelve action adapters");
 for (const action of actions) {
   const result = await build({
     entryPoints: [`${action}/main.ts`],

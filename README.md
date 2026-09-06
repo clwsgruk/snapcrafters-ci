@@ -1,39 +1,51 @@
 # Snapcrafters CI
 
-This repository contains common actions and tools used throughout the Snapcrafters [organisation](https://github.com/snapcrafters) for the testing and delivery of our snaps.
+Twelve composite actions for building, reviewing, testing and publishing one selected snap project.
+Snapcraft, snap, review-tools, LXD and ghvmctl remain external tools. Orchestration lives in small
+TypeScript feature modules; action-local adapters have committed Node 24 bundles.
 
-## Snapcrafters Actions
+| Action                                                 | Purpose                                                           |
+| ------------------------------------------------------ | ----------------------------------------------------------------- |
+| [parse-snapcraft-yaml](parse-snapcraft-yaml/README.md) | Locate a project and serialize its metadata                       |
+| [get-architectures](get-architectures/README.md)       | Produce explicit architecture matrices                            |
+| [sync-version](sync-version/README.md)                 | Run a trusted update script and commit tracked changes            |
+| [test-snap-build](test-snap-build/README.md)           | Build locally and review                                          |
+| [review-snap](review-snap/README.md)                   | Invoke review-tools                                               |
+| [release-to-candidate](release-to-candidate/README.md) | Remote-build and publish one architecture                         |
+| [fetch-manifests](fetch-manifests/README.md)           | Download and validate this run's revision manifests               |
+| [call-for-testing](call-for-testing/README.md)         | Create a testing issue bound to exact revisions                   |
+| [setup-ghvmctl](setup-ghvmctl/README.md)               | Install ghvmctl 0.4.1 revision 16 and configure KVM/LXD           |
+| [get-screenshots](get-screenshots/README.md)           | Capture and atomically commit two PNGs                            |
+| [run-tests](run-tests/README.md)                       | Run trusted Bash with private complete logs and bounded reporting |
+| [promote-to-stable](promote-to-stable/README.md)       | Authorize and reconcile exact revision promotions                 |
 
-The actions in this repo are all used during the build, test and release of our snaps. Each of them listed below has it's own README
+Public names, defaults, required flags and output expressions are frozen from upstream
+`cb43fba979fbb7388ec44f37b1e70d6cdb8edb8c`. `action.yaml` is the authoritative interface.
+Use github.com-hosted Ubuntu 22.04 or 24.04. Wrappers require Node 24 before privileged work;
+`setup-ghvmctl` validates as its first step, so its caller must already have Node 24 on PATH.
 
-- [snapcrafters/ci/call-for-testing](call-for-testing/README.md)
-- [snapcrafters/ci/get-architectures](get-architectures/README.md)
-- [snapcrafters/ci/get-screenshots](get-screenshots/README.md)
-- [snapcrafters/ci/parse-snapcraft-yaml](parse-snapcraft-yaml/README.md)
-- [snapcrafters/ci/promote-to-stable](promote-to-stable/README.md)
-- [snapcrafters/ci/release-to-candidate](release-to-candidate/README.md)
-- [snapcrafters/ci/review-snap](review-snap/README.md)
-- [snapcrafters/ci/sync-version](sync-version/README.md)
-- [snapcrafters/ci/test-snap-build](test-snap-build/README.md)
+Use mise for development:
 
-### Usage
+```sh
+mise install
+mise run install
+mise run ci
+```
 
-You can see examples of these actions in use in the following repos:
+`mise run fmt`, `mise run test`, `mise run build` and `mise run size` are the focused entry points.
+Bun manages the frozen dependency lock. Vite+ supplies formatting, linting, type checks and tests.
+CI also runs actionlint, ShellCheck for every inline script, source budgets, and two independent
+frozen builds compared with committed bundles and licenses. Generated `*/dist/*` files must be
+rebuilt and committed with source changes. The final comparison intentionally fails until the
+matching generated files have been committed.
 
-- [signal-desktop](https://github.com/snapcrafters/signal-desktop/tree/candidate/.github/workflows)
-- [mattermost-desktop](https://github.com/snapcrafters/mattermost-desktop/tree/candidate/.github/workflows)
-- [discord](https://github.com/snapcrafters/discord/tree/candidate/.github/workflows)
+The fresh [inventory](test/fixtures/inventory.md) records 87 active repositories and 80 immutable
+recipes using 38 compact schema shapes. Omitted architectures, unknown bases and ambiguous
+platform semantics fail clearly. Project paths are resolved internally while public path spelling
+is preserved. `ci-repo` overrides are deprecated: pin the forked action itself.
 
-## Contributing
-
-If you'd like to contribute to this repository, please feel free to fork and create a pull request.
-
-There are a few style guidelines to keep in mind:
-
-- Code should be linted using [Prettier](https://prettier.io/). You can achieve this with `make lint` and `make format`. The only requirements are [`npx`](https://www.npmjs.com/package/npx) and [`shellcheck`](https://github.com/koalaman/shellcheck).
-- When defining inputs/outputs in `action.yaml`, or listing them in the tables within `README.md`, they should be listed in alphabetical order for easy reading and updating.
-- Github Action inputs/outputs should be named all lowercase, separated by `-` where needed. The applies to inputs/outputs to actions themselves, and for individual steps within the actions. For example: `snap-name` or `token`.
-- Environment variables referring to repository level secrets and variables should be named all uppercase, and separated by `_`. For example: `SNAPCRAFTERS_BOT_COMMIT`.
-- Step/job level environment variables should be named all lowercase, and separated by `_`. For example: `snap_name` or `yaml_path`.
-- All `bash` variables should be quoted.
-- Scripts of all kinds, including those within actions `run:|` directives should follow the [Google styleguide](https://google.github.io/styleguide/shellguide.html)
+See [operational behavior and recovery](docs/operations.md), [publishing examples](docs/publishing.md),
+and [actual TDD evidence](docs/tdd-evidence.md). Pure parsing/validation has a 90% branch coverage
+gate. Overall coverage is reported without a global percentage target. Tests use real Bash, local
+Git remotes, private files, local HTTP servers and strict fake executables; no live publication or
+VM integration is performed by the test suite.

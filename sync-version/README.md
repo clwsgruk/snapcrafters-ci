@@ -6,14 +6,17 @@ takes care of identifying and committing those changes.
 
 ## Usage
 
+Replace `REVIEWED_SHA` with a reviewed immutable action commit. See
+[behavior and recovery](../docs/operations.md) for supported runners and corrections.
+
 ```yaml
 jobs:
   sync:
     name: 🔄 Sync version with upstream
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: 🔄 Sync version with upstream
-        uses: snapcrafters/ci/sync-version@main
+        uses: snapcrafters/ci/sync-version@REVIEWED_SHA
         with:
           token: ${{ secrets.TOKEN }}
           update-script: |

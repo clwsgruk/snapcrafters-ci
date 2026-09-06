@@ -1,37 +1,21 @@
-name: Lint
-
+name: CI
 on:
   pull_request:
-    branches:
-      - main
   push:
-    branches:
-      - main
-
+    branches: [main]
+permissions:
+  contents: read
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-22.04
+  ci:
+    strategy:
+      matrix:
+        runner: [ubuntu-22.04, ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Node
-        uses: actions/setup-node@v7
-
-      - name: Run linters
-        run: |
-          make lint
-
-      - name: Run formatters
-        run: |
-          make format
-
-      - name: Check for modifications to generated files
-        run: |
-          if [[ -n "$(git status -s)" ]]; then
-            echo "Please run 'make format' then commit/push changes"
-            echo
-            git diff
-            exit 1
-          fi
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
+        with:
+          install: false
+      - run: mise install
+      - run: mise run install
+      - run: mise run ci

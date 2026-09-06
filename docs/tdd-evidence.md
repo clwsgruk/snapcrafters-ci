@@ -1,6 +1,9 @@
 # TDD evidence
 
-Commands run with repository-pinned Node 24.20.0 and Bun 1.4.0 through mise.
+The repository pins Node 24.20.0 and Bun 1.4.0 through mise. Early test commands
+were later found to resolve Node 22.22.3 through a higher-priority host PATH entry.
+The copied-wrapper test exposed this (12 failures: Node 24 required); task commands now
+invoke mise's resolved Node binary explicitly. Final checks rerun the full suite on Node 24.
 The container's snap launcher fails; a temporary launcher invokes the same mise binary directly,
 with its state in /tmp and unrelated global tool configuration excluded.
 
@@ -66,3 +69,19 @@ with its state in /tmp and unrelated global tool configuration excluded.
 
 - GREEN: 25 tests passed; all twelve adapters built. Size: production 1,650, tooling 89,
   tests 788, fixtures 875 nonblank lines.
+
+- `mise run test -- test/smoke.test.ts` — RED: missing copied-wrapper harness; then RED:
+  twelve wrappers rejected accidental Node 22 resolution. Corrected the task executable paths.
+
+- Copied-wrapper GREEN: all twelve public YAML wrappers plus deny-by-default invalid-host setup
+  passed on actual Node 24.20.0. An explicit `.cjs` fake executable target was needed because the
+  test-only network preload makes Node reject the `.snap-review` filename extension.
+- Coverage GREEN: 51 tests; project branches 96.92%, validation branches 90%. Overall source
+  branches 66.84%; copied-bundle executions are exercised separately, not credited to that total.
+- `mise run test -- test/release.test.ts test/execution.test.ts` — RED: staging dropped needed
+  `requirements.txt`, and caller step-summary text was absent. GREEN: preserved source text files
+  and bounded/redacted caller summaries while preserving exit 7.
+- `mise run test -- test/github.test.ts` — RED: a different body carrying the same marker was
+  accepted. GREEN: marker recovery requires exact body/title identity.
+- `mise run test -- test/screenshots.test.ts` — RED: unrelated 422 plus concurrent ref movement
+  created a second commit. GREEN: retry also requires the explicit non-fast-forward error.

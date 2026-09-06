@@ -40,3 +40,20 @@ test("explicit tokens and disconnect recovery create exactly one marked comment"
     await new Promise<void>((r) => server.close(() => r()));
   }
 });
+
+test("an existing deterministic marker with different content cannot impersonate a completed write", async () => {
+  const server = createServer((req, res) => {
+    if (req.method !== "GET") throw Error("unexpected write");
+    res.end(JSON.stringify([{ id: 1, body: "tampered\n<!-- snapcrafters-ci:collision -->" }]));
+  });
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+  const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  try {
+    await expect(
+      marked("/comments", { body: "intended" }, "collision", "token", base),
+    ).rejects.toThrow(/marker/i);
+  } finally {
+    server.closeAllConnections();
+    await new Promise<void>((r) => server.close(() => r()));
+  }
+});

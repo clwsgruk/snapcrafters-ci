@@ -7,16 +7,19 @@ the original call for testing issue.
 
 ## Usage
 
+Replace `REVIEWED_SHA` with a reviewed immutable action commit. See
+[behavior and recovery](../docs/operations.md) for supported runners and corrections.
+
 ```yaml
 # ...
 jobs:
   screenshots:
     name: 📸 Gather screenshots
     needs: call-for-testing
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: 📸 Gather screenshots
-        uses: snapcrafters/ci/get-screenshots@main
+        uses: snapcrafters/ci/get-screenshots@REVIEWED_SHA
         with:
           issue-number: ${{ needs.call-for-testing.outputs.issue-number }}
           github-token: ${{ secrets.GITHUB_TOKEN }}

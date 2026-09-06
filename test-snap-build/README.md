@@ -19,15 +19,18 @@ the following files in your repository, which will be passed to the review actio
 
 ## Usage
 
+Replace `REVIEWED_SHA` with a reviewed immutable action commit. See
+[behavior and recovery](../docs/operations.md) for supported runners and corrections.
+
 ```yaml
 # ...
 jobs:
   build:
     name: 🧪 Build snap on amd64
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: 🧪 Build snap on amd64
-        uses: snapcrafters/ci/test-snap-build@main
+        uses: snapcrafters/ci/test-snap-build@REVIEWED_SHA
 ```
 
 ## API

@@ -8728,9 +8728,10 @@ function scalar(value) {
 // src/github.ts
 var api = "https://api.github.com";
 var ApiError = class extends Error {
-  constructor(status) {
+  constructor(status, conflict = false) {
     super(`GitHub request failed (${status})`);
     this.status = status;
+    this.conflict = conflict;
   }
 };
 async function bounded(response, max = 8 * 1024 * 1024) {
@@ -8764,7 +8765,15 @@ async function request(method, path, token, body, base = api, deadline = Date.no
     redirect: "error"
   });
   const bytes = await bounded(response);
-  if (!response.ok) throw new ApiError(response.status);
+  if (!response.ok) {
+    let conflict = false;
+    try {
+      const error = JSON.parse(bytes.toString("utf8"));
+      conflict = error.message === "Update is not a fast forward";
+    } catch {
+    }
+    throw new ApiError(response.status, conflict);
+  }
   return bytes.length ? JSON.parse(bytes.toString("utf8")) : {};
 }
 async function pages(path, token, field, base = api) {

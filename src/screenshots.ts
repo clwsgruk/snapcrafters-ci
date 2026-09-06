@@ -138,7 +138,12 @@ export async function uploadScreenshots(value: Screenshots, base = api) {
         screen: `https://raw.githubusercontent.com/${value.repo}/${next.sha}/${paths[0]}`,
         window: `https://raw.githubusercontent.com/${value.repo}/${next.sha}/${paths[1]}`,
       };
-    if (!(failure instanceof ApiError) || ![409, 422].includes(failure.status) || actual === parent)
+    if (
+      !(failure instanceof ApiError) ||
+      ![409, 422].includes(failure.status) ||
+      !failure.conflict ||
+      actual === parent
+    )
       throw Error("Screenshot ref update unconfirmed; no retry without a confirmed conflict");
   }
   throw Error("Screenshot conflict retry limit exceeded");

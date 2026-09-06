@@ -41,6 +41,7 @@ test("release stages fresh sources, uploads once, confirms digest, and resumes e
     "name: sample\nbase: core22\nadopt-info: app\narchitectures: [amd64]\n",
   );
   writeFileSync(path.join(work, "stale.snap"), "stale");
+  writeFileSync(path.join(work, "requirements.txt"), "needed source");
   execFileSync("git", ["init", work], { stdio: "ignore" });
   execFileSync("git", ["add", "snapcraft.yaml"], { cwd: work });
   execFileSync(
@@ -60,7 +61,7 @@ test("release stages fresh sources, uploads once, confirms digest, and resumes e
   );
   const fake = `#!${process.execPath}\nconst fs=require('node:fs'),p=require('node:path'),a=process.argv.slice(2),tool=p.basename(process.argv[1]);fs.appendFileSync(${JSON.stringify(log)},JSON.stringify([tool,...a])+'\\n'); const store=${JSON.stringify(store)};
 if(tool==='snapcraft'&&a[0]==='revisions'&&a[1]==='sample'&&a[2]==='--arch'&&a[3]==='amd64'&&a.length===4){console.log('Rev. Uploaded Arches Version Channels');if(fs.existsSync(store)) console.log('12 2026-09-06T12:00:00Z amd64 2.0 latest/candidate*');}
-else if(tool==='snapcraft'&&JSON.stringify(a)===JSON.stringify(['remote-build','--launchpad-accept-public-upload'])){if(fs.existsSync('stale.snap'))process.exit(91);if(!fs.readFileSync('snapcraft.yaml','utf8').includes('build-on'))process.exit(92);fs.writeFileSync('sample_2.0_amd64.snap','fresh');}
+else if(tool==='snapcraft'&&JSON.stringify(a)===JSON.stringify(['remote-build','--launchpad-accept-public-upload'])){if(fs.existsSync('stale.snap')||!fs.existsSync('requirements.txt'))process.exit(91);if(!fs.readFileSync('snapcraft.yaml','utf8').includes('build-on'))process.exit(92);fs.writeFileSync('sample_2.0_amd64.snap','fresh');}
 else if(tool==='snapcraft'&&a[0]==='upload'&&a.length===3&&a[2]==='--release=latest/candidate'){fs.writeFileSync(store,'fresh');console.log("Revision 12 created for 'sample'");}
 else if(tool==='unsquashfs'&&a[0]==='-cat'&&a[2]==='meta/snap.yaml'&&a.length===3){console.log('name: sample\\nversion: "2.0"\\narchitectures: [amd64]');}
 else if(tool==='snap'&&JSON.stringify(a)===JSON.stringify(['download','sample','--revision=12'])){fs.writeFileSync('sample_12.snap',fs.readFileSync(store));}

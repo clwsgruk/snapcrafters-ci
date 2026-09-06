@@ -5,6 +5,9 @@ newly released revisions and instructions on how to test and promote them.
 
 ## Usage
 
+Replace `REVIEWED_SHA` with a reviewed immutable action commit. See
+[behavior and recovery](../docs/operations.md) for supported runners and corrections.
+
 ### Use in combination with `snapcrafters/ci/release-to-candidate`
 
 In this mode, the action will look for an artifact uploaded by the
@@ -15,10 +18,10 @@ revisions that were uploaded, and use those to populate the call for testing tem
 jobs:
   release:
     name: 🚢 Release to latest/candidate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: 🚢 Release to latest/candidate
-        uses: snapcrafters/ci/release-to-candidate@main
+        uses: snapcrafters/ci/release-to-candidate@REVIEWED_SHA
         with:
           architecture: arm64
           launchpad-token: ${{ secrets.LAUNCHPAD_TOKEN }}
@@ -27,10 +30,10 @@ jobs:
   call-for-testing:
     name: 📣 Create call for testing
     needs: release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: 📣 Create call for testing
-        uses: snapcrafters/ci/call-for-testing@main
+        uses: snapcrafters/ci/call-for-testing@REVIEWED_SHA
         with:
           architectures: "amd64 arm64"
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -46,10 +49,10 @@ revisions.
 jobs:
   call-for-testing:
     name: 📣 Create call for testing
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: 📣 Create call for testing
-        uses: snapcrafters/ci/call-for-testing@main
+        uses: snapcrafters/ci/call-for-testing@REVIEWED_SHA
         with:
           architectures: "amd64 arm64"
           github-token: ${{ secrets.GITHUB_TOKEN }}

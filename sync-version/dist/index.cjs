@@ -7417,7 +7417,18 @@ async function script(source, directory, env = process.env, storage = (0, import
   });
   clearTimeout(timer);
   streams.forEach((finish) => finish());
-  const summary = Buffer.from([...first, ...last.length ? ["\n\u2026\n", ...last] : []].join("")).subarray(0, 6e4).toString("utf8").replace(/\uFFFD$/, "");
+  const short = (text, tail = false) => {
+    const bytes = Buffer.from(text);
+    return (tail ? bytes.subarray(-2e4) : bytes.subarray(0, 2e4)).toString("utf8").replace(/^\uFFFD|\uFFFD$/g, "");
+  };
+  let extra = "";
+  if (env.GITHUB_STEP_SUMMARY) {
+    try {
+      extra = "\nWorkflow summary:\n" + redact(readBounded(env.GITHUB_STEP_SUMMARY, 16e3, true).toString("utf8")).split("\n").slice(0, 100).join("\n");
+    } catch {
+    }
+  }
+  const summary = short(first.join("")) + (last.length ? "\n\u2026\n" + short(last.join(""), true) : "") + extra;
   (0, import_node_fs.writeFileSync)((0, import_node_path.join)(dir, "summary.txt"), summary, { mode: 384 });
   if (env.GITHUB_STEP_SUMMARY) {
     try {
@@ -7427,6 +7438,24 @@ async function script(source, directory, env = process.env, storage = (0, import
     }
   }
   return { code, script: file, stdout, stderr, summary };
+}
+function readBounded(file, limit, truncate = false) {
+  const fd = (0, import_node_fs.openSync)(file, import_node_fs.constants.O_RDONLY | import_node_fs.constants.O_NOFOLLOW);
+  try {
+    const stat = (0, import_node_fs.fstatSync)(fd);
+    if (!stat.isFile() || !truncate && stat.size > limit)
+      throw Error("Invalid file type or size");
+    const bytes = Buffer.alloc(Math.min(stat.size, limit));
+    let size = 0;
+    while (size < bytes.length) {
+      const count = (0, import_node_fs.readSync)(fd, bytes, size, bytes.length - size, null);
+      if (!count) break;
+      size += count;
+    }
+    return bytes.subarray(0, size);
+  } finally {
+    (0, import_node_fs.closeSync)(fd);
+  }
 }
 
 // src/project.ts

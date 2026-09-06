@@ -7,12 +7,34 @@ shellcheck = "0.11.0"
 [tasks.install]
 run = "bun install --frozen-lockfile"
 [tasks.fmt]
-run = "./node_modules/.bin/vp fmt"
+run = 'PATH="{{ tools.node.path }}/bin:$PATH" "{{ tools.node.path }}/bin/node" node_modules/vite-plus/bin/vp fmt'
 [tasks.check]
-run = "./node_modules/.bin/vp check"
+run = 'PATH="{{ tools.node.path }}/bin:$PATH" "{{ tools.node.path }}/bin/node" node_modules/vite-plus/bin/vp check'
 [tasks.test]
-run = "./node_modules/.bin/vp test run"
+run = 'PATH="{{ tools.node.path }}/bin:$PATH" "{{ tools.node.path }}/bin/node" node_modules/vite-plus/bin/vp test run'
 [tasks.size]
-run = "node scripts/size.ts"
+run = '"{{ tools.node.path }}/bin/node" scripts/size.ts'
 [tasks.build]
 run = "bun scripts/build.ts"
+[tasks."test:coverage"]
+run = 'PATH="{{ tools.node.path }}/bin:$PATH" "{{ tools.node.path }}/bin/node" node_modules/vite-plus/bin/vp test run --coverage'
+[tasks."test:smoke"]
+run = 'PATH="{{ tools.node.path }}/bin:$PATH" "{{ tools.node.path }}/bin/node" node_modules/vite-plus/bin/vp test run test/smoke.test.ts'
+[tasks."test:contract"]
+run = 'PATH="{{ tools.node.path }}/bin:$PATH" "{{ tools.node.path }}/bin/node" node_modules/vite-plus/bin/vp test run test/contracts.test.ts test/wrappers.test.ts'
+[tasks.actionlint]
+run = "actionlint"
+[tasks.shellcheck]
+run = '"{{ tools.node.path }}/bin/node" scripts/shellcheck.ts'
+[tasks."check-dist"]
+run = 'PATH="{{ tools.node.path }}/bin:$PATH" "{{ tools.node.path }}/bin/node" scripts/check-dist.ts'
+[tasks.ci]
+run = [
+  '"{{ mise_bin }}" run check',
+  '"{{ mise_bin }}" run test:coverage',
+  '"{{ mise_bin }}" run actionlint',
+  '"{{ mise_bin }}" run shellcheck',
+  '"{{ mise_bin }}" run size',
+  '"{{ mise_bin }}" run build',
+  '"{{ mise_bin }}" run check-dist',
+]

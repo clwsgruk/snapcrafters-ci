@@ -71,7 +71,7 @@ test("artifact collection paginates and validates the complete expected set befo
   const { createServer } = await import("node:http");
   const { mkdtempSync, readdirSync, rmSync } = await import("node:fs");
   const { tmpdir } = await import("node:os");
-  const { join } = await import("node:path");
+  const path = await import("node:path");
   let gets = 0;
   const server = createServer((req, res) => {
     expect(req.headers.authorization).toBe("Bearer artifact-token");
@@ -89,7 +89,7 @@ test("artifact collection paginates and validates the complete expected set befo
   });
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
   const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`,
-    dir = mkdtempSync(join(tmpdir(), "artifacts-"));
+    dir = mkdtempSync(path.join(tmpdir(), "artifacts-"));
   try {
     await expect(
       fetchManifests(

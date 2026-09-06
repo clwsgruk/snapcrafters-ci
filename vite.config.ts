@@ -1,6 +1,15 @@
 import { defineConfig } from "vite-plus";
 export default defineConfig({
   lint: { ignorePatterns: ["**/dist/**"], options: { typeAware: true, typeCheck: true } },
-  test: { include: ["test/**/*.test.ts"], testTimeout: 20000 },
+  test: {
+    include: ["test/**/*.test.ts"],
+    testTimeout: 20000,
+    coverage: {
+      provider: "v8",
+      include: ["src/**/*.ts"],
+      reporter: ["text", "json-summary"],
+      thresholds: { "src/project.ts": { branches: 90 }, "src/validation.ts": { branches: 90 } },
+    },
+  },
   fmt: { ignorePatterns: ["**/dist/**", "test/fixtures/**", "bun.lock"] },
 });

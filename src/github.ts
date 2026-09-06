@@ -1,7 +1,10 @@
 import { createHash } from "node:crypto";
 export const api = "https://api.github.com";
 export class ApiError extends Error {
-  constructor(public status: number) {
+  constructor(
+    public status: number,
+    public conflict = false,
+  ) {
     super(`GitHub request failed (${status})`);
   }
 }
@@ -43,7 +46,16 @@ export async function request<T = Record<string, unknown>>(
     redirect: "error",
   });
   const bytes = await bounded(response);
-  if (!response.ok) throw new ApiError(response.status);
+  if (!response.ok) {
+    let conflict = false;
+    try {
+      const error = JSON.parse(bytes.toString("utf8")) as { message?: string };
+      conflict = error.message === "Update is not a fast forward";
+    } catch {
+      /* unstructured failures are not retryable conflicts */
+    }
+    throw new ApiError(response.status, conflict);
+  }
   return (bytes.length ? JSON.parse(bytes.toString("utf8")) : {}) as T;
 }
 export async function pages<T>(
@@ -73,6 +85,7 @@ export const marker = (value: unknown) =>
 export interface Message {
   id: number;
   number?: number;
+  title?: string;
   body: string;
 }
 export async function marked(
@@ -82,19 +95,30 @@ export async function marked(
   token: string,
   base = api,
 ): Promise<Message> {
-  const stamp = `<!-- snapcrafters-ci:${id} -->`;
-  const find = async () =>
-    (await pages<Message>(path, token, undefined, base)).find((item) => item.body?.includes(stamp));
+  const stamp = `<!-- snapcrafters-ci:${id} -->`,
+    expectedBody = `${body.body || ""}\n${stamp}`;
+  const find = async () => {
+    const rows = await pages<Message>(
+      path.endsWith("/issues") ? `${path}?state=all` : path,
+      token,
+      undefined,
+      base,
+    );
+    const matches = rows.filter((item) => item.body?.includes(stamp));
+    if (
+      matches.length > 1 ||
+      matches.some(
+        (item) =>
+          item.body !== expectedBody || (body.title !== undefined && item.title !== body.title),
+      )
+    )
+      throw Error("Deterministic marker conflicts with existing content");
+    return matches[0];
+  };
   const existing = await find();
   if (existing) return existing;
   try {
-    return await request<Message>(
-      "POST",
-      path,
-      token,
-      { ...body, body: `${body.body || ""}\n${stamp}` },
-      base,
-    );
+    return await request<Message>("POST", path, token, { ...body, body: expectedBody }, base);
   } catch (error) {
     const recovered = await find();
     if (recovered) return recovered;

@@ -66,3 +66,23 @@ test("architectures cover the fresh inventory and normalize lists without empty 
   ])
     expect(() => architectures(data)).toThrow();
 });
+
+test("unobserved architecture fields and non-scalar metadata fail clearly", async () => {
+  const { architectures, scalar, yaml } = await import("../src/project.ts");
+  for (const data of [
+    { base: "core24", platforms: { amd64: { typo: "amd64" } } },
+    { architectures: "amd64" },
+    { base: "core24", platforms: { amd64: { "build-on": [] } } },
+  ])
+    expect(() => architectures(data)).toThrow();
+  for (const value of [{ version: "x" }, ["1"], () => "1"])
+    expect(() => scalar(value)).toThrow(/scalar/);
+  expect(() => yaml("name: a\nname: b\n")).toThrow();
+  expect(() => yaml("[]")).toThrow(/mapping/);
+  const dir = mkdtempSync(join(tmpdir(), "absent-"));
+  try {
+    expect(() => project("", dir)).toThrow(/No snapcraft/);
+  } finally {
+    rmSync(dir, { recursive: true });
+  }
+});

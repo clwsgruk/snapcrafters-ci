@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 export function measure(texts: string[], lines: number, files: number) {
@@ -15,9 +15,10 @@ if (resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
     );
   const source = paths.filter((p) => p.startsWith("src/") && p.endsWith(".ts"));
   const adapters = paths.filter((p) => /^[^/]+\/main\.ts$/.test(p));
-  if (source.length > 15 || adapters.length !== 12)
+  const sourceFiles = paths.filter((p) => p.startsWith("src/") && statSync(p).isFile());
+  if (sourceFiles.length > 15 || adapters.length !== 12)
     throw Error(
-      `Expected <=15 source files and 12 adapters; found ${source.length}, ${adapters.length}`,
+      `Expected <=15 source files and 12 adapters; found ${sourceFiles.length}, ${adapters.length}`,
     );
   const categories: [string, string[], number, number][] = [
     ["production", [...source, ...adapters], 2500, 27],

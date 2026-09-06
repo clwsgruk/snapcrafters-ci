@@ -6,6 +6,9 @@ import {
   closeSync,
   writeSync,
   appendFileSync,
+  readSync,
+  fstatSync,
+  constants,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -125,10 +128,27 @@ export async function script(
   });
   clearTimeout(timer);
   streams.forEach((finish) => finish());
-  const summary = Buffer.from([...first, ...(last.length ? ["\n…\n", ...last] : [])].join(""))
-    .subarray(0, 60000)
-    .toString("utf8")
-    .replace(/\uFFFD$/, "");
+  const short = (text: string, tail = false) => {
+    const bytes = Buffer.from(text);
+    return (tail ? bytes.subarray(-20000) : bytes.subarray(0, 20000))
+      .toString("utf8")
+      .replace(/^\uFFFD|\uFFFD$/g, "");
+  };
+  let extra = "";
+  if (env.GITHUB_STEP_SUMMARY) {
+    try {
+      extra =
+        "\nWorkflow summary:\n" +
+        redact(readBounded(env.GITHUB_STEP_SUMMARY, 16000, true).toString("utf8"))
+          .split("\n")
+          .slice(0, 100)
+          .join("\n");
+    } catch {
+      /* reporting cannot change the test result */
+    }
+  }
+  const summary =
+    short(first.join("")) + (last.length ? "\n…\n" + short(last.join(""), true) : "") + extra;
   writeFileSync(join(dir, "summary.txt"), summary, { mode: 0o600 });
   if (env.GITHUB_STEP_SUMMARY) {
     try {
@@ -138,4 +158,23 @@ export async function script(
     }
   }
   return { code, script: file, stdout, stderr, summary };
+}
+
+export function readBounded(file: string, limit: number, truncate = false): Buffer {
+  const fd = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    const stat = fstatSync(fd);
+    if (!stat.isFile() || (!truncate && stat.size > limit))
+      throw Error("Invalid file type or size");
+    const bytes = Buffer.alloc(Math.min(stat.size, limit));
+    let size = 0;
+    while (size < bytes.length) {
+      const count = readSync(fd, bytes, size, bytes.length - size, null);
+      if (!count) break;
+      size += count;
+    }
+    return bytes.subarray(0, size);
+  } finally {
+    closeSync(fd);
+  }
 }

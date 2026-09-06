@@ -8765,9 +8765,10 @@ var import_node_path2 = require("node:path");
 var import_node_crypto = require("node:crypto");
 var api = "https://api.github.com";
 var ApiError = class extends Error {
-  constructor(status) {
+  constructor(status, conflict = false) {
     super(`GitHub request failed (${status})`);
     this.status = status;
+    this.conflict = conflict;
   }
 };
 async function bounded(response, max = 8 * 1024 * 1024) {
@@ -8801,7 +8802,15 @@ async function request(method, path, token, body, base = api, deadline = Date.no
     redirect: "error"
   });
   const bytes = await bounded(response);
-  if (!response.ok) throw new ApiError(response.status);
+  if (!response.ok) {
+    let conflict = false;
+    try {
+      const error = JSON.parse(bytes.toString("utf8"));
+      conflict = error.message === "Update is not a fast forward";
+    } catch {
+    }
+    throw new ApiError(response.status, conflict);
+  }
   return bytes.length ? JSON.parse(bytes.toString("utf8")) : {};
 }
 async function pages(path, token, field, base = api) {
@@ -8823,19 +8832,26 @@ async function pages(path, token, field, base = api) {
 }
 var marker = (value) => (0, import_node_crypto.createHash)("sha256").update(JSON.stringify(value)).digest("hex");
 async function marked(path, body, id, token, base = api) {
-  const stamp = `<!-- snapcrafters-ci:${id} -->`;
-  const find = async () => (await pages(path, token, void 0, base)).find((item) => item.body?.includes(stamp));
+  const stamp = `<!-- snapcrafters-ci:${id} -->`, expectedBody = `${body.body || ""}
+${stamp}`;
+  const find = async () => {
+    const rows = await pages(
+      path.endsWith("/issues") ? `${path}?state=all` : path,
+      token,
+      void 0,
+      base
+    );
+    const matches = rows.filter((item) => item.body?.includes(stamp));
+    if (matches.length > 1 || matches.some(
+      (item) => item.body !== expectedBody || body.title !== void 0 && item.title !== body.title
+    ))
+      throw Error("Deterministic marker conflicts with existing content");
+    return matches[0];
+  };
   const existing = await find();
   if (existing) return existing;
   try {
-    return await request(
-      "POST",
-      path,
-      token,
-      { ...body, body: `${body.body || ""}
-${stamp}` },
-      base
-    );
+    return await request("POST", path, token, { ...body, body: expectedBody }, base);
   } catch (error) {
     const recovered = await find();
     if (recovered) return recovered;
@@ -9096,7 +9112,18 @@ async function script(source, directory, env = process.env, storage = (0, import
   });
   clearTimeout(timer);
   streams.forEach((finish) => finish());
-  const summary = Buffer.from([...first, ...last.length ? ["\n\u2026\n", ...last] : []].join("")).subarray(0, 6e4).toString("utf8").replace(/\uFFFD$/, "");
+  const short = (text, tail = false) => {
+    const bytes = Buffer.from(text);
+    return (tail ? bytes.subarray(-2e4) : bytes.subarray(0, 2e4)).toString("utf8").replace(/^\uFFFD|\uFFFD$/g, "");
+  };
+  let extra = "";
+  if (env.GITHUB_STEP_SUMMARY) {
+    try {
+      extra = "\nWorkflow summary:\n" + redact(readBounded(env.GITHUB_STEP_SUMMARY, 16e3, true).toString("utf8")).split("\n").slice(0, 100).join("\n");
+    } catch {
+    }
+  }
+  const summary = short(first.join("")) + (last.length ? "\n\u2026\n" + short(last.join(""), true) : "") + extra;
   (0, import_node_fs3.writeFileSync)((0, import_node_path3.join)(dir, "summary.txt"), summary, { mode: 384 });
   if (env.GITHUB_STEP_SUMMARY) {
     try {
@@ -9106,6 +9133,24 @@ async function script(source, directory, env = process.env, storage = (0, import
     }
   }
   return { code, script: file, stdout, stderr, summary };
+}
+function readBounded(file, limit, truncate = false) {
+  const fd = (0, import_node_fs3.openSync)(file, import_node_fs3.constants.O_RDONLY | import_node_fs3.constants.O_NOFOLLOW);
+  try {
+    const stat = (0, import_node_fs3.fstatSync)(fd);
+    if (!stat.isFile() || !truncate && stat.size > limit)
+      throw Error("Invalid file type or size");
+    const bytes = Buffer.alloc(Math.min(stat.size, limit));
+    let size = 0;
+    while (size < bytes.length) {
+      const count = (0, import_node_fs3.readSync)(fd, bytes, size, bytes.length - size, null);
+      if (!count) break;
+      size += count;
+    }
+    return bytes.subarray(0, size);
+  } finally {
+    (0, import_node_fs3.closeSync)(fd);
+  }
 }
 
 // src/runtime.ts

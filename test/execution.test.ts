@@ -65,3 +65,22 @@ test("sync rejects every untracked path before commit, and derives version after
     rmSync(dir, { recursive: true });
   }
 });
+
+test("caller step-summary is included, bounded and redacted without changing the test status", async () => {
+  const { writeFileSync } = await import("node:fs");
+  const dir = mkdtempSync(join(tmpdir(), "summary-")),
+    file = join(dir, "summary");
+  writeFileSync(file, "caller detail secret-token");
+  try {
+    const result = await script('printf "output\\n"; exit 7', dir, {
+      PATH: process.env.PATH,
+      GITHUB_STEP_SUMMARY: file,
+      INPUT_GITHUB_TOKEN: "secret-token",
+    });
+    expect(result.code).toBe(7);
+    expect(result.summary).toContain("caller detail ***");
+    expect(result.summary).not.toContain("secret-token");
+  } finally {
+    rmSync(dir, { recursive: true });
+  }
+});
