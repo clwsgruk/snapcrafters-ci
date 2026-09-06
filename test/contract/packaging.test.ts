@@ -16,3 +16,12 @@ test("distribution verification uses pinned Node and independent source trees", 
   expect(source).toContain('spawn("node"');
   expect(source).toContain("copySourceTree");
 });
+
+test("wrapper output keys and prerequisite steps are wired to their public contracts", async () => {
+  const architectures = await readFile("src/project/action.ts", "utf8");
+  expect(architectures).toContain('setOutput("architectures_list"');
+  const promotion = await readFile("promote-to-stable/action.yaml", "utf8");
+  expect(promotion).toContain("actions/checkout@");
+  const screenshots = await readFile("src/screenshots/action.ts", "utf8");
+  expect(screenshots).toContain("runGhvmctlSetupAction");
+});

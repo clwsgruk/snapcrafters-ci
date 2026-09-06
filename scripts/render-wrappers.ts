@@ -27,7 +27,7 @@ const actions: Record<
 `,
   },
   "parse-snapcraft-yaml": { id: "parse" },
-  "promote-to-stable": {},
+  "promote-to-stable": { before: checkoutStep() },
   "release-to-candidate": {
     id: "publish",
     before: checkoutStep("        token: ${{ inputs.repo-token }}\n        fetch-depth: 0"),
@@ -95,6 +95,7 @@ for (const [action, config] of Object.entries(actions)) {
     )
     .join("");
   const id = config.id ? `      id: ${config.id}\n` : "";
+  const envBlock = env || config.extraEnv ? `      env:\n${env}${config.extraEnv ?? ""}` : "";
   const rendered = `${source.slice(0, boundary)}
 runs:
   using: composite
@@ -105,8 +106,7 @@ ${config.before ?? ""}    - name: Setup Node 24
         node-version: "24.20.0"
     - name: Run ${action}
 ${id}      shell: bash
-      env:
-${env}${config.extraEnv ?? ""}      run: node "\${{ github.action_path }}/dist/index.cjs"
+${envBlock}      run: node "\${{ github.action_path }}/dist/index.cjs"
 ${config.after ?? ""}`;
   await writeFile(file, rendered);
 }

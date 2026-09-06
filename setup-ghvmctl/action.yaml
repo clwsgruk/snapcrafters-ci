@@ -22,5 +22,4 @@ runs:
         node-version: "24.20.0"
     - name: Run setup-ghvmctl
       shell: bash
-      env:
       run: node "${{ github.action_path }}/dist/index.cjs"

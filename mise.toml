@@ -39,6 +39,9 @@ run = "./node_modules/.bin/vp test run --coverage"
 [tasks.build]
 run = "bun scripts/build.ts"
 
+[tasks.wrappers]
+run = "bun scripts/render-wrappers.ts"
+
 [tasks.inventory]
 description = "Refresh the read-only immutable Snapcrafters recipe inventory"
 run = "bun scripts/inventory.ts"

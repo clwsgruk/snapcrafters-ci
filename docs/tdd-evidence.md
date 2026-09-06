@@ -164,6 +164,10 @@ mutable sibling references, and public metadata drift.
   absent and the verifier requires pinned `node` plus complete independent tracked-source copies.
 - `mise run test -- main.test` — GREEN: 12 files, 12 tests; each thin adapter maps to its named
   workflow exactly once without a production-only escape path.
+- `mise run test:contract -- packaging` — RED: the computed JSON architecture key did not match
+  the preserved wrapper output, promotion lacked checkout, and screenshots did not install
+  ghvmctl. GREEN: 3 files, 5 tests; exact internal output wiring and prerequisites pass, and the
+  renderer no longer emits a null `env` mapping for input-free actions.
 
 - `mise run build` using pinned Vite+ `vp pack` — deterministic CJS output, but inspection found
   runtime `require()` calls for `@actions/core`, `@actions/github`, `yaml`, and `yauzl`; this failed

@@ -30,5 +30,5 @@ export async function runArchitecturesAction(env: NodeJS.ProcessEnv): Promise<vo
     (target) => target.buildFor,
   );
   core.setOutput("architectures", architectures.join(" "));
-  core.setOutput("architectures-list", JSON.stringify(architectures));
+  core.setOutput("architectures_list", JSON.stringify(architectures));
 }

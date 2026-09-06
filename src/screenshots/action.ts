@@ -6,6 +6,7 @@ import { collectManifests } from "../manifests/collect.js";
 import { parseProject } from "../project/parse.js";
 import { issueCommenter, manifestGitHub, screenshotGitHub } from "../runtime/github.js";
 import { captureScreenshots } from "./run.js";
+import { runGhvmctlSetupAction } from "./setup.js";
 import { publishScreenshots } from "./upload.js";
 
 export async function runScreenshotsAction(env: NodeJS.ProcessEnv): Promise<void> {
@@ -22,6 +23,7 @@ export async function runScreenshotsAction(env: NodeJS.ProcessEnv): Promise<void
   repository(screenshotsRepo);
   const cancellation = actionSignal();
   try {
+    await runGhvmctlSetupAction();
     const manifests = await collectManifests(
       manifestGitHub(issueToken, context.repository, context.runId, cancellation.signal),
       context.workspace,
