@@ -277,6 +277,17 @@ mutable sibling references, and public metadata drift.
   digest/version/architecture binding, bounded complete state files, immediate publication records,
   manifest/tag/cleanup partial states, and exact-tag recovery.
 
+## Parent gate regression
+
+- Parent `mise install` and `mise run install` passed without dependency changes.
+- Parent `mise run ci` exposed an invalid-context wrapper test timeout at the implicit 5-second
+  limit. Giving the twelve sequential Node processes the same explicit 60-second test budget as
+  the successful-wrapper case then exposed the actual failure: `setup-ghvmctl` returned zero in an
+  invalid consumer context instead of rejecting it before setup commands.
+- Added the existing bounded hosted-runner context validation before ghvmctl setup. Rebuilt the
+  bundle; `mise run test:smoke` passed both tests. Parent `mise run ci` then passed all 151 tests in
+  35 files, the 96.21% pure-parser branch gate, all lint checks and both isolated bundle rebuilds.
+
 ## Intentionally unrun external acceptance
 
 No Launchpad remote build, Snap Store upload/release/promotion, GitHub issue/comment/tag/ref write,

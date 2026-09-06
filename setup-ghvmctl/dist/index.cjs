@@ -19821,6 +19821,92 @@ __export(main_exports, {
 module.exports = __toCommonJS(main_exports);
 var core = __toESM(require_core(), 1);
 
+// src/actions/context.ts
+var import_promises = require("node:fs/promises");
+
+// src/runtime/errors.ts
+var InputError = class extends Error {
+  name = "InputError";
+};
+
+// src/actions/context-validation.ts
+var import_node_path = require("node:path");
+
+// src/actions/inputs.ts
+function positiveDecimal(value, name) {
+  if (!/^[1-9][0-9]*$/.test(value)) throw new InputError(`${name} must be a positive decimal`);
+  return value;
+}
+function repository(value) {
+  const match = /^([A-Za-z0-9](?:[A-Za-z0-9-]{0,38}))\/([A-Za-z0-9_.-]{1,100})$/.exec(value);
+  if (!match) throw new InputError("Invalid owner/repository");
+  return { owner: match[1], name: match[2] };
+}
+
+// src/actions/context-validation.ts
+function validateContextEnvironment(env, nodeVersion) {
+  const eventPath = env.GITHUB_EVENT_PATH;
+  if (!env.GITHUB_WORKSPACE || !env.GITHUB_REPOSITORY || !env.GITHUB_RUN_ID || !env.GITHUB_SHA || !eventPath)
+    throw new InputError("Incomplete GitHub Actions context");
+  if (!(0, import_node_path.isAbsolute)(env.GITHUB_WORKSPACE) || !(0, import_node_path.isAbsolute)(eventPath))
+    throw new InputError("GitHub workspace and event paths must be absolute");
+  if (env.GITHUB_ACTIONS !== "true" || env.GITHUB_SERVER_URL !== "https://github.com" || env.RUNNER_ENVIRONMENT !== "github-hosted" || env.RUNNER_OS !== "Linux" || !(/* @__PURE__ */ new Set(["ubuntu22", "ubuntu24"])).has(env.ImageOS ?? "") || nodeVersion.split(".")[0] !== "24")
+    throw new InputError("Unsupported GitHub Actions runner capability");
+  repository(env.GITHUB_REPOSITORY);
+  positiveDecimal(env.GITHUB_RUN_ID, "GITHUB_RUN_ID");
+  if (!/^[0-9a-f]{40}$/.test(env.GITHUB_SHA)) throw new InputError("Invalid GITHUB_SHA");
+  if (!/^[A-Za-z0-9_]+$/.test(env.GITHUB_EVENT_NAME ?? ""))
+    throw new InputError("Invalid GITHUB_EVENT_NAME");
+  return {
+    workspace: env.GITHUB_WORKSPACE,
+    repository: env.GITHUB_REPOSITORY,
+    runId: env.GITHUB_RUN_ID,
+    sha: env.GITHUB_SHA,
+    eventName: env.GITHUB_EVENT_NAME ?? "",
+    eventPath
+  };
+}
+function parseEventPayload(bytes) {
+  const event = JSON.parse(bytes.toString("utf8"));
+  if (!event || typeof event !== "object" || Array.isArray(event))
+    throw new InputError("Event payload must be an object");
+  return event;
+}
+
+// src/actions/context.ts
+async function actionContext(env, nodeVersion = process.versions.node) {
+  const validated = validateContextEnvironment(env, nodeVersion);
+  const event = parseEventPayload(await readBoundedEvent(validated.eventPath));
+  return {
+    workspace: validated.workspace,
+    repository: validated.repository,
+    runId: validated.runId,
+    sha: validated.sha,
+    eventName: validated.eventName,
+    event
+  };
+}
+async function readBoundedEvent(path) {
+  const limit = 2 * 1024 * 1024;
+  const handle = await (0, import_promises.open)(path, "r");
+  try {
+    const metadata = await handle.stat();
+    if (!metadata.isFile()) throw new InputError("Event payload must be a regular file");
+    if (metadata.size > limit) throw new InputError("Event payload exceeds size limit");
+    const buffer = Buffer.alloc(Math.min(metadata.size + 1, limit + 1));
+    let offset = 0;
+    while (offset < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
+      if (bytesRead === 0) break;
+      offset += bytesRead;
+    }
+    if (offset > limit) throw new InputError("Event payload exceeds size limit");
+    return buffer.subarray(0, offset);
+  } finally {
+    await handle.close();
+  }
+}
+
 // src/actions/signal.ts
 function actionSignal() {
   const controller = new AbortController();
@@ -19838,13 +19924,13 @@ function actionSignal() {
 
 // src/runtime/process.ts
 var import_node_child_process = require("node:child_process");
-var import_promises = require("node:fs/promises");
+var import_promises2 = require("node:fs/promises");
 async function runProcess(spec) {
   if (!spec.file || spec.file.includes("\n")) throw new Error("Invalid executable");
   if (spec.signal.aborted) throw new Error("Process aborted before spawn");
   let log;
   if (spec.logPath) {
-    log = await (0, import_promises.open)(spec.logPath, "w", 384);
+    log = await (0, import_promises2.open)(spec.logPath, "w", 384);
     await log.chmod(384);
   }
   if (spec.signal.aborted) {
@@ -19951,6 +20037,7 @@ function redactAndBound(value, secrets, limit) {
 
 // src/screenshots/setup.ts
 async function runGhvmctlSetupAction() {
+  await actionContext(process.env);
   const cancellation = actionSignal();
   try {
     for (const args of [

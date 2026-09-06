@@ -1,7 +1,9 @@
+import { actionContext } from "../actions/context.js";
 import { actionSignal } from "../actions/signal.js";
 import { runProcess } from "../runtime/process.js";
 
 export async function runGhvmctlSetupAction(): Promise<void> {
+  await actionContext(process.env);
   const cancellation = actionSignal();
   try {
     for (const args of [

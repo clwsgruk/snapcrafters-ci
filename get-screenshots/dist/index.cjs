@@ -33556,6 +33556,7 @@ async function readPng(path) {
 
 // src/screenshots/setup.ts
 async function runGhvmctlSetupAction() {
+  await actionContext(process.env);
   const cancellation = actionSignal();
   try {
     for (const args of [

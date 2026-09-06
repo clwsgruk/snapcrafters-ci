@@ -46,7 +46,7 @@ test("all twelve bundles reject an invalid consumer context without the smoke by
     });
     expect(result.code, action).not.toBe(0);
   }
-});
+}, 60_000);
 
 async function runWrapper(action: string, apiOrigin: string): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), `wrapper-${action}-`));
