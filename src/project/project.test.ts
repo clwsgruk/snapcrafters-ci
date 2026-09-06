@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
@@ -25,6 +25,27 @@ describe("project parsing", () => {
       components: [{ name: "docs" }],
     });
     expect(project.yamlPath).toBe(join(workspace, "nested", "snap", "snapcraft.yaml"));
+  });
+
+  test("rejects oversized recipes and symlinked recipe or declaration files", async () => {
+    const oversized = await mkdtemp(join(tmpdir(), "project-oversized-"));
+    await writeFile(
+      join(oversized, "snapcraft.yaml"),
+      `name: demo\n#${"x".repeat(2 * 1024 * 1024)}`,
+    );
+    await expect(parseProject(oversized)).rejects.toThrow(/2 MiB/i);
+
+    const linked = await mkdtemp(join(tmpdir(), "project-linked-"));
+    await writeFile(join(linked, "actual.yaml"), "name: demo\nversion: '1'\n");
+    await symlink("actual.yaml", join(linked, "snapcraft.yaml"));
+    await expect(parseProject(linked)).rejects.toThrow(/symlink/i);
+
+    const declaration = await mkdtemp(join(tmpdir(), "project-declaration-"));
+    await mkdir(join(declaration, ".github"));
+    await writeFile(join(declaration, "snapcraft.yaml"), "name: demo\nversion: '1'\n");
+    await writeFile(join(declaration, "declaration.json"), "{}");
+    await symlink("../declaration.json", join(declaration, ".github/plug-declaration.json"));
+    await expect(parseProject(declaration)).rejects.toThrow(/symlink/i);
   });
 });
 
