@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
-import { mkdtempSync, rmSync, readFileSync, writeFileSync } from "node:fs";
-import { command, safeEnv } from "./execution.ts";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { command, safeEnv, readBounded } from "./execution.ts";
 import { project } from "./project.ts";
 import { input, outputs } from "./runtime.ts";
-import { api, request, ApiError, marker, marked } from "./github.ts";
+import { api, request, ApiError, marker, marked, pages } from "./github.ts";
 import { repository, snapName, channel } from "./validation.ts";
 import { revision, fetchManifests, localManifests } from "./manifests.ts";
 import {
@@ -78,6 +78,7 @@ export interface Screenshots {
   window: Buffer;
   name: string;
   email: string;
+  key?: string;
 }
 export async function uploadScreenshots(value: Screenshots, base = api) {
   repository(value.repo);
@@ -118,7 +119,7 @@ export async function uploadScreenshots(value: Screenshots, base = api) {
       tree: paths.map((path, i) => ({ path, mode: "100644", type: "blob", sha: blobs[i] })),
     });
     const next = await call<{ sha: string }>("POST", "/git/commits", {
-      message: `data: screenshots for ${value.snap}#${value.issue}`,
+      message: `data: screenshots for ${value.snap}#${value.issue}${value.key ? `\nci-screenshots:${value.key}:${value.date}` : ""}`,
       tree: tree.sha,
       parents: [parent],
       author: { name: value.name, email: value.email },
@@ -208,17 +209,13 @@ export async function screenshotAction() {
     repo = repository(process.env.GITHUB_REPOSITORY!),
     images = repository(input("screenshots-repo")),
     token = input("github-token");
-  const key = marker([repo, snap, issue, process.env.GITHUB_RUN_ID]),
+  const key = marker([repo, snap, p.root, issue, process.env.GITHUB_RUN_ID]),
     file = join(process.cwd(), `.ci-screenshots-${key}.json`);
   let urls: { screen: string; window: string };
   try {
-    const fd = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW);
-    try {
-      if (fstatSync(fd).size > 4096) throw Error("Screenshot state too large");
-      urls = JSON.parse(readFileSync(fd, "utf8"));
-    } finally {
-      closeSync(fd);
-    }
+    urls = JSON.parse(readBounded(file, 4096).toString("utf8"));
+    if (!urls || Object.keys(urls).sort().join(",") !== "screen,window")
+      throw Error("Invalid screenshot state fields");
     for (const url of Object.values(urls))
       if (
         !url.startsWith(`https://raw.githubusercontent.com/${images}/`) ||
@@ -228,34 +225,71 @@ export async function screenshotAction() {
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     if (Number(process.env.GITHUB_RUN_ATTEMPT || "1") > 1)
-      throw Error("Restore exact screenshot state before retrying a failed comment");
-    await fetchManifests(token, repo, process.env.GITHUB_RUN_ID!);
-    const rows = localManifests(process.cwd(), snap),
-      selected = rows.find((r) => r.architecture === "amd64");
-    if (rows.length && !selected) throw Error("Missing amd64 screenshot manifest");
-    const captures = await capture(
-      snap,
-      input("snap-application-name") || snap,
-      channel(input("channel")),
-      selected?.revision,
-    );
-    urls = await uploadScreenshots({
-      repo: images,
-      token: input("screenshots-token"),
-      snap,
-      issue,
-      date: new Date().toISOString().slice(0, 10),
-      ...captures,
-      name: input("bot-name"),
-      email: input("bot-email"),
-    });
+      urls = await recoverScreenshots(images, snap, issue, key, input("screenshots-token"));
+    else {
+      await fetchManifests(token, repo, process.env.GITHUB_RUN_ID!);
+      const rows = localManifests(process.cwd(), snap),
+        selected = rows.find((r) => r.architecture === "amd64");
+      if (rows.length && !selected) throw Error("Missing amd64 screenshot manifest");
+      const captures = await capture(
+        snap,
+        input("snap-application-name") || snap,
+        channel(input("channel")),
+        selected?.revision,
+      );
+      urls = await uploadScreenshots({
+        repo: images,
+        key,
+        token: input("screenshots-token"),
+        snap,
+        issue,
+        date: new Date().toISOString().slice(0, 10),
+        ...captures,
+        name: input("bot-name"),
+        email: input("bot-email"),
+      });
+    }
     writeFileSync(file, JSON.stringify(urls), { mode: 0o600, flag: "wx" });
   }
   outputs(urls);
-  await marked(
-    `/repos/${repo}/issues/${issue}/comments`,
-    { body: `![Full screen](${urls.screen})\n\n![Application window](${urls.window})` },
-    key,
+  try {
+    await marked(
+      `/repos/${repo}/issues/${issue}/comments`,
+      { body: `![Full screen](${urls.screen})\n\n![Application window](${urls.window})` },
+      key,
+      token,
+    );
+  } catch {
+    throw Error(
+      `Screenshots committed at ${urls.screen}; comment failed. Retry uses exact state ${file}`,
+    );
+  }
+}
+
+export async function recoverScreenshots(
+  repo: string,
+  snap: string,
+  issue: string,
+  key: string,
+  token: string,
+  base = api,
+) {
+  repository(repo);
+  snapName(snap);
+  revision(issue);
+  const commits = await pages<{ sha: string; commit: { message: string } }>(
+    `/repos/${repo}/commits`,
     token,
+    undefined,
+    base,
   );
+  const prefix = `data: screenshots for ${snap}#${issue}\nci-screenshots:${key}:`;
+  const matches = commits.filter((c) => c.commit.message.startsWith(prefix));
+  if (matches.length !== 1 || !/^[a-f0-9]{40}$/.test(matches[0].sha))
+    throw Error("Exact screenshot state could not be recovered; no upload attempted");
+  const date = matches[0].commit.message.slice(prefix.length);
+  if (!/^\d{4}-\d\d-\d\d$/.test(date) || new Date(date).toISOString().slice(0, 10) !== date)
+    throw Error("Invalid screenshot state date");
+  const url = `https://raw.githubusercontent.com/${repo}/${matches[0].sha}/${date.replaceAll("-", "")}-${snap}-${issue}`;
+  return { screen: `${url}-screen.png`, window: `${url}-window.png` };
 }

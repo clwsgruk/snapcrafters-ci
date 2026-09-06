@@ -40,3 +40,30 @@ test.each(Object.keys(expectedUses))(
     else if (checkout) expect(checkout.with).toBeUndefined();
   },
 );
+
+test("release preserves existing manifest artifacts and verifies them before the tag phase", () => {
+  const steps = action("release-to-candidate").runs.steps;
+  const upload = steps.find((s) => s.with?.name === "manifest-${{ inputs.architecture }}")!;
+  expect(upload.with?.overwrite).toBe("false");
+  expect(upload["continue-on-error"]).toBe(true);
+  const verify = steps.findIndex((s) => s.env?.CI_PHASE === "artifact");
+  expect(verify).toBeGreaterThan(steps.indexOf(upload));
+  expect(verify).toBeLessThan(steps.findIndex((s) => s.env?.CI_PHASE === "tag"));
+  expect(steps[verify].env?.INPUT_REPO_TOKEN).toBe("${{ inputs.repo-token }}");
+});
+
+test("every action keeps the reviewed step input routes, output routes and conditions", async () => {
+  const { default: routes } = await import("./fixtures/wrapper-routes.json");
+  for (const name of Object.keys(expectedUses)) {
+    const value = action(name);
+    expect({
+      outputs: value.outputs || {},
+      steps: value.runs.steps.map(({ id, env, with: inputs, if: condition }) => ({
+        id,
+        env,
+        with: inputs,
+        if: condition,
+      })),
+    }).toEqual(routes[name as keyof typeof routes]);
+  }
+});

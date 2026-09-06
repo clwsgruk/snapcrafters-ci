@@ -8964,6 +8964,8 @@ async function fetchManifests(token, repository2, run, directory = process.cwd()
   if (new Set(manifests.map((m) => m.name)).size > 1) throw Error("Multiple snaps in manifest set");
   if (expected && manifests.length && JSON.stringify(manifests.map((m) => m.architecture).sort()) !== JSON.stringify([...expected.architectures].sort()))
     throw Error("Manifest architecture set mismatch");
+  if ((0, import_node_fs2.readdirSync)(directory).some((p) => /^manifest-.*\.yaml$/.test(p) && !names.has(p.slice(0, -5))))
+    throw Error("Unexpected stale manifest outside this run's artifact set");
   for (const m of manifests) {
     const file = (0, import_node_path2.resolve)(directory, `manifest-${m.architecture}.yaml`);
     try {
@@ -9132,12 +9134,29 @@ async function callForTesting() {
       if (matches.length !== 1) throw Error(`No exact active revision for ${arch}`);
       return { name: snap, architecture: arch, revision: matches[0].revision };
     });
+  let version = p.outputs.version;
+  if (p.data.version == null) {
+    const versions = rows.map((row) => {
+      const matches = revisions(
+        command("snapcraft", ["revisions", snap, "--arch", row.architecture], process.cwd(), {
+          ...safeEnv(),
+          SNAPCRAFT_STORE_CREDENTIALS: input("store-token")
+        })
+      ).filter(
+        (r) => r.revision === row.revision && r.architectures.includes(row.architecture) && r.channels.includes(`${candidate}*`)
+      );
+      if (matches.length !== 1) throw Error("Adopted version requires exact active Store revision");
+      return matches[0].version;
+    });
+    if (new Set(versions).size !== 1) throw Error("Adopted versions differ across architectures");
+    version = versions[0];
+  }
   const context = {
     repository: repo,
     snap,
     channel: candidate,
     destination,
-    version: p.outputs.version,
+    version,
     rows
   };
   const issue = await marked(

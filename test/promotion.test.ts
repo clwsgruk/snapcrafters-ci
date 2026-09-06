@@ -33,6 +33,9 @@ test("promotion rejects any unrelated revision before all writes, then releases 
     `#!${process.execPath}\nconst fs=require('node:fs'),a=process.argv.slice(2);fs.appendFileSync(${JSON.stringify(calls)},JSON.stringify(a)+'\\n');if(JSON.stringify(a)===JSON.stringify(['revisions','sample','--arch','amd64'])) console.log('Rev. Uploaded Arches Version Channels\\n12 2026-09-06T00:00:00Z amd64 2 '+(fs.existsSync(${JSON.stringify(flag)})?'latest/stable*':'latest/candidate*'));else if(JSON.stringify(a)===JSON.stringify(['release','sample','12','latest/stable']))fs.writeFileSync(${JSON.stringify(flag)},'yes');else process.exit(90);`,
     { mode: 0o700 },
   );
+  let permission = "write",
+    edited = false,
+    denyComment = false;
   let body = "/promote 12,999 latest/stable done",
     closed = false,
     writes = 0;
@@ -40,6 +43,7 @@ test("promotion rejects any unrelated revision before all writes, then releases 
     reactions: { content: string; user: { id: number } }[] = [];
   const issue = {
     number: 1,
+    pull_request: undefined as unknown,
     state: "open",
     labels: [{ name: "testing" }],
     body: testingBody(
@@ -59,7 +63,7 @@ test("promotion rejects any unrelated revision before all writes, then releases 
     body,
     user: { login: "maintainer" },
     created_at: "2026-09-06T00:00:00Z",
-    updated_at: "2026-09-06T00:00:00Z",
+    updated_at: edited ? "2026-09-06T00:01:00Z" : "2026-09-06T00:00:00Z",
   });
   const server = createServer(async (req, res) => {
     expect(req.headers.authorization).toBe("Bearer issue-token");
@@ -72,13 +76,18 @@ test("promotion rejects any unrelated revision before all writes, then releases 
     }
     if (req.url === "/repos/owner/repo/issues/comments/7") res.end(JSON.stringify(comment()));
     else if (req.url === "/repos/owner/repo/collaborators/maintainer/permission")
-      res.end(JSON.stringify({ permission: "write" }));
+      res.end(JSON.stringify({ permission }));
     else if (req.url === "/user") res.end('{"id":3}');
     else if (req.url === "/repos/owner/repo/issues/1") {
       if (req.method === "PATCH") closed = true;
       res.end(JSON.stringify({ ...issue, state: closed ? "closed" : "open" }));
     } else if (req.url?.startsWith("/repos/owner/repo/issues/1/comments")) {
       if (req.method === "POST") {
+        if (denyComment) {
+          res.writeHead(403);
+          res.end("{}");
+          return;
+        }
         const row = { id: 8, ...data };
         comments.push(row as { id: number; body: string });
         res.end(JSON.stringify(row));
@@ -111,6 +120,31 @@ test("promotion rejects any unrelated revision before all writes, then releases 
     expect(writes).toBe(0);
     expect(fs.existsSync(flag)).toBe(false);
     body = "/promote 12 latest/stable done";
+    permission = "read";
+    await expect(
+      promote(event(), "owner/repo", "sample", "latest/stable", "issue-token", "store-token", base),
+    ).rejects.toThrow(/permission/);
+    permission = "write";
+    edited = true;
+    await expect(
+      promote(event(), "owner/repo", "sample", "latest/stable", "issue-token", "store-token", base),
+    ).rejects.toThrow(/unedited/);
+    edited = false;
+    issue.pull_request = {};
+    await expect(
+      promote(event(), "owner/repo", "sample", "latest/stable", "issue-token", "store-token", base),
+    ).rejects.toThrow(/non-PR/);
+    issue.pull_request = undefined;
+    expect(writes).toBe(0);
+    expect(fs.existsSync(flag)).toBe(false);
+    denyComment = true;
+    await expect(
+      promote(event(), "owner/repo", "sample", "latest/stable", "issue-token", "store-token", base),
+    ).rejects.toThrow(/Promoted revisions: 12/);
+    expect(closed).toBe(false);
+    expect(fs.existsSync(flag)).toBe(true);
+    denyComment = false;
+
     await promote(
       event(),
       "owner/repo",

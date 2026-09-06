@@ -14,30 +14,9 @@ In this mode, the action will look for an artifact uploaded by the
 `snapcrafters/ci/release-to-candidate` action that contains a manifest detailing the exact
 revisions that were uploaded, and use those to populate the call for testing template.
 
-```yaml
-jobs:
-  release:
-    name: 🚢 Release to latest/candidate
-    runs-on: ubuntu-24.04
-    steps:
-      - name: 🚢 Release to latest/candidate
-        uses: snapcrafters/ci/release-to-candidate@REVIEWED_SHA
-        with:
-          architecture: arm64
-          launchpad-token: ${{ secrets.LAUNCHPAD_TOKEN }}
-          store-token: ${{ secrets.STORE_TOKEN }}
-
-  call-for-testing:
-    name: 📣 Create call for testing
-    needs: release
-    runs-on: ubuntu-24.04
-    steps:
-      - name: 📣 Create call for testing
-        uses: snapcrafters/ci/call-for-testing@REVIEWED_SHA
-        with:
-          architectures: "amd64 arm64"
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-```
+Use the complete, serialized [publishing example](../docs/publishing.md), including its
+call-for-testing job. Request exactly the architectures published by that workflow. Adopted
+versions also need Store access to read the exact revision version.
 
 ### Use standalone - `store-token` required
 
@@ -46,6 +25,15 @@ channel (`latest/candidate` by default) for each architecture and populate the c
 revisions.
 
 ```yaml
+name: Call for testing
+on: workflow_dispatch
+permissions:
+  contents: read
+  issues: write
+  actions: read
+concurrency:
+  group: testing-sample-latest-candidate
+  cancel-in-progress: false
 jobs:
   call-for-testing:
     name: 📣 Create call for testing
@@ -71,7 +59,7 @@ jobs:
 | `github-token`           | A token with permissions to create issues on the repository.                                                                                                                             |    Y     |                                                                                                      |
 | `promotion-channel`      | The channel the snap should be promoted to on successful test.                                                                                                                           |    N     | `latest/stable`                                                                                      |
 | `snapcraft-channel`      | The channel to install Snapcraft from.                                                                                                                                                   |    N     | `latest/stable`                                                                                      |
-| `snapcraft-project-root` | The root of the snapcraft project, where the `snapcraft` command would usually be executed from. Do not include the trailing `/`.                                                        |    N     |
+| `snapcraft-project-root` | The root of the snapcraft project, where the `snapcraft` command would usually be executed from.                                                                                         |    N     |
 | `store-token`            | A token with permissions to query the specified channel in the Snap Store. Only required if the revisions to test are not passed to the workflow by the `release-to-candidate` workflow. |    N     |                                                                                                      |
 | `testing-instructions`   | Custom testing instructions for testing the `candidate` snap.                                                                                                                            |    N     | See [action.yaml](https://github.com/snapcrafters/ci/blob/main/call-for-testing/action.yaml#L40-L52) |
 

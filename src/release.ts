@@ -3,27 +3,23 @@ import {
   mkdtempSync,
   rmSync,
   mkdirSync,
-  readFileSync,
   writeFileSync,
   renameSync,
   readdirSync,
   lstatSync,
   createReadStream,
-  openSync,
-  closeSync,
-  constants,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve, basename } from "node:path";
 import { createHash } from "node:crypto";
 import { stringify } from "yaml";
-import { command, safeEnv } from "./execution.ts";
+import { command, safeEnv, readBounded } from "./execution.ts";
 import { architecture, architectures, project, yaml, scalar, mapping } from "./project.ts";
 import { channel, snapName, revisions } from "./validation.ts";
 import { input, outputs } from "./runtime.ts";
 import { api, request, ApiError, marker } from "./github.ts";
 import { repository } from "./validation.ts";
-import { revision } from "./manifests.ts";
+import { revision, fetchManifests, type Manifest } from "./manifests.ts";
 export { revisions } from "./validation.ts";
 export interface Published {
   snap: string;
@@ -54,26 +50,21 @@ async function digest(file: string) {
   return hash.digest("hex");
 }
 function readState(file: string): Published {
-  const fd = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW);
-  try {
-    if (lstatSync(file).size > 4096) throw Error("Release state too large");
-    const value = JSON.parse(readFileSync(fd, "utf8")) as Published;
-    snapName(value.snap);
-    channel(value.channel);
-    architecture(value.architecture);
-    revision(value.revision);
-    if (
-      !/^[a-f0-9]{96}$/.test(value.digest) ||
-      !/^[a-f0-9]{40}$/.test(value.sourceSha) ||
-      typeof value.root !== "string" ||
-      !/^[A-Za-z0-9.+:~_-]{1,32}$/.test(value.version)
-    )
-      throw Error("Invalid release state");
-    return value;
-  } finally {
-    closeSync(fd);
-  }
+  const value = JSON.parse(readBounded(file, 4096).toString("utf8")) as Published;
+  snapName(value.snap);
+  channel(value.channel);
+  architecture(value.architecture);
+  revision(value.revision);
+  if (
+    !/^[a-f0-9]{96}$/.test(value.digest) ||
+    !/^[a-f0-9]{40}$/.test(value.sourceSha) ||
+    typeof value.root !== "string" ||
+    !/^[A-Za-z0-9.+:~_-]{1,32}$/.test(value.version)
+  )
+    throw Error("Invalid release state");
+  return value;
 }
+
 export async function publish(options: ReleaseOptions): Promise<Published> {
   const p = project(options.root, options.cwd),
     snap = snapName(p.outputs["snap-name"]),
@@ -107,8 +98,13 @@ export async function publish(options: ReleaseOptions): Promise<Published> {
       rmSync(dir, { recursive: true, force: true });
     }
   };
+  let saved: Published | undefined;
   try {
-    const saved = readState(file);
+    saved = readState(file);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+  if (saved) {
     if (
       saved.snap !== snap ||
       saved.root !== selectedRoot ||
@@ -120,12 +116,12 @@ export async function publish(options: ReleaseOptions): Promise<Published> {
       throw Error("Release state does not match the selected project/source/channel");
     await verify(saved);
     return saved;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
   }
   if (Number(process.env.GITHUB_RUN_ATTEMPT || "1") > 1)
     throw Error("Rerun requires the exact saved release state before build/upload");
   const baseline = new Set(readback().map((r) => r.revision));
+  let attempted = false,
+    confirmed: Published | undefined;
   const temporary = mkdtempSync(join(tmpdir(), "snap-release-")),
     stage = join(temporary, "project"),
     home = join(temporary, "home");
@@ -194,6 +190,11 @@ export async function publish(options: ReleaseOptions): Promise<Published> {
         throw Error("Fresh component metadata mismatch");
       componentArgs.push("--component", `${name}=${path}`);
     }
+    if (
+      readdirSync(stage).filter((f) => f.endsWith(".comp")).length !==
+      Object.keys(components).length
+    )
+      throw Error("Unexpected fresh component set");
     command(
       "review-tools.snap-review",
       [
@@ -204,6 +205,7 @@ export async function publish(options: ReleaseOptions): Promise<Published> {
       ],
       stage,
     );
+    attempted = true;
     let output = "";
     try {
       output = command(
@@ -239,6 +241,7 @@ export async function publish(options: ReleaseOptions): Promise<Published> {
           sourceSha,
         };
         await verify(state);
+        confirmed = state;
         writeFileSync(`${file}.tmp`, JSON.stringify(state) + "\n", { mode: 0o600, flag: "wx" });
         renameSync(`${file}.tmp`, file);
         return state;
@@ -248,6 +251,16 @@ export async function publish(options: ReleaseOptions): Promise<Published> {
     throw Error(
       "Upload attempted once; publication is unconfirmed. Reconcile Store state before any retry",
     );
+  } catch (error) {
+    if (confirmed)
+      throw Error(
+        `Published ${snap} revision ${confirmed.revision} to ${destination}; state persistence failed. Recovery state: ${JSON.stringify(confirmed)}`,
+      );
+    if (attempted)
+      throw Error(
+        `Upload attempted once for ${snap} to ${destination}; publication is unconfirmed. ${error instanceof Error ? error.message : "Readback failed"}. Reconcile before retrying.`,
+      );
+    throw error;
   } finally {
     rmSync(temporary, { recursive: true, force: true });
   }
@@ -329,6 +342,24 @@ export async function tagRelease(
   }
 }
 
+export async function verifyManifest(
+  state: Pick<Published, "snap" | "architecture" | "revision">,
+  repo: string,
+  run: string,
+  token: string,
+  base = api,
+) {
+  const dir = mkdtempSync(join(tmpdir(), "release-manifest-"));
+  try {
+    const rows: Manifest[] = await fetchManifests(token, repo, run, dir, undefined, base);
+    const row = rows.find((m) => m.architecture === state.architecture);
+    if (!row || row.name !== state.snap || row.revision !== state.revision)
+      throw Error("Stored manifest differs from confirmed publication");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 export async function releaseAction() {
   const cwd = process.cwd(),
     arch = architecture(input("architecture")),
@@ -336,9 +367,18 @@ export async function releaseAction() {
   const file = statePath(cwd, arch);
   if (process.env.CI_PHASE === "prepare") {
     outputs({
-      "state-name": `release-state-${snapName(p.outputs["snap-name"])}-${marker(p.outputs["project-root"]).slice(0, 12)}-${arch}`,
+      "state-name": `release-state-${snapName(p.outputs["snap-name"])}-${marker(relative(cwd, p.root) || ".").slice(0, 12)}-${arch}`,
       "state-path": file,
     });
+    return;
+  }
+  if (process.env.CI_PHASE === "artifact") {
+    await verifyManifest(
+      readState(file),
+      process.env.GITHUB_REPOSITORY!,
+      process.env.GITHUB_RUN_ID!,
+      input("repo-token"),
+    );
     return;
   }
   if (process.env.CI_PHASE === "tag") {

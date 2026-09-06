@@ -3,13 +3,7 @@ import { mkdtempSync, writeFileSync, symlinkSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { png } from "../src/screenshots.ts";
-export const pngBytes = () => {
-  const b = Buffer.alloc(33);
-  Buffer.from("89504e470d0a1a0a0000000d49484452", "hex").copy(b);
-  b.writeUInt32BE(1, 16);
-  b.writeUInt32BE(1, 20);
-  return b;
-};
+import { pngBytes } from "./png.ts";
 test("timestamp screenshot alias resolves only to same-directory owned regular PNG", () => {
   const dir = mkdtempSync(join(tmpdir(), "png-"));
   try {
@@ -144,5 +138,47 @@ test("VM capture uses ghvmctl timestamp aliases and cleans its owned VM/HOME on 
   } finally {
     process.env.PATH = old;
     rmSync(dir, { recursive: true });
+  }
+});
+
+test("comment retry recovers immutable screenshots from reachable commit history without upload", async () => {
+  const { recoverScreenshots } = await import("../src/screenshots.ts");
+  const { createServer } = await import("node:http");
+  let writes = 0;
+  const server = createServer((req, res) => {
+    if (req.method !== "GET") writes++;
+    expect(req.headers.authorization).toBe("Bearer screenshot-token");
+    res.end(
+      JSON.stringify([
+        {
+          sha: "e".repeat(40),
+          commit: {
+            message: "data: screenshots for sample#1\nci-screenshots:retry-key:2026-09-06",
+          },
+        },
+      ]),
+    );
+  });
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+  const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  try {
+    const urls = await recoverScreenshots(
+      "owner/images",
+      "sample",
+      "1",
+      "retry-key",
+      "screenshot-token",
+      base,
+    );
+    expect(urls.screen).toBe(
+      `https://raw.githubusercontent.com/owner/images/${"e".repeat(40)}/20260906-sample-1-screen.png`,
+    );
+    expect(writes).toBe(0);
+    await expect(
+      recoverScreenshots("owner/images", "sample", "1", "other-key", "screenshot-token", base),
+    ).rejects.toThrow(/state/);
+  } finally {
+    server.closeAllConnections();
+    await new Promise<void>((r) => server.close(() => r()));
   }
 });

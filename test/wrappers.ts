@@ -29,6 +29,7 @@ export const expectedUses: Record<string, string[]> = {
   "promote-to-stable": ["actions/setup-node", "actions/checkout"],
 };
 export interface Step {
+  "continue-on-error"?: boolean;
   uses?: string;
   id?: string;
   run?: string;

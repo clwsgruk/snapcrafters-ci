@@ -62,6 +62,14 @@ export function testingIssue(
     throw Error("Testing issue identity mismatch");
   channel(data.channel);
   if (
+    !body
+      .trimStart()
+      .startsWith(
+        `A new version (${data.version}) of \`${data.snap}\` was just pushed to the \`${data.channel}\` channel`,
+      )
+  )
+    throw Error("Testing prose differs from bound context");
+  if (
     !Array.isArray(data.rows) ||
     !data.rows.length ||
     data.rows.length > 7 ||
@@ -102,12 +110,32 @@ export async function callForTesting() {
       if (matches.length !== 1) throw Error(`No exact active revision for ${arch}`);
       return { name: snap, architecture: arch, revision: matches[0].revision };
     });
+  let version = p.outputs.version;
+  if (p.data.version == null) {
+    const versions = rows.map((row) => {
+      const matches = revisions(
+        command("snapcraft", ["revisions", snap, "--arch", row.architecture], process.cwd(), {
+          ...safeEnv(),
+          SNAPCRAFT_STORE_CREDENTIALS: input("store-token"),
+        }),
+      ).filter(
+        (r) =>
+          r.revision === row.revision &&
+          r.architectures.includes(row.architecture) &&
+          r.channels.includes(`${candidate}*`),
+      );
+      if (matches.length !== 1) throw Error("Adopted version requires exact active Store revision");
+      return matches[0].version;
+    });
+    if (new Set(versions).size !== 1) throw Error("Adopted versions differ across architectures");
+    version = versions[0];
+  }
   const context = {
     repository: repo,
     snap,
     channel: candidate,
     destination,
-    version: p.outputs.version,
+    version,
     rows,
   };
   const issue = await marked(

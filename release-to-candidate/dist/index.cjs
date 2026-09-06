@@ -7934,16 +7934,16 @@ var require_buffer_crc32 = __commonJS({
       }
       return crc ^ -1;
     }
-    function crc32() {
+    function crc322() {
       return bufferizeInt(_crc32.apply(null, arguments));
     }
-    crc32.signed = function() {
+    crc322.signed = function() {
       return _crc32.apply(null, arguments);
     };
-    crc32.unsigned = function() {
+    crc322.unsigned = function() {
       return _crc32.apply(null, arguments) >>> 0;
     };
-    module2.exports = crc32;
+    module2.exports = crc322;
   }
 });
 
@@ -7953,7 +7953,7 @@ var require_yauzl = __commonJS({
     var fs = require("fs");
     var zlib = require("zlib");
     var fd_slicer = require_fd_slicer();
-    var crc32 = require_buffer_crc32();
+    var crc322 = require_buffer_crc32();
     var util = require("util");
     var EventEmitter = require("events").EventEmitter;
     var Transform = require("stream").Transform;
@@ -8471,7 +8471,7 @@ var require_yauzl = __commonJS({
             continue;
           }
           var oldNameCrc32 = extraField.data.readUInt32LE(1);
-          if (crc32.unsigned(fileNameBuffer) !== oldNameCrc32) {
+          if (crc322.unsigned(fileNameBuffer) !== oldNameCrc32) {
             continue;
           }
           fileName = decodeBuffer(extraField.data.subarray(5), true);
@@ -8689,34 +8689,15 @@ var require_yauzl = __commonJS({
 });
 
 // src/release.ts
-var import_node_fs3 = require("node:fs");
+var import_node_fs5 = require("node:fs");
 var import_node_os = require("node:os");
-var import_node_path2 = require("node:path");
+var import_node_path3 = require("node:path");
 var import_node_crypto3 = require("node:crypto");
 var import_yaml2 = __toESM(require_dist(), 1);
 
 // src/execution.ts
 var import_node_child_process = require("node:child_process");
-function safeEnv(env = process.env) {
-  const keys = /^(PATH|HOME|LANG|LC_ALL|TZ|CI|DISPLAY|XDG_RUNTIME_DIR|GITHUB_(WORKSPACE|SHA|REF|REF_NAME|REF_TYPE|REPOSITORY|REPOSITORY_OWNER|RUN_ID|RUN_NUMBER|RUN_ATTEMPT|JOB|ACTOR|EVENT_NAME|SERVER_URL|STEP_SUMMARY)|RUNNER_(OS|ARCH|TEMP))$/;
-  return Object.fromEntries(
-    Object.entries(env).filter(([k, v]) => keys.test(k) && v !== void 0)
-  );
-}
-function command(file, args, cwd = process.cwd(), env = safeEnv(), timeout = 6e5) {
-  try {
-    return (0, import_node_child_process.execFileSync)(file, args, {
-      cwd,
-      env,
-      encoding: "utf8",
-      timeout,
-      maxBuffer: 8 * 1024 * 1024,
-      stdio: ["ignore", "pipe", "pipe"]
-    });
-  } catch {
-    throw Error(`${file} ${args[0] || ""} failed`);
-  }
-}
+var import_node_fs2 = require("node:fs");
 
 // src/project.ts
 var import_node_fs = require("node:fs");
@@ -8808,8 +8789,13 @@ function architectures(data) {
       const fields = mapping(value);
       if (Object.keys(fields).some((k) => !["build-on", "run-on"].includes(k)))
         throw Error("Unknown architecture field");
-      if (fields["run-on"] !== void 0) archList(fields["run-on"]);
-      return archList(fields["build-on"]);
+      const builders = archList(fields["build-on"]);
+      if (fields["run-on"] !== void 0) {
+        const targets = archList(fields["run-on"]);
+        if (!builders.every((builder) => targets.includes(builder)))
+          throw Error("Ambiguous legacy cross-architecture run-on");
+      }
+      return builders;
     });
   }
   if (!result.length) throw Error("Empty architecture matrix");
@@ -8822,8 +8808,51 @@ function scalar(value) {
   return String(value);
 }
 
+// src/execution.ts
+function safeEnv(env = process.env) {
+  const keys = /^(PATH|HOME|LANG|LC_ALL|TZ|CI|DISPLAY|XDG_RUNTIME_DIR|GITHUB_(WORKSPACE|SHA|REF|REF_NAME|REF_TYPE|REPOSITORY|REPOSITORY_OWNER|RUN_ID|RUN_NUMBER|RUN_ATTEMPT|JOB|ACTOR|EVENT_NAME|SERVER_URL|STEP_SUMMARY)|RUNNER_(OS|ARCH|TEMP))$/;
+  return Object.fromEntries(
+    Object.entries(env).filter(([k, v]) => keys.test(k) && v !== void 0)
+  );
+}
+function command(file, args, cwd = process.cwd(), env = safeEnv(), timeout = 6e5) {
+  try {
+    return (0, import_node_child_process.execFileSync)(file, args, {
+      cwd,
+      env,
+      encoding: "utf8",
+      timeout,
+      maxBuffer: 8 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch {
+    throw Error(`${file} ${args[0] || ""} failed`);
+  }
+}
+function readBounded(file, limit, truncate = false) {
+  const fd = (0, import_node_fs2.openSync)(file, import_node_fs2.constants.O_RDONLY | import_node_fs2.constants.O_NOFOLLOW);
+  try {
+    const stat = (0, import_node_fs2.fstatSync)(fd);
+    if (!stat.isFile() || !truncate && stat.size > limit)
+      throw Error("Invalid file type or size");
+    const bytes = Buffer.alloc(Math.min(stat.size, limit));
+    let size = 0;
+    while (size < bytes.length) {
+      const count = (0, import_node_fs2.readSync)(fd, bytes, size, bytes.length - size, null);
+      if (!count) break;
+      size += count;
+    }
+    return bytes.subarray(0, size);
+  } finally {
+    (0, import_node_fs2.closeSync)(fd);
+  }
+}
+
 // src/manifests.ts
 var import_yauzl = __toESM(require_yauzl(), 1);
+var import_node_zlib = require("node:zlib");
+var import_node_fs3 = require("node:fs");
+var import_node_path2 = require("node:path");
 
 // src/github.ts
 var import_node_crypto = require("node:crypto");
@@ -8877,6 +8906,23 @@ async function request(method, path, token, body, base = api, deadline = Date.no
   }
   return bytes.length ? JSON.parse(bytes.toString("utf8")) : {};
 }
+async function pages(path, token, field, base = api) {
+  const result = [];
+  for (let page = 1; page <= 10; page++) {
+    const data = await request(
+      "GET",
+      `${path}${path.includes("?") ? "&" : "?"}per_page=100&page=${page}`,
+      token,
+      void 0,
+      base
+    );
+    const rows = field ? data[field] : data;
+    if (!Array.isArray(rows)) throw Error("Invalid paginated response");
+    result.push(...rows);
+    if (rows.length < 100) return result;
+  }
+  throw Error("Pagination limit exceeded");
+}
 var marker = (value) => (0, import_node_crypto.createHash)("sha256").update(JSON.stringify(value)).digest("hex");
 
 // src/manifests.ts
@@ -8886,6 +8932,128 @@ function revision(value) {
   const text = String(value);
   if (!/^[1-9][0-9]{0,39}$/.test(text)) throw Error("Invalid revision");
   return text;
+}
+function manifest(source, label, snap) {
+  const data = yaml(source), name = scalar(data.name), arch = architecture(data.architecture);
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name) || name.length > 40 || label !== `manifest-${arch}` || snap && snap !== name)
+    throw Error("Manifest identity mismatch");
+  return { name, architecture: arch, revision: revision(data.revision) };
+}
+async function unpack(bytes, label, snap) {
+  if (bytes.length > 1024 * 1024) throw Error("Archive size limit");
+  return new Promise(
+    (resolve4, reject) => (0, import_yauzl.fromBuffer)(bytes, { lazyEntries: true, validateEntrySizes: true }, (error, zip) => {
+      if (error || !zip) {
+        reject(error);
+        return;
+      }
+      const fail = (reason) => {
+        zip.close();
+        reject(reason);
+      };
+      let result;
+      zip.on("error", fail);
+      zip.on("entry", (entry) => {
+        if (result || entry.fileName !== `${label}.yaml` || !/^manifest-[a-z0-9]+\.yaml$/.test(entry.fileName) || (entry.externalFileAttributes >>> 16 & 61440) === 40960 || entry.uncompressedSize > 65536) {
+          fail(Error("Unsafe or duplicate manifest entry"));
+          return;
+        }
+        zip.openReadStream(entry, (error2, stream) => {
+          if (error2 || !stream) {
+            fail(error2);
+            return;
+          }
+          const chunks = [];
+          let size = 0;
+          stream.on("error", fail);
+          stream.on("data", (chunk) => {
+            size += chunk.length;
+            if (size > 65536) {
+              stream.destroy();
+              fail(Error("Decompression limit"));
+            } else chunks.push(chunk);
+          });
+          stream.on("end", () => {
+            try {
+              const data = Buffer.concat(chunks);
+              if ((0, import_node_zlib.crc32)(data) !== entry.crc32) throw Error("ZIP checksum mismatch");
+              result = manifest(data.toString("utf8"), label, snap);
+              zip.readEntry();
+            } catch (error3) {
+              fail(error3);
+            }
+          });
+        });
+      });
+      zip.on("end", () => {
+        zip.close();
+        if (!result) reject(Error("Empty archive"));
+        else resolve4(result);
+      });
+      zip.readEntry();
+    })
+  );
+}
+async function fetchManifests(token, repository2, run, directory = process.cwd(), expected, base = api) {
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repository2) || !/^[1-9]\d*$/.test(run))
+    throw Error("Invalid repository/run");
+  const artifacts = await pages(
+    `/repos/${repository2}/actions/runs/${run}/artifacts`,
+    token,
+    "artifacts",
+    base
+  );
+  const manifests = [], names = /* @__PURE__ */ new Set();
+  for (const artifact of artifacts.filter((a) => a.name.startsWith("manifest-"))) {
+    if (artifact.expired || names.has(artifact.name) || !Number.isSafeInteger(artifact.id))
+      throw Error("Expired or duplicate artifact");
+    names.add(artifact.name);
+    const response = await fetch(
+      `${base}/repos/${repository2}/actions/artifacts/${artifact.id}/zip`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        redirect: "manual",
+        signal: AbortSignal.timeout(2e4)
+      }
+    );
+    let download = response;
+    if (response.status === 302) {
+      const location = new URL(response.headers.get("location") || "");
+      if (location.protocol !== "https:") throw Error("Unsafe artifact redirect");
+      download = await fetch(location, { redirect: "error", signal: AbortSignal.timeout(2e4) });
+    }
+    if (!download.ok) throw Error(`Artifact download failed (${download.status})`);
+    manifests.push(
+      await unpack(await bounded(download, 1024 * 1024), artifact.name, expected?.snap)
+    );
+  }
+  if (new Set(manifests.map((m) => m.name)).size > 1) throw Error("Multiple snaps in manifest set");
+  if (expected && manifests.length && JSON.stringify(manifests.map((m) => m.architecture).sort()) !== JSON.stringify([...expected.architectures].sort()))
+    throw Error("Manifest architecture set mismatch");
+  if ((0, import_node_fs3.readdirSync)(directory).some((p) => /^manifest-.*\.yaml$/.test(p) && !names.has(p.slice(0, -5))))
+    throw Error("Unexpected stale manifest outside this run's artifact set");
+  for (const m of manifests) {
+    const file = (0, import_node_path2.resolve)(directory, `manifest-${m.architecture}.yaml`);
+    try {
+      const stat = (0, import_node_fs3.lstatSync)(file);
+      if (!stat.isFile() || stat.isSymbolicLink() || JSON.stringify(
+        manifest((0, import_node_fs3.readFileSync)(file, "utf8"), `manifest-${m.architecture}`, m.name)
+      ) !== JSON.stringify(m))
+        throw Error("Existing manifest differs");
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+  }
+  for (const m of manifests)
+    (0, import_node_fs3.writeFileSync)(
+      (0, import_node_path2.resolve)(directory, `manifest-${m.architecture}.yaml`),
+      `name: ${m.name}
+architecture: ${m.architecture}
+revision: '${m.revision}'
+`,
+      { mode: 384 }
+    );
+  return manifests;
 }
 
 // src/validation.ts
@@ -8925,7 +9093,7 @@ function revisions(text) {
 }
 
 // src/runtime.ts
-var import_node_fs2 = require("node:fs");
+var import_node_fs4 = require("node:fs");
 var import_node_crypto2 = require("node:crypto");
 function validateRunner(env = process.env, node = process.version) {
   if (env.GITHUB_SERVER_URL !== "https://github.com" || env.RUNNER_ENVIRONMENT !== "github-hosted" || env.RUNNER_OS !== "Linux" || !["ubuntu22", "ubuntu24"].includes(env.ImageOS || "") || !node.startsWith("v24."))
@@ -8935,7 +9103,7 @@ var input = (name) => process.env[`INPUT_${name.toUpperCase().replaceAll("-", "_
 function outputs(values) {
   for (const [key, value] of Object.entries(values)) {
     const delimiter = (0, import_node_crypto2.randomUUID)();
-    (0, import_node_fs2.appendFileSync)(process.env.GITHUB_OUTPUT, `${key}<<${delimiter}
+    (0, import_node_fs4.appendFileSync)(process.env.GITHUB_OUTPUT, `${key}<<${delimiter}
 ${value}
 ${delimiter}
 `);
@@ -8952,30 +9120,24 @@ async function main(action) {
 }
 
 // src/release.ts
-var statePath = (cwd, arch) => (0, import_node_path2.join)(cwd, `.ci-release-${architecture(arch)}.json`);
+var statePath = (cwd, arch) => (0, import_node_path3.join)(cwd, `.ci-release-${architecture(arch)}.json`);
 async function digest(file) {
-  const stat = (0, import_node_fs3.lstatSync)(file);
+  const stat = (0, import_node_fs5.lstatSync)(file);
   if (!stat.isFile() || stat.size < 1 || stat.size > 16 * 1024 ** 3)
     throw Error("Invalid snap/component file");
   const hash = (0, import_node_crypto3.createHash)("sha384");
-  for await (const chunk of (0, import_node_fs3.createReadStream)(file)) hash.update(chunk);
+  for await (const chunk of (0, import_node_fs5.createReadStream)(file)) hash.update(chunk);
   return hash.digest("hex");
 }
 function readState(file) {
-  const fd = (0, import_node_fs3.openSync)(file, import_node_fs3.constants.O_RDONLY | import_node_fs3.constants.O_NOFOLLOW);
-  try {
-    if ((0, import_node_fs3.lstatSync)(file).size > 4096) throw Error("Release state too large");
-    const value = JSON.parse((0, import_node_fs3.readFileSync)(fd, "utf8"));
-    snapName(value.snap);
-    channel(value.channel);
-    architecture(value.architecture);
-    revision(value.revision);
-    if (!/^[a-f0-9]{96}$/.test(value.digest) || !/^[a-f0-9]{40}$/.test(value.sourceSha) || typeof value.root !== "string" || !/^[A-Za-z0-9.+:~_-]{1,32}$/.test(value.version))
-      throw Error("Invalid release state");
-    return value;
-  } finally {
-    (0, import_node_fs3.closeSync)(fd);
-  }
+  const value = JSON.parse(readBounded(file, 4096).toString("utf8"));
+  snapName(value.snap);
+  channel(value.channel);
+  architecture(value.architecture);
+  revision(value.revision);
+  if (!/^[a-f0-9]{96}$/.test(value.digest) || !/^[a-f0-9]{40}$/.test(value.sourceSha) || typeof value.root !== "string" || !/^[A-Za-z0-9.+:~_-]{1,32}$/.test(value.version))
+    throw Error("Invalid release state");
+  return value;
 }
 async function publish(options2) {
   const p = project(options2.root, options2.cwd), snap = snapName(p.outputs["snap-name"]), arch = architecture(options2.architecture), destination = channel(options2.channel);
@@ -8983,7 +9145,7 @@ async function publish(options2) {
     throw Error("Architecture is not selected by the recipe");
   if (!options2.storeToken || !options2.launchpadToken)
     throw Error("Store and Launchpad credentials required");
-  const sourceSha = command("git", ["rev-parse", "HEAD"], options2.cwd).trim(), selectedRoot = (0, import_node_path2.relative)(options2.cwd, p.root) || ".";
+  const sourceSha = command("git", ["rev-parse", "HEAD"], options2.cwd).trim(), selectedRoot = (0, import_node_path3.relative)(options2.cwd, p.root) || ".";
   const file = statePath(options2.cwd, arch), env = { ...safeEnv(), SNAPCRAFT_STORE_CREDENTIALS: options2.storeToken };
   const readback = () => revisions(command("snapcraft", ["revisions", snap, "--arch", arch], options2.cwd, env));
   const verify = async (state) => {
@@ -8991,45 +9153,49 @@ async function publish(options2) {
       (r) => r.revision === state.revision && r.version === state.version && r.architectures.includes(arch) && r.channels.includes(`${destination}*`)
     );
     if (!row) throw Error("Exact release state not active in Store");
-    const dir = (0, import_node_fs3.mkdtempSync)((0, import_node_path2.join)((0, import_node_os.tmpdir)(), "snap-download-"));
+    const dir = (0, import_node_fs5.mkdtempSync)((0, import_node_path3.join)((0, import_node_os.tmpdir)(), "snap-download-"));
     try {
       command("snap", ["download", snap, `--revision=${state.revision}`], dir, safeEnv());
-      if (await digest((0, import_node_path2.join)(dir, `${snap}_${state.revision}.snap`)) !== state.digest)
+      if (await digest((0, import_node_path3.join)(dir, `${snap}_${state.revision}.snap`)) !== state.digest)
         throw Error("Store snap digest differs from release state");
     } finally {
-      (0, import_node_fs3.rmSync)(dir, { recursive: true, force: true });
+      (0, import_node_fs5.rmSync)(dir, { recursive: true, force: true });
     }
   };
+  let saved;
   try {
-    const saved = readState(file);
+    saved = readState(file);
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  if (saved) {
     if (saved.snap !== snap || saved.root !== selectedRoot || saved.sourceSha !== sourceSha || saved.channel !== destination || saved.architecture !== arch || p.data.version != null && saved.version !== scalar(p.data.version))
       throw Error("Release state does not match the selected project/source/channel");
     await verify(saved);
     return saved;
-  } catch (error) {
-    if (error.code !== "ENOENT") throw error;
   }
   if (Number(process.env.GITHUB_RUN_ATTEMPT || "1") > 1)
     throw Error("Rerun requires the exact saved release state before build/upload");
   const baseline = new Set(readback().map((r) => r.revision));
-  const temporary = (0, import_node_fs3.mkdtempSync)((0, import_node_path2.join)((0, import_node_os.tmpdir)(), "snap-release-")), stage = (0, import_node_path2.join)(temporary, "project"), home = (0, import_node_path2.join)(temporary, "home");
+  let attempted = false, confirmed;
+  const temporary = (0, import_node_fs5.mkdtempSync)((0, import_node_path3.join)((0, import_node_os.tmpdir)(), "snap-release-")), stage = (0, import_node_path3.join)(temporary, "project"), home = (0, import_node_path3.join)(temporary, "home");
   try {
-    (0, import_node_fs3.cpSync)(p.root, stage, {
+    (0, import_node_fs5.cpSync)(p.root, stage, {
       recursive: true,
-      filter: (path) => !(0, import_node_fs3.lstatSync)(path).isSymbolicLink() && ![".git", "node_modules"].includes((0, import_node_path2.basename)(path)) && !/\.(snap|comp)$|^\.ci-release-/.test((0, import_node_path2.basename)(path))
+      filter: (path) => !(0, import_node_fs5.lstatSync)(path).isSymbolicLink() && ![".git", "node_modules"].includes((0, import_node_path3.basename)(path)) && !/\.(snap|comp)$|^\.ci-release-/.test((0, import_node_path3.basename)(path))
     });
-    (0, import_node_fs3.mkdirSync)((0, import_node_path2.join)(home, ".local/share/snapcraft/provider/launchpad"), {
+    (0, import_node_fs5.mkdirSync)((0, import_node_path3.join)(home, ".local/share/snapcraft/provider/launchpad"), {
       recursive: true,
       mode: 448
     });
     for (const suffix of ["provider/launchpad/credentials", "launchpad-credentials"])
-      (0, import_node_fs3.writeFileSync)((0, import_node_path2.join)(home, ".local/share/snapcraft", suffix), options2.launchpadToken, {
+      (0, import_node_fs5.writeFileSync)((0, import_node_path3.join)(home, ".local/share/snapcraft", suffix), options2.launchpadToken, {
         mode: 384
       });
-    const stagedYaml = (0, import_node_path2.resolve)(stage, (0, import_node_path2.relative)(p.root, p.yaml));
+    const stagedYaml = (0, import_node_path3.resolve)(stage, (0, import_node_path3.relative)(p.root, p.yaml));
     const args = ["remote-build", "--launchpad-accept-public-upload"];
     if (p.data.base !== "core24")
-      (0, import_node_fs3.writeFileSync)(stagedYaml, (0, import_yaml2.stringify)({ ...p.data, architectures: [{ "build-on": arch }] }));
+      (0, import_node_fs5.writeFileSync)(stagedYaml, (0, import_yaml2.stringify)({ ...p.data, architectures: [{ "build-on": arch }] }));
     else args.push(`--build-for=${arch}`);
     command("git", ["init", "-b", `build-${arch}`], stage);
     command("git", ["add", "."], stage);
@@ -9049,9 +9215,9 @@ async function publish(options2) {
       stage
     );
     command("snapcraft", args, stage, { ...safeEnv(), HOME: home });
-    const files = (0, import_node_fs3.readdirSync)(stage).filter((f) => f.endsWith(".snap"));
+    const files = (0, import_node_fs5.readdirSync)(stage).filter((f) => f.endsWith(".snap"));
     if (files.length !== 1) throw Error("Expected exactly one fresh snap");
-    const snapFile = (0, import_node_path2.join)(stage, files[0]), snapDigest = await digest(snapFile), metadata = yaml(command("unsquashfs", ["-cat", snapFile, "meta/snap.yaml"], stage));
+    const snapFile = (0, import_node_path3.join)(stage, files[0]), snapDigest = await digest(snapFile), metadata = yaml(command("unsquashfs", ["-cat", snapFile, "meta/snap.yaml"], stage));
     const version = scalar(metadata.version);
     if (metadata.name !== snap || !Array.isArray(metadata.architectures) || !metadata.architectures.includes(arch) || !/^[A-Za-z0-9.+:~_-]{1,32}$/.test(version) || p.data.version != null && scalar(p.data.version) !== version)
       throw Error("Fresh snap metadata mismatch");
@@ -9059,13 +9225,15 @@ async function publish(options2) {
     for (const [name, value] of Object.entries(components)) {
       snapName(name);
       const v = mapping(value).version;
-      const path = (0, import_node_path2.join)(stage, `${snap}+${name}${v == null ? "" : `_${scalar(v)}`}.comp`);
+      const path = (0, import_node_path3.join)(stage, `${snap}+${name}${v == null ? "" : `_${scalar(v)}`}.comp`);
       await digest(path);
       const meta = yaml(command("unsquashfs", ["-cat", path, "meta/component.yaml"], stage));
       if (meta.component !== `${snap}+${name}` || v != null && scalar(meta.version) !== scalar(v))
         throw Error("Fresh component metadata mismatch");
       componentArgs.push("--component", `${name}=${path}`);
     }
+    if ((0, import_node_fs5.readdirSync)(stage).filter((f) => f.endsWith(".comp")).length !== Object.keys(components).length)
+      throw Error("Unexpected fresh component set");
     command(
       "review-tools.snap-review",
       [
@@ -9076,6 +9244,7 @@ async function publish(options2) {
       ],
       stage
     );
+    attempted = true;
     let output = "";
     try {
       output = command(
@@ -9105,8 +9274,9 @@ async function publish(options2) {
           sourceSha
         };
         await verify(state);
-        (0, import_node_fs3.writeFileSync)(`${file}.tmp`, JSON.stringify(state) + "\n", { mode: 384, flag: "wx" });
-        (0, import_node_fs3.renameSync)(`${file}.tmp`, file);
+        confirmed = state;
+        (0, import_node_fs5.writeFileSync)(`${file}.tmp`, JSON.stringify(state) + "\n", { mode: 384, flag: "wx" });
+        (0, import_node_fs5.renameSync)(`${file}.tmp`, file);
         return state;
       }
       if (attempt < 2) await new Promise((r) => setTimeout(r, 1e3));
@@ -9114,8 +9284,18 @@ async function publish(options2) {
     throw Error(
       "Upload attempted once; publication is unconfirmed. Reconcile Store state before any retry"
     );
+  } catch (error) {
+    if (confirmed)
+      throw Error(
+        `Published ${snap} revision ${confirmed.revision} to ${destination}; state persistence failed. Recovery state: ${JSON.stringify(confirmed)}`
+      );
+    if (attempted)
+      throw Error(
+        `Upload attempted once for ${snap} to ${destination}; publication is unconfirmed. ${error instanceof Error ? error.message : "Readback failed"}. Reconcile before retrying.`
+      );
+    throw error;
   } finally {
-    (0, import_node_fs3.rmSync)(temporary, { recursive: true, force: true });
+    (0, import_node_fs5.rmSync)(temporary, { recursive: true, force: true });
   }
 }
 async function tagRelease(state, repo, token, multi, name, email, base = api) {
@@ -9174,14 +9354,34 @@ async function tagRelease(state, repo, token, multi, name, email, base = api) {
     );
   }
 }
+async function verifyManifest(state, repo, run, token, base = api) {
+  const dir = (0, import_node_fs5.mkdtempSync)((0, import_node_path3.join)((0, import_node_os.tmpdir)(), "release-manifest-"));
+  try {
+    const rows = await fetchManifests(token, repo, run, dir, void 0, base);
+    const row = rows.find((m) => m.architecture === state.architecture);
+    if (!row || row.name !== state.snap || row.revision !== state.revision)
+      throw Error("Stored manifest differs from confirmed publication");
+  } finally {
+    (0, import_node_fs5.rmSync)(dir, { recursive: true, force: true });
+  }
+}
 async function releaseAction() {
   const cwd = process.cwd(), arch = architecture(input("architecture")), p = project(input("snapcraft-project-root"));
   const file = statePath(cwd, arch);
   if (process.env.CI_PHASE === "prepare") {
     outputs({
-      "state-name": `release-state-${snapName(p.outputs["snap-name"])}-${marker(p.outputs["project-root"]).slice(0, 12)}-${arch}`,
+      "state-name": `release-state-${snapName(p.outputs["snap-name"])}-${marker((0, import_node_path3.relative)(cwd, p.root) || ".").slice(0, 12)}-${arch}`,
       "state-path": file
     });
+    return;
+  }
+  if (process.env.CI_PHASE === "artifact") {
+    await verifyManifest(
+      readState(file),
+      process.env.GITHUB_REPOSITORY,
+      process.env.GITHUB_RUN_ID,
+      input("repo-token")
+    );
     return;
   }
   if (process.env.CI_PHASE === "tag") {
@@ -9210,8 +9410,8 @@ async function releaseAction() {
     launchpadToken: input("launchpad-token")
   });
   outputs({ revision: state.revision });
-  (0, import_node_fs3.writeFileSync)(
-    (0, import_node_path2.join)(cwd, `manifest-${arch}.yaml`),
+  (0, import_node_fs5.writeFileSync)(
+    (0, import_node_path3.join)(cwd, `manifest-${arch}.yaml`),
     `name: ${state.snap}
 architecture: ${arch}
 revision: '${state.revision}'

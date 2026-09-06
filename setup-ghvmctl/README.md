@@ -17,6 +17,9 @@ jobs:
   test-snap:
     runs-on: ubuntu-24.04
     steps:
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: "24"
       - name: Setup ghvmctl
         uses: snapcrafters/ci/setup-ghvmctl@REVIEWED_SHA
 
@@ -34,7 +37,7 @@ jobs:
           ghvmctl exec "cat /home/ubuntu/signal-desktop.log"
 
       - name: Upload screenshots
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: "screenshots"
           path: "~/ghvmctl-screenshots/*.png"

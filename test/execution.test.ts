@@ -25,7 +25,7 @@ test("one trusted Bash script preserves both streams, failure status, private lo
 });
 
 test("sync rejects every untracked path before commit, and derives version after the script", async () => {
-  const { syncVersion } = await import("../src/local.ts");
+  const { syncVersion } = await import("../src/execution.ts");
   const { execFileSync } = await import("node:child_process");
   const { writeFileSync, mkdirSync } = await import("node:fs");
   const dir = mkdtempSync(join(tmpdir(), "sync-"));
@@ -38,7 +38,8 @@ test("sync rejects every untracked path before commit, and derives version after
     mkdirSync(work);
     git(["init", "-b", "candidate"], work);
     writeFileSync(join(work, "snapcraft.yaml"), "name: sample\nversion: '1'\n");
-    git(["add", "snapcraft.yaml"], work);
+    writeFileSync(join(work, ".gitignore"), "ignored-output\n");
+    git(["add", "snapcraft.yaml", ".gitignore"], work);
     const identity = [
       "-c",
       "user.name=Tester",
@@ -56,6 +57,11 @@ test("sync rejects every untracked path before commit, and derives version after
     ).rejects.toThrow(/new file/);
     expect(git(["rev-parse", "HEAD"], work)).toBe(head);
     rmSync(join(work, "new file"));
+    await expect(
+      syncVersion("printf ignored > ignored-output", "", "Bot", "bot@example.org", work),
+    ).rejects.toThrow(/ignored-output/);
+    expect(git(["rev-parse", "HEAD"], work)).toBe(head);
+    rmSync(join(work, "ignored-output"));
     await syncVersion("sed -i \"s/'1'/'2'/\" snapcraft.yaml", "", "Bot", "bot@example.org", work);
     expect(git(["log", "-1", "--format=%s"], work).trim()).toBe("chore: bump sample to version 2");
     expect(git(["rev-parse", "HEAD"], work)).toBe(
@@ -80,6 +86,37 @@ test("caller step-summary is included, bounded and redacted without changing the
     expect(result.code).toBe(7);
     expect(result.summary).toContain("caller detail ***");
     expect(result.summary).not.toContain("secret-token");
+  } finally {
+    rmSync(dir, { recursive: true });
+  }
+});
+
+test("multiline credential fragments never appear in live output or summary", async () => {
+  const { vi } = await import("vitest");
+  const output: string[] = [];
+  const spy = vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    output.push(String(chunk));
+    return true;
+  });
+  const dir = mkdtempSync(join(tmpdir(), "redact-"));
+  try {
+    const result = await script("printf 'header\\npayload\\nfooter\\n'", dir, {
+      PATH: process.env.PATH,
+      GITHUB_TOKEN: "header\npayload\nfooter",
+    });
+    expect(result.summary).not.toContain("payload");
+    expect(output.join("")).not.toContain("payload");
+    expect(readFileSync(result.stdout, "utf8")).toContain("payload");
+  } finally {
+    spy.mockRestore();
+    rmSync(dir, { recursive: true });
+  }
+});
+
+test("a signalled Bash script retains the conventional signal exit status", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "signal-"));
+  try {
+    expect((await script("kill -TERM $$", dir, { PATH: process.env.PATH })).code).toBe(143);
   } finally {
     rmSync(dir, { recursive: true });
   }

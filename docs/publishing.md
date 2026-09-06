@@ -10,6 +10,7 @@ on: workflow_dispatch
 permissions:
   contents: write
   actions: read
+  issues: write
 concurrency:
   group: publish-sample-latest-candidate
   cancel-in-progress: false
@@ -24,6 +25,16 @@ jobs:
           channel: latest/candidate
           repo-token: ${{ secrets.REPO_TOKEN }}
           launchpad-token: ${{ secrets.LAUNCHPAD_TOKEN }}
+          store-token: ${{ secrets.STORE_TOKEN }}
+  testing:
+    needs: release
+    runs-on: ubuntu-24.04
+    environment: snap-publishing
+    steps:
+      - uses: snapcrafters/ci/call-for-testing@REVIEWED_SHA
+        with:
+          architectures: amd64
+          github-token: ${{ secrets.ISSUE_TOKEN }}
           store-token: ${{ secrets.STORE_TOKEN }}
 ```
 

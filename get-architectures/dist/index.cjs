@@ -7405,8 +7405,13 @@ function architectures(data) {
       const fields = mapping(value);
       if (Object.keys(fields).some((k) => !["build-on", "run-on"].includes(k)))
         throw Error("Unknown architecture field");
-      if (fields["run-on"] !== void 0) archList(fields["run-on"]);
-      return archList(fields["build-on"]);
+      const builders = archList(fields["build-on"]);
+      if (fields["run-on"] !== void 0) {
+        const targets = archList(fields["run-on"]);
+        if (!builders.every((builder) => targets.includes(builder)))
+          throw Error("Ambiguous legacy cross-architecture run-on");
+      }
+      return builders;
     });
   }
   if (!result.length) throw Error("Empty architecture matrix");

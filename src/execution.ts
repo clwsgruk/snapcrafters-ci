@@ -9,9 +9,11 @@ import {
   readSync,
   fstatSync,
   constants,
+  rmSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { tmpdir, constants as osConstants } from "node:os";
+import { join, dirname } from "node:path";
+import { project } from "./project.ts";
 import { StringDecoder } from "node:string_decoder";
 
 export function safeEnv(env = process.env): NodeJS.ProcessEnv {
@@ -54,7 +56,7 @@ export async function script(
   writeFileSync(file, source, { mode: 0o600 });
   const secrets = Object.entries(env)
     .filter(([k, v]) => /token|secret|password|credential/i.test(k) && v)
-    .map(([, v]) => v!)
+    .flatMap(([, v]) => [v!, ...v!.split(/\r?\n/)].filter(Boolean))
     .sort((a, b) => b.length - a.length);
   const redact = (s: string) =>
     secrets.reduce((v, secret) => v.replaceAll(secret, "***"), s).replaceAll("\u001b", "");
@@ -124,7 +126,9 @@ export async function script(
   );
   const code = await new Promise<number>((resolve) => {
     child.once("error", () => resolve(127));
-    child.once("close", (status) => resolve(status ?? 128));
+    child.once("close", (status, signal) =>
+      resolve(status ?? 128 + (signal ? osConstants.signals[signal] : 0)),
+    );
   });
   clearTimeout(timer);
   streams.forEach((finish) => finish());
@@ -177,4 +181,42 @@ export function readBounded(file: string, limit: number, truncate = false): Buff
   } finally {
     closeSync(fd);
   }
+}
+
+export async function syncVersion(
+  source: string,
+  root: string,
+  name: string,
+  email: string,
+  cwd = process.cwd(),
+) {
+  const before = project(root, cwd);
+  const result = await script(source, cwd);
+  rmSync(dirname(result.script), { recursive: true });
+  if (result.code) throw Error(`Update script failed with status ${result.code}`);
+  const untracked = command("git", ["ls-files", "--others", "-z"], cwd).split("\0").filter(Boolean);
+  if (untracked.length)
+    throw Error(`Untracked paths must be resolved before committing:\n${untracked.join("\n")}`);
+  if (!command("git", ["status", "--porcelain", "--untracked-files=no"], cwd).trim()) return;
+  const after = project(root, cwd);
+  const detail =
+    before.outputs.version === after.outputs.version
+      ? "dependencies"
+      : `to version ${after.outputs.version}`;
+  command(
+    "git",
+    [
+      "-c",
+      `user.name=${name}`,
+      "-c",
+      `user.email=${email}`,
+      "-c",
+      "commit.gpgsign=false",
+      "commit",
+      "-am",
+      `chore: bump ${after.outputs["snap-name"]} ${detail}`,
+    ],
+    cwd,
+  );
+  command("git", ["push"], cwd);
 }

@@ -8964,6 +8964,8 @@ async function fetchManifests(token, repository2, run, directory = process.cwd()
   if (new Set(manifests.map((m) => m.name)).size > 1) throw Error("Multiple snaps in manifest set");
   if (expected && manifests.length && JSON.stringify(manifests.map((m) => m.architecture).sort()) !== JSON.stringify([...expected.architectures].sort()))
     throw Error("Manifest architecture set mismatch");
+  if ((0, import_node_fs2.readdirSync)(directory).some((p) => /^manifest-.*\.yaml$/.test(p) && !names.has(p.slice(0, -5))))
+    throw Error("Unexpected stale manifest outside this run's artifact set");
   for (const m of manifests) {
     const file = (0, import_node_path2.resolve)(directory, `manifest-${m.architecture}.yaml`);
     try {
@@ -9044,7 +9046,7 @@ async function script(source, directory, env = process.env, storage = (0, import
   const dir = (0, import_node_fs3.mkdtempSync)((0, import_node_path3.join)(storage, "script-"));
   const file = (0, import_node_path3.join)(dir, "caller.sh"), stdout = (0, import_node_path3.join)(dir, "stdout.log"), stderr = (0, import_node_path3.join)(dir, "stderr.log");
   (0, import_node_fs3.writeFileSync)(file, source, { mode: 384 });
-  const secrets = Object.entries(env).filter(([k, v]) => /token|secret|password|credential/i.test(k) && v).map(([, v]) => v).sort((a, b) => b.length - a.length);
+  const secrets = Object.entries(env).filter(([k, v]) => /token|secret|password|credential/i.test(k) && v).flatMap(([, v]) => [v, ...v.split(/\r?\n/)].filter(Boolean)).sort((a, b) => b.length - a.length);
   const redact = (s) => secrets.reduce((v, secret) => v.replaceAll(secret, "***"), s).replaceAll("\x1B", "");
   const first = [], last = [];
   let live = 128 * 1024;
@@ -9108,7 +9110,10 @@ async function script(source, directory, env = process.env, storage = (0, import
   );
   const code = await new Promise((resolve3) => {
     child.once("error", () => resolve3(127));
-    child.once("close", (status) => resolve3(status ?? 128));
+    child.once(
+      "close",
+      (status, signal) => resolve3(status ?? 128 + (signal ? import_node_os.constants.signals[signal] : 0))
+    );
   });
   clearTimeout(timer);
   streams.forEach((finish) => finish());

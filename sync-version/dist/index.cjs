@@ -7315,15 +7315,66 @@ var require_dist = __commonJS({
   }
 });
 
-// src/local.ts
-var import_node_fs3 = require("node:fs");
-var import_node_path3 = require("node:path");
-
 // src/execution.ts
 var import_node_child_process = require("node:child_process");
-var import_node_fs = require("node:fs");
+var import_node_fs2 = require("node:fs");
 var import_node_os = require("node:os");
+var import_node_path2 = require("node:path");
+
+// src/project.ts
+var import_node_fs = require("node:fs");
 var import_node_path = require("node:path");
+var import_yaml = __toESM(require_dist(), 1);
+function mapping(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw Error("Expected a mapping");
+  return value;
+}
+function yaml(source) {
+  return mapping((0, import_yaml.parse)(source, { intAsBigInt: true, uniqueKeys: true, maxAliasCount: 50 }));
+}
+function project(input2 = "", cwd = process.cwd()) {
+  const publicRoot = input2 || ".";
+  const root = (0, import_node_path.resolve)(cwd, publicRoot);
+  const candidates = [
+    ".snapcraft.yaml",
+    "build-aux/snap/snapcraft.yaml",
+    "snap/snapcraft.yaml",
+    "snapcraft.yaml"
+  ];
+  const file = candidates.filter((p) => (0, import_node_fs.existsSync)((0, import_node_path.resolve)(root, p))).at(-1);
+  if (!file) throw Error(`No snapcraft.yaml found in ${root}`);
+  const absoluteYaml = (0, import_node_path.resolve)(root, file);
+  const data = yaml((0, import_node_fs.readFileSync)(absoluteYaml, "utf8"));
+  const declaration = (kind) => [`${kind}-declaration.json`, `.github/${kind}-declaration.json`].filter((p) => (0, import_node_fs.existsSync)((0, import_node_path.resolve)(cwd, p))).at(-1) || "";
+  const plugs = declaration("plug"), slots = declaration("slot");
+  const components = data.components == null ? {} : mapping(data.components);
+  return {
+    root,
+    yaml: absoluteYaml,
+    data,
+    plugs: plugs ? (0, import_node_path.resolve)(cwd, plugs) : "",
+    slots: slots ? (0, import_node_path.resolve)(cwd, slots) : "",
+    outputs: {
+      "project-root": publicRoot,
+      "yaml-path": `${publicRoot}/${file}`,
+      "snap-name": scalar(data.name),
+      version: scalar(data.version),
+      classic: String(data.confinement === "classic"),
+      "plugs-file": plugs,
+      "slots-file": slots,
+      components: Object.entries(components).map(([name, value]) => `${name}|${scalar(mapping(value).version)}`).join(",")
+    }
+  };
+}
+function scalar(value) {
+  if (value == null) return "null";
+  if (!["string", "number", "bigint", "boolean"].includes(typeof value))
+    throw Error("Expected a scalar");
+  return String(value);
+}
+
+// src/execution.ts
 var import_node_string_decoder = require("node:string_decoder");
 function safeEnv(env = process.env) {
   const keys = /^(PATH|HOME|LANG|LC_ALL|TZ|CI|DISPLAY|XDG_RUNTIME_DIR|GITHUB_(WORKSPACE|SHA|REF|REF_NAME|REF_TYPE|REPOSITORY|REPOSITORY_OWNER|RUN_ID|RUN_NUMBER|RUN_ATTEMPT|JOB|ACTOR|EVENT_NAME|SERVER_URL|STEP_SUMMARY)|RUNNER_(OS|ARCH|TEMP))$/;
@@ -7346,10 +7397,10 @@ function command(file, args, cwd = process.cwd(), env = safeEnv(), timeout = 6e5
   }
 }
 async function script(source, directory, env = process.env, storage = (0, import_node_os.tmpdir)()) {
-  const dir = (0, import_node_fs.mkdtempSync)((0, import_node_path.join)(storage, "script-"));
-  const file = (0, import_node_path.join)(dir, "caller.sh"), stdout = (0, import_node_path.join)(dir, "stdout.log"), stderr = (0, import_node_path.join)(dir, "stderr.log");
-  (0, import_node_fs.writeFileSync)(file, source, { mode: 384 });
-  const secrets = Object.entries(env).filter(([k, v]) => /token|secret|password|credential/i.test(k) && v).map(([, v]) => v).sort((a, b) => b.length - a.length);
+  const dir = (0, import_node_fs2.mkdtempSync)((0, import_node_path2.join)(storage, "script-"));
+  const file = (0, import_node_path2.join)(dir, "caller.sh"), stdout = (0, import_node_path2.join)(dir, "stdout.log"), stderr = (0, import_node_path2.join)(dir, "stderr.log");
+  (0, import_node_fs2.writeFileSync)(file, source, { mode: 384 });
+  const secrets = Object.entries(env).filter(([k, v]) => /token|secret|password|credential/i.test(k) && v).flatMap(([, v]) => [v, ...v.split(/\r?\n/)].filter(Boolean)).sort((a, b) => b.length - a.length);
   const redact = (s) => secrets.reduce((v, secret) => v.replaceAll(secret, "***"), s).replaceAll("\x1B", "");
   const first = [], last = [];
   let live = 128 * 1024;
@@ -7360,7 +7411,7 @@ async function script(source, directory, env = process.env, storage = (0, import
     stdio: ["ignore", "pipe", "pipe"]
   });
   const streams = [child.stdout, child.stderr].map((stream, index) => {
-    const fd = (0, import_node_fs.openSync)(index ? stderr : stdout, "wx", 384), decoder = new import_node_string_decoder.StringDecoder("utf8");
+    const fd = (0, import_node_fs2.openSync)(index ? stderr : stdout, "wx", 384), decoder = new import_node_string_decoder.StringDecoder("utf8");
     let pending = "";
     const emit = (line) => {
       const text = redact(line).slice(0, 2e3);
@@ -7377,7 +7428,7 @@ async function script(source, directory, env = process.env, storage = (0, import
       }
     };
     stream.on("data", (chunk) => {
-      (0, import_node_fs.writeSync)(fd, chunk);
+      (0, import_node_fs2.writeSync)(fd, chunk);
       pending += decoder.write(chunk);
       let end;
       while ((end = pending.indexOf("\n")) >= 0) {
@@ -7399,7 +7450,7 @@ async function script(source, directory, env = process.env, storage = (0, import
     return () => {
       pending += decoder.end();
       if (pending) emit(pending);
-      (0, import_node_fs.closeSync)(fd);
+      (0, import_node_fs2.closeSync)(fd);
     };
   });
   const timer = setTimeout(
@@ -7413,7 +7464,10 @@ async function script(source, directory, env = process.env, storage = (0, import
   );
   const code = await new Promise((resolve2) => {
     child.once("error", () => resolve2(127));
-    child.once("close", (status) => resolve2(status ?? 128));
+    child.once(
+      "close",
+      (status, signal) => resolve2(status ?? 128 + (signal ? import_node_os.constants.signals[signal] : 0))
+    );
   });
   clearTimeout(timer);
   streams.forEach((finish) => finish());
@@ -7429,10 +7483,10 @@ async function script(source, directory, env = process.env, storage = (0, import
     }
   }
   const summary = short(first.join("")) + (last.length ? "\n\u2026\n" + short(last.join(""), true) : "") + extra;
-  (0, import_node_fs.writeFileSync)((0, import_node_path.join)(dir, "summary.txt"), summary, { mode: 384 });
+  (0, import_node_fs2.writeFileSync)((0, import_node_path2.join)(dir, "summary.txt"), summary, { mode: 384 });
   if (env.GITHUB_STEP_SUMMARY) {
     try {
-      (0, import_node_fs.appendFileSync)(env.GITHUB_STEP_SUMMARY, summary);
+      (0, import_node_fs2.appendFileSync)(env.GITHUB_STEP_SUMMARY, summary);
     } catch {
       console.warn("Could not append test summary");
     }
@@ -7440,84 +7494,29 @@ async function script(source, directory, env = process.env, storage = (0, import
   return { code, script: file, stdout, stderr, summary };
 }
 function readBounded(file, limit, truncate = false) {
-  const fd = (0, import_node_fs.openSync)(file, import_node_fs.constants.O_RDONLY | import_node_fs.constants.O_NOFOLLOW);
+  const fd = (0, import_node_fs2.openSync)(file, import_node_fs2.constants.O_RDONLY | import_node_fs2.constants.O_NOFOLLOW);
   try {
-    const stat = (0, import_node_fs.fstatSync)(fd);
+    const stat = (0, import_node_fs2.fstatSync)(fd);
     if (!stat.isFile() || !truncate && stat.size > limit)
       throw Error("Invalid file type or size");
     const bytes = Buffer.alloc(Math.min(stat.size, limit));
     let size = 0;
     while (size < bytes.length) {
-      const count = (0, import_node_fs.readSync)(fd, bytes, size, bytes.length - size, null);
+      const count = (0, import_node_fs2.readSync)(fd, bytes, size, bytes.length - size, null);
       if (!count) break;
       size += count;
     }
     return bytes.subarray(0, size);
   } finally {
-    (0, import_node_fs.closeSync)(fd);
+    (0, import_node_fs2.closeSync)(fd);
   }
 }
-
-// src/project.ts
-var import_node_fs2 = require("node:fs");
-var import_node_path2 = require("node:path");
-var import_yaml = __toESM(require_dist(), 1);
-function mapping(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw Error("Expected a mapping");
-  return value;
-}
-function yaml(source) {
-  return mapping((0, import_yaml.parse)(source, { intAsBigInt: true, uniqueKeys: true, maxAliasCount: 50 }));
-}
-function project(input2 = "", cwd = process.cwd()) {
-  const publicRoot = input2 || ".";
-  const root = (0, import_node_path2.resolve)(cwd, publicRoot);
-  const candidates = [
-    ".snapcraft.yaml",
-    "build-aux/snap/snapcraft.yaml",
-    "snap/snapcraft.yaml",
-    "snapcraft.yaml"
-  ];
-  const file = candidates.filter((p) => (0, import_node_fs2.existsSync)((0, import_node_path2.resolve)(root, p))).at(-1);
-  if (!file) throw Error(`No snapcraft.yaml found in ${root}`);
-  const absoluteYaml = (0, import_node_path2.resolve)(root, file);
-  const data = yaml((0, import_node_fs2.readFileSync)(absoluteYaml, "utf8"));
-  const declaration = (kind) => [`${kind}-declaration.json`, `.github/${kind}-declaration.json`].filter((p) => (0, import_node_fs2.existsSync)((0, import_node_path2.resolve)(cwd, p))).at(-1) || "";
-  const plugs = declaration("plug"), slots = declaration("slot");
-  const components = data.components == null ? {} : mapping(data.components);
-  return {
-    root,
-    yaml: absoluteYaml,
-    data,
-    plugs: plugs ? (0, import_node_path2.resolve)(cwd, plugs) : "",
-    slots: slots ? (0, import_node_path2.resolve)(cwd, slots) : "",
-    outputs: {
-      "project-root": publicRoot,
-      "yaml-path": `${publicRoot}/${file}`,
-      "snap-name": scalar(data.name),
-      version: scalar(data.version),
-      classic: String(data.confinement === "classic"),
-      "plugs-file": plugs,
-      "slots-file": slots,
-      components: Object.entries(components).map(([name, value]) => `${name}|${scalar(mapping(value).version)}`).join(",")
-    }
-  };
-}
-function scalar(value) {
-  if (value == null) return "null";
-  if (!["string", "number", "bigint", "boolean"].includes(typeof value))
-    throw Error("Expected a scalar");
-  return String(value);
-}
-
-// src/local.ts
 async function syncVersion(source, root, name, email, cwd = process.cwd()) {
   const before = project(root, cwd);
   const result = await script(source, cwd);
-  (0, import_node_fs3.rmSync)((0, import_node_path3.dirname)(result.script), { recursive: true });
+  (0, import_node_fs2.rmSync)((0, import_node_path2.dirname)(result.script), { recursive: true });
   if (result.code) throw Error(`Update script failed with status ${result.code}`);
-  const untracked = command("git", ["ls-files", "--others", "--exclude-standard", "-z"], cwd).split("\0").filter(Boolean);
+  const untracked = command("git", ["ls-files", "--others", "-z"], cwd).split("\0").filter(Boolean);
   if (untracked.length)
     throw Error(`Untracked paths must be resolved before committing:
 ${untracked.join("\n")}`);

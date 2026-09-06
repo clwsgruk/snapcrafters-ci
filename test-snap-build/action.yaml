@@ -44,7 +44,10 @@ runs:
         snapcraft-channel: ${{ inputs.snapcraft-channel }}
     - name: Install review-tools
       shell: bash
-      run: "if ! snap list review-tools &>/dev/null; then\n  sudo snap install review-tools\nfi\n"
+      run: |
+        if ! snap list review-tools &>/dev/null; then
+          sudo snap install review-tools
+        fi
     - name: Review the snap
       shell: bash
       env:
@@ -52,11 +55,19 @@ runs:
         plugs_file: ${{ steps.snapcraft-yaml.outputs.plugs-file }}
         slots_file: ${{ steps.snapcraft-yaml.outputs.slots-file }}
         is_classic: ${{ steps.snapcraft-yaml.outputs.classic }}
-      run:
-        "args=()\nif [[ -n \"${plugs_file}\" ]]; then\n  args+=(\"--plugs\" \"${plugs_file}\")\nfi\nif [[ -n \"\
-        ${slots_file}\" ]]; then\n  args+=(\"--slots\" \"${slots_file}\")\nfi\nif [[ \"${is_classic}\" == \"true\"\
-        \ ]]; then\n  args+=(\"--allow-classic\")\nfi\nargs+=(\"${snap_file}\")\nreview-tools.snap-review \"${args[@]}\"\
-        \n"
+      run: |
+        args=()
+        if [[ -n "${plugs_file}" ]]; then
+          args+=("--plugs" "${plugs_file}")
+        fi
+        if [[ -n "${slots_file}" ]]; then
+          args+=("--slots" "${slots_file}")
+        fi
+        if [[ "${is_classic}" == "true" ]]; then
+          args+=("--allow-classic")
+        fi
+        args+=("${snap_file}")
+        review-tools.snap-review "${args[@]}"
     - shell: bash
       if: inputs.install == 'true'
       env:

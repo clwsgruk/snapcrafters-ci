@@ -1,5 +1,8 @@
 # Behavior and recovery
 
+Wrappers require github.com-hosted Ubuntu 22.04/24.04 and Node 24. The standalone
+setup-ghvmctl action validates as its first step, so set up Node 24 before invoking it.
+
 Scripts are trusted caller code. Never run a pull request's scripts with publishing credentials.
 Version synchronization lists and rejects every untracked path before committing tracked changes;
 identity settings are local to each Git command. Test scripts run unchanged in one private Bash
@@ -10,7 +13,7 @@ step summaries are included within the reporting bound; reporting failures prese
 Manifest artifacts keep the names `manifest-ARCH` / `manifest-ARCH.yaml`. ZIP data is validated
 in memory before filesystem writes: exact name, architecture and decimal-string revision,
 entry identity, CRC, size and duplicate checks. Call-for-testing checks the complete requested
-architecture set. Large revisions never pass through floating-point numeric conversion.
+architecture set. Adopted versions come from the exact active Store revisions. Large revisions never pass through floating-point numeric conversion.
 
 Release uses fresh staging, source-local synthetic Git, exact fresh snap/component metadata and
 one Snapcraft upload. It records a baseline before upload and confirms a new exact revision with
@@ -20,7 +23,8 @@ and source commit. The state artifact is restored before a workflow rerun can bu
 If that artifact was never saved, the rerun fails and requires reconciliation with the Store;
 recover the original `.ci-release-ARCH.json` if it remains available. Never delete state to force
 another upload. Artifact/tag errors identify the already published revision. Annotated tags are
-verified by exact target and message. Multi-snap mode selects one root and prefixes that snap's tag.
+verified by exact target and message. Legacy manifest artifacts are never overwritten: an existing
+artifact must read back with the exact published snap/architecture/revision before tagging. Multi-snap mode selects one root and prefixes that snap's tag.
 
 The pinned external upload-artifact action has no supplied-token input and uses GitHub's Actions
 runtime artifact credential. All REST artifact/issue/comment/tag operations explicitly use their
@@ -36,7 +40,8 @@ Screenshot capture owns its temporary HOME and VM and deletes both during cleanu
 constrained ghvmctl timestamp aliases to current-UID regular PNGs, opened without following target
 symlinks. Two blobs are committed in one tree/commit, with a non-force ref update and immutable URLs.
 Only an explicit non-fast-forward response plus a changed ref is retryable. Comment retry uses the
-saved `.ci-screenshots-KEY.json`; absent saved state on a new runner fails before another upload.
+saved `.ci-screenshots-KEY.json`, or recovers the immutable commit from its exact run marker in
+reachable repository history. If neither can be verified, it fails before another upload.
 
 Limits: at most 1,000 paginated items; 8 MiB JSON responses; 1 MiB manifest ZIPs and 64 KiB entries;
 8 MiB per PNG; three publication readbacks/ref-conflict attempts. Runner/provider failures can

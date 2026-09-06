@@ -8691,30 +8691,11 @@ var require_yauzl = __commonJS({
 // src/screenshots.ts
 var import_node_crypto3 = require("node:crypto");
 var import_node_os = require("node:os");
-var import_node_fs4 = require("node:fs");
+var import_node_fs5 = require("node:fs");
 
 // src/execution.ts
 var import_node_child_process = require("node:child_process");
-function safeEnv(env = process.env) {
-  const keys = /^(PATH|HOME|LANG|LC_ALL|TZ|CI|DISPLAY|XDG_RUNTIME_DIR|GITHUB_(WORKSPACE|SHA|REF|REF_NAME|REF_TYPE|REPOSITORY|REPOSITORY_OWNER|RUN_ID|RUN_NUMBER|RUN_ATTEMPT|JOB|ACTOR|EVENT_NAME|SERVER_URL|STEP_SUMMARY)|RUNNER_(OS|ARCH|TEMP))$/;
-  return Object.fromEntries(
-    Object.entries(env).filter(([k, v]) => keys.test(k) && v !== void 0)
-  );
-}
-function command(file, args, cwd = process.cwd(), env = safeEnv(), timeout = 6e5) {
-  try {
-    return (0, import_node_child_process.execFileSync)(file, args, {
-      cwd,
-      env,
-      encoding: "utf8",
-      timeout,
-      maxBuffer: 8 * 1024 * 1024,
-      stdio: ["ignore", "pipe", "pipe"]
-    });
-  } catch {
-    throw Error(`${file} ${args[0] || ""} failed`);
-  }
-}
+var import_node_fs2 = require("node:fs");
 
 // src/project.ts
 var import_node_fs = require("node:fs");
@@ -8783,8 +8764,48 @@ function scalar(value) {
   return String(value);
 }
 
+// src/execution.ts
+function safeEnv(env = process.env) {
+  const keys = /^(PATH|HOME|LANG|LC_ALL|TZ|CI|DISPLAY|XDG_RUNTIME_DIR|GITHUB_(WORKSPACE|SHA|REF|REF_NAME|REF_TYPE|REPOSITORY|REPOSITORY_OWNER|RUN_ID|RUN_NUMBER|RUN_ATTEMPT|JOB|ACTOR|EVENT_NAME|SERVER_URL|STEP_SUMMARY)|RUNNER_(OS|ARCH|TEMP))$/;
+  return Object.fromEntries(
+    Object.entries(env).filter(([k, v]) => keys.test(k) && v !== void 0)
+  );
+}
+function command(file, args, cwd = process.cwd(), env = safeEnv(), timeout = 6e5) {
+  try {
+    return (0, import_node_child_process.execFileSync)(file, args, {
+      cwd,
+      env,
+      encoding: "utf8",
+      timeout,
+      maxBuffer: 8 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch {
+    throw Error(`${file} ${args[0] || ""} failed`);
+  }
+}
+function readBounded(file, limit, truncate = false) {
+  const fd = (0, import_node_fs2.openSync)(file, import_node_fs2.constants.O_RDONLY | import_node_fs2.constants.O_NOFOLLOW);
+  try {
+    const stat = (0, import_node_fs2.fstatSync)(fd);
+    if (!stat.isFile() || !truncate && stat.size > limit)
+      throw Error("Invalid file type or size");
+    const bytes = Buffer.alloc(Math.min(stat.size, limit));
+    let size = 0;
+    while (size < bytes.length) {
+      const count = (0, import_node_fs2.readSync)(fd, bytes, size, bytes.length - size, null);
+      if (!count) break;
+      size += count;
+    }
+    return bytes.subarray(0, size);
+  } finally {
+    (0, import_node_fs2.closeSync)(fd);
+  }
+}
+
 // src/runtime.ts
-var import_node_fs2 = require("node:fs");
+var import_node_fs3 = require("node:fs");
 var import_node_crypto = require("node:crypto");
 function validateRunner(env = process.env, node = process.version) {
   if (env.GITHUB_SERVER_URL !== "https://github.com" || env.RUNNER_ENVIRONMENT !== "github-hosted" || env.RUNNER_OS !== "Linux" || !["ubuntu22", "ubuntu24"].includes(env.ImageOS || "") || !node.startsWith("v24."))
@@ -8794,7 +8815,7 @@ var input = (name) => process.env[`INPUT_${name.toUpperCase().replaceAll("-", "_
 function outputs(values) {
   for (const [key, value] of Object.entries(values)) {
     const delimiter = (0, import_node_crypto.randomUUID)();
-    (0, import_node_fs2.appendFileSync)(process.env.GITHUB_OUTPUT, `${key}<<${delimiter}
+    (0, import_node_fs3.appendFileSync)(process.env.GITHUB_OUTPUT, `${key}<<${delimiter}
 ${value}
 ${delimiter}
 `);
@@ -8911,7 +8932,7 @@ ${stamp}`;
 // src/manifests.ts
 var import_yauzl = __toESM(require_yauzl(), 1);
 var import_node_zlib = require("node:zlib");
-var import_node_fs3 = require("node:fs");
+var import_node_fs4 = require("node:fs");
 var import_node_path2 = require("node:path");
 function revision(value) {
   if (typeof value !== "string" && typeof value !== "bigint")
@@ -9017,12 +9038,14 @@ async function fetchManifests(token, repository2, run, directory = process.cwd()
   if (new Set(manifests.map((m) => m.name)).size > 1) throw Error("Multiple snaps in manifest set");
   if (expected && manifests.length && JSON.stringify(manifests.map((m) => m.architecture).sort()) !== JSON.stringify([...expected.architectures].sort()))
     throw Error("Manifest architecture set mismatch");
+  if ((0, import_node_fs4.readdirSync)(directory).some((p) => /^manifest-.*\.yaml$/.test(p) && !names.has(p.slice(0, -5))))
+    throw Error("Unexpected stale manifest outside this run's artifact set");
   for (const m of manifests) {
     const file = (0, import_node_path2.resolve)(directory, `manifest-${m.architecture}.yaml`);
     try {
-      const stat = (0, import_node_fs3.lstatSync)(file);
+      const stat = (0, import_node_fs4.lstatSync)(file);
       if (!stat.isFile() || stat.isSymbolicLink() || JSON.stringify(
-        manifest((0, import_node_fs3.readFileSync)(file, "utf8"), `manifest-${m.architecture}`, m.name)
+        manifest((0, import_node_fs4.readFileSync)(file, "utf8"), `manifest-${m.architecture}`, m.name)
       ) !== JSON.stringify(m))
         throw Error("Existing manifest differs");
     } catch (error) {
@@ -9030,7 +9053,7 @@ async function fetchManifests(token, repository2, run, directory = process.cwd()
     }
   }
   for (const m of manifests)
-    (0, import_node_fs3.writeFileSync)(
+    (0, import_node_fs4.writeFileSync)(
       (0, import_node_path2.resolve)(directory, `manifest-${m.architecture}.yaml`),
       `name: ${m.name}
 architecture: ${m.architecture}
@@ -9041,10 +9064,10 @@ revision: '${m.revision}'
   return manifests;
 }
 function localManifests(directory, snap) {
-  return (0, import_node_fs3.readdirSync)(directory).filter((p) => /^manifest-.*\.yaml$/.test(p)).map((p) => {
+  return (0, import_node_fs4.readdirSync)(directory).filter((p) => /^manifest-.*\.yaml$/.test(p)).map((p) => {
     const file = (0, import_node_path2.resolve)(directory, p);
-    if (!(0, import_node_fs3.lstatSync)(file).isFile()) throw Error("Unsafe manifest file");
-    return manifest((0, import_node_fs3.readFileSync)(file, "utf8"), p.slice(0, -5), snap);
+    if (!(0, import_node_fs4.lstatSync)(file).isFile()) throw Error("Unsafe manifest file");
+    return manifest((0, import_node_fs4.readFileSync)(file, "utf8"), p.slice(0, -5), snap);
   });
 }
 
@@ -9068,7 +9091,7 @@ function repository(value) {
 }
 
 // src/screenshots.ts
-var import_node_fs5 = require("node:fs");
+var import_node_fs6 = require("node:fs");
 var import_node_path3 = require("node:path");
 function validPng(bytes) {
   if (bytes.length < 33 || bytes.length > 8 * 1024 * 1024 || !bytes.subarray(0, 16).equals(Buffer.from("89504e470d0a1a0a0000000d49484452", "hex")) || !bytes.readUInt32BE(16) || !bytes.readUInt32BE(20) || bytes.readUInt32BE(16) > 16384 || bytes.readUInt32BE(20) > 16384)
@@ -9076,29 +9099,29 @@ function validPng(bytes) {
   return bytes;
 }
 function png(directory, kind) {
-  const dir = (0, import_node_fs5.lstatSync)(directory);
+  const dir = (0, import_node_fs6.lstatSync)(directory);
   if (!dir.isDirectory() || dir.uid !== process.getuid())
     throw Error("Screenshot directory is not owned");
   let file = (0, import_node_path3.join)(directory, `screenshot-${kind}.png`);
-  if ((0, import_node_fs5.lstatSync)(file).isSymbolicLink()) {
-    const alias = (0, import_node_fs5.readlinkSync)(file);
+  if ((0, import_node_fs6.lstatSync)(file).isSymbolicLink()) {
+    const alias = (0, import_node_fs6.readlinkSync)(file);
     if ((0, import_node_path3.basename)(alias) !== alias || !new RegExp(`^screenshot-${kind}-[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{6}\\.png$`).test(alias))
       throw Error("Unsafe screenshot alias");
     file = (0, import_node_path3.join)(directory, alias);
   }
-  const before = (0, import_node_fs5.lstatSync)(file), fd = (0, import_node_fs5.openSync)(file, import_node_fs5.constants.O_RDONLY | import_node_fs5.constants.O_NOFOLLOW);
+  const before = (0, import_node_fs6.lstatSync)(file), fd = (0, import_node_fs6.openSync)(file, import_node_fs6.constants.O_RDONLY | import_node_fs6.constants.O_NOFOLLOW);
   try {
-    const stat = (0, import_node_fs5.fstatSync)(fd);
+    const stat = (0, import_node_fs6.fstatSync)(fd);
     if (!stat.isFile() || stat.uid !== process.getuid() || stat.ino !== before.ino || stat.dev !== before.dev || stat.size > 8 * 1024 * 1024)
       throw Error("Unsafe screenshot file");
     const buffer = Buffer.alloc(stat.size + 1);
     let size = 0, read = 0;
-    while (read = (0, import_node_fs5.readSync)(fd, buffer, size, buffer.length - size, null)) size += read;
-    if (size !== stat.size || (0, import_node_fs5.fstatSync)(fd).size !== stat.size)
+    while (read = (0, import_node_fs6.readSync)(fd, buffer, size, buffer.length - size, null)) size += read;
+    if (size !== stat.size || (0, import_node_fs6.fstatSync)(fd).size !== stat.size)
       throw Error("Screenshot changed while reading");
     return validPng(buffer.subarray(0, size));
   } finally {
-    (0, import_node_fs5.closeSync)(fd);
+    (0, import_node_fs6.closeSync)(fd);
   }
 }
 async function uploadScreenshots(value, base = api) {
@@ -9131,7 +9154,8 @@ async function uploadScreenshots(value, base = api) {
       tree: paths.map((path, i) => ({ path, mode: "100644", type: "blob", sha: blobs[i] }))
     });
     const next = await call("POST", "/git/commits", {
-      message: `data: screenshots for ${value.snap}#${value.issue}`,
+      message: `data: screenshots for ${value.snap}#${value.issue}${value.key ? `
+ci-screenshots:${value.key}:${value.date}` : ""}`,
       tree: tree.sha,
       parents: [parent],
       author: { name: value.name, email: value.email }
@@ -9161,7 +9185,7 @@ async function capture(snap, app, target, rev) {
   snapName(app);
   channel(target);
   if (rev) revision(rev);
-  const home = (0, import_node_fs4.mkdtempSync)((0, import_node_path3.join)((0, import_node_os.tmpdir)(), "ci-vm-")), env = { ...safeEnv(), HOME: home, SNAP_REAL_HOME: home, VM_NAME: `ci-${(0, import_node_crypto3.randomUUID)()}` };
+  const home = (0, import_node_fs5.mkdtempSync)((0, import_node_path3.join)((0, import_node_os.tmpdir)(), "ci-vm-")), env = { ...safeEnv(), HOME: home, SNAP_REAL_HOME: home, VM_NAME: `ci-${(0, import_node_crypto3.randomUUID)()}` };
   try {
     command("ghvmctl", ["prepare"], home, env);
     command(
@@ -9201,7 +9225,7 @@ async function capture(snap, app, target, rev) {
     try {
       command("lxc", ["delete", "--force", env.VM_NAME], home, env);
     } finally {
-      (0, import_node_fs4.rmSync)(home, { recursive: true, force: true });
+      (0, import_node_fs5.rmSync)(home, { recursive: true, force: true });
     }
   }
 }
@@ -9209,53 +9233,79 @@ async function screenshotAction() {
   if (input("ci-repo") !== "snapcrafters/ci")
     throw Error("ci-repo overrides are deprecated; pin a forked action SHA");
   const p = project(input("snapcraft-project-root")), snap = snapName(p.outputs["snap-name"]), issue = revision(input("issue-number")), repo = repository(process.env.GITHUB_REPOSITORY), images = repository(input("screenshots-repo")), token = input("github-token");
-  const key = marker([repo, snap, issue, process.env.GITHUB_RUN_ID]), file = (0, import_node_path3.join)(process.cwd(), `.ci-screenshots-${key}.json`);
+  const key = marker([repo, snap, p.root, issue, process.env.GITHUB_RUN_ID]), file = (0, import_node_path3.join)(process.cwd(), `.ci-screenshots-${key}.json`);
   let urls;
   try {
-    const fd = (0, import_node_fs5.openSync)(file, import_node_fs5.constants.O_RDONLY | import_node_fs5.constants.O_NOFOLLOW);
-    try {
-      if ((0, import_node_fs5.fstatSync)(fd).size > 4096) throw Error("Screenshot state too large");
-      urls = JSON.parse((0, import_node_fs4.readFileSync)(fd, "utf8"));
-    } finally {
-      (0, import_node_fs5.closeSync)(fd);
-    }
+    urls = JSON.parse(readBounded(file, 4096).toString("utf8"));
+    if (!urls || Object.keys(urls).sort().join(",") !== "screen,window")
+      throw Error("Invalid screenshot state fields");
     for (const url of Object.values(urls))
       if (!url.startsWith(`https://raw.githubusercontent.com/${images}/`) || !/\/[a-f0-9]{40}\//.test(url))
         throw Error("Screenshot state mismatch");
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
     if (Number(process.env.GITHUB_RUN_ATTEMPT || "1") > 1)
-      throw Error("Restore exact screenshot state before retrying a failed comment");
-    await fetchManifests(token, repo, process.env.GITHUB_RUN_ID);
-    const rows = localManifests(process.cwd(), snap), selected = rows.find((r) => r.architecture === "amd64");
-    if (rows.length && !selected) throw Error("Missing amd64 screenshot manifest");
-    const captures = await capture(
-      snap,
-      input("snap-application-name") || snap,
-      channel(input("channel")),
-      selected?.revision
-    );
-    urls = await uploadScreenshots({
-      repo: images,
-      token: input("screenshots-token"),
-      snap,
-      issue,
-      date: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10),
-      ...captures,
-      name: input("bot-name"),
-      email: input("bot-email")
-    });
-    (0, import_node_fs4.writeFileSync)(file, JSON.stringify(urls), { mode: 384, flag: "wx" });
+      urls = await recoverScreenshots(images, snap, issue, key, input("screenshots-token"));
+    else {
+      await fetchManifests(token, repo, process.env.GITHUB_RUN_ID);
+      const rows = localManifests(process.cwd(), snap), selected = rows.find((r) => r.architecture === "amd64");
+      if (rows.length && !selected) throw Error("Missing amd64 screenshot manifest");
+      const captures = await capture(
+        snap,
+        input("snap-application-name") || snap,
+        channel(input("channel")),
+        selected?.revision
+      );
+      urls = await uploadScreenshots({
+        repo: images,
+        key,
+        token: input("screenshots-token"),
+        snap,
+        issue,
+        date: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10),
+        ...captures,
+        name: input("bot-name"),
+        email: input("bot-email")
+      });
+    }
+    (0, import_node_fs5.writeFileSync)(file, JSON.stringify(urls), { mode: 384, flag: "wx" });
   }
   outputs(urls);
-  await marked(
-    `/repos/${repo}/issues/${issue}/comments`,
-    { body: `![Full screen](${urls.screen})
+  try {
+    await marked(
+      `/repos/${repo}/issues/${issue}/comments`,
+      { body: `![Full screen](${urls.screen})
 
 ![Application window](${urls.window})` },
-    key,
-    token
+      key,
+      token
+    );
+  } catch {
+    throw Error(
+      `Screenshots committed at ${urls.screen}; comment failed. Retry uses exact state ${file}`
+    );
+  }
+}
+async function recoverScreenshots(repo, snap, issue, key, token, base = api) {
+  repository(repo);
+  snapName(snap);
+  revision(issue);
+  const commits = await pages(
+    `/repos/${repo}/commits`,
+    token,
+    void 0,
+    base
   );
+  const prefix = `data: screenshots for ${snap}#${issue}
+ci-screenshots:${key}:`;
+  const matches = commits.filter((c) => c.commit.message.startsWith(prefix));
+  if (matches.length !== 1 || !/^[a-f0-9]{40}$/.test(matches[0].sha))
+    throw Error("Exact screenshot state could not be recovered; no upload attempted");
+  const date = matches[0].commit.message.slice(prefix.length);
+  if (!/^\d{4}-\d\d-\d\d$/.test(date) || new Date(date).toISOString().slice(0, 10) !== date)
+    throw Error("Invalid screenshot state date");
+  const url = `https://raw.githubusercontent.com/${repo}/${matches[0].sha}/${date.replaceAll("-", "")}-${snap}-${issue}`;
+  return { screen: `${url}-screen.png`, window: `${url}-window.png` };
 }
 
 // get-screenshots/main.ts

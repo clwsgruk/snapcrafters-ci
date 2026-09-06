@@ -13,10 +13,25 @@ import { tmpdir } from "node:os";
 import { execFile, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
 import { createServer } from "node:http";
-import { action, expectedUses, pins } from "./wrappers.ts";
+import { parse } from "yaml";
+import { expectedUses, pins, type Action } from "./wrappers.ts";
+import { zip } from "./zip.ts";
+import { pngBytes } from "./png.ts";
 import { testingBody } from "../src/testing.ts";
 const exec = promisify(execFile);
-export async function smoke(name: string, patch: NodeJS.ProcessEnv = {}) {
+export async function smoke(
+  name: string,
+  patch: NodeJS.ProcessEnv = {},
+  options: {
+    adopted?: boolean;
+    inputs?: Record<string, string>;
+    denyComments?: boolean;
+    summaryFailure?: boolean;
+    artifactFailure?: boolean;
+    expectFailure?: boolean;
+  } = {},
+) {
+  const artifacts: { id: number; name: string; expired: boolean; data: Buffer }[] = [];
   const dir = mkdtempSync(join(tmpdir(), "wrapper-")),
     work = join(dir, "consumer"),
     copy = join(dir, "action"),
@@ -53,7 +68,7 @@ export async function smoke(name: string, patch: NodeJS.ProcessEnv = {}) {
   execFileSync("git", ["init", "--bare", remote], { stdio: "ignore" });
   execFileSync("git", ["remote", "add", "origin", remote], { cwd: work });
   execFileSync("git", ["push", "-u", "origin", "candidate"], { cwd: work, stdio: "ignore" });
-  const a = action(name),
+  const a = parse(readFileSync(join(copy, "action.yaml"), "utf8")) as Action,
     inputs = Object.fromEntries(
       Object.entries(a.inputs || {}).map(([k, v]) => [k, String(v.default ?? "")]),
     );
@@ -70,6 +85,12 @@ export async function smoke(name: string, patch: NodeJS.ProcessEnv = {}) {
     "test-script": 'printf "first\\n"; printf "second\\n" >&2',
     "update-script": `printf "name: sample\\nversion: '2'\\nbase: core22\\narchitectures: [amd64]\\n" > snapcraft.yaml`,
   });
+  Object.assign(inputs, options.inputs || {});
+  if (options.adopted)
+    writeFileSync(
+      join(work, "snapcraft.yaml"),
+      "name: sample\nbase: core22\nadopt-info: app\narchitectures: [amd64]\n",
+    );
   writeFileSync(join(work, "built.snap"), "snap");
   if (name === "sync-version") rmSync(join(work, "built.snap"));
   const comment = {
@@ -123,7 +144,7 @@ export async function smoke(name: string, patch: NodeJS.ProcessEnv = {}) {
       path.includes("/git/tags") || path.includes("/git/refs") || path.includes("/git/ref/tags");
     const expected = images
       ? "screenshot-token"
-      : tag
+      : tag || name === "release-to-candidate"
         ? "repo-token"
         : name === "fetch-manifests"
           ? "artifact-token"
@@ -133,9 +154,22 @@ export async function smoke(name: string, patch: NodeJS.ProcessEnv = {}) {
       res.end("{}");
       return;
     }
+    if (options.denyComments && method === "POST" && path.endsWith("/comments")) {
+      res.writeHead(403);
+      res.end("{}");
+      return;
+    }
     let result: unknown;
-    if (method === "GET" && path.includes("/actions/runs/1/artifacts?")) result = { artifacts: [] };
-    else if (method === "GET" && path === "/user") result = { id: 3 };
+    if (method === "GET" && path.includes("/actions/runs/1/artifacts?"))
+      result = { artifacts: artifacts.map(({ id, name, expired }) => ({ id, name, expired })) };
+    else if (
+      method === "GET" &&
+      path === "/repos/owner/repo/actions/artifacts/1/zip" &&
+      artifacts.length
+    ) {
+      res.end(artifacts[0].data);
+      return;
+    } else if (method === "GET" && path === "/user") result = { id: 3 };
     else if (path === "/repos/owner/repo/collaborators/maintainer/permission" && method === "GET")
       result = { permission: "write" };
     else if (path === "/repos/owner/repo/issues/comments/7" && method === "GET") result = comment;
@@ -209,7 +243,7 @@ else if(tool==='dpkg'&&is(['--print-architecture']))console.log('amd64');
 else if(tool==='review-tools.snap-review'&&a.length===1&&a[0].endsWith('.snap')){}
 else if(tool==='snapcraft'){if(is(['revisions','sample','--arch','amd64'])){console.log('Rev. Uploaded Arches Version Channels');if(scenario!=='release-to-candidate'||fs.existsSync(flag))console.log('12 2026-09-06T00:00:00Z amd64 1 '+(fs.existsSync(flag)&&scenario==='promote-to-stable'?'latest/stable*':'latest/candidate*'));}else if(is(['remote-build','--launchpad-accept-public-upload']))fs.writeFileSync('sample_1_amd64.snap','fresh');else if(a.length===3&&a[0]==='upload'&&a[1].endsWith('sample_1_amd64.snap')&&a[2]==='--release=latest/candidate'){fs.writeFileSync(flag,'yes');console.log("Revision 12 created for 'sample'");}else if(is(['release','sample','12','latest/stable']))fs.writeFileSync(flag,'yes');else bad();}
 else if(tool==='unsquashfs'&&a.length===3&&a[0]==='-cat'&&a[2]==='meta/snap.yaml')console.log("name: sample\\nversion: '1'\\narchitectures: [amd64]");
-else if(tool==='ghvmctl'){if(is(['prepare'])||is(['snap-install','sample','--channel','latest/candidate'])||is(['snap-run','sample.sample'])){}else if(a[0]==='exec'&&a.length===2&&a[1]==='gnome-screenshot -w -f /home/ubuntu/.ghvmctl-window-ready.png && test -s /home/ubuntu/.ghvmctl-window-ready.png'){}else if(is(['screenshot-full'])||is(['screenshot-window'])){const kind=a[0]==='screenshot-full'?'screen':'window',d=p.join(process.env.SNAP_REAL_HOME,'ghvmctl-screenshots');fs.mkdirSync(d,{recursive:true});const b=Buffer.alloc(33);Buffer.from('89504e470d0a1a0a0000000d49484452','hex').copy(b);b.writeUInt32BE(1,16);b.writeUInt32BE(1,20);const file='screenshot-'+kind+'-2026-09-06_120000.png';fs.writeFileSync(p.join(d,file),b);fs.symlinkSync(file,p.join(d,'screenshot-'+kind+'.png'));}else bad();}
+else if(tool==='ghvmctl'){if(is(['prepare'])||is(['snap-install','sample','--channel','latest/candidate'])||is(['snap-run','sample.sample'])){}else if(a[0]==='exec'&&a.length===2&&a[1]==='gnome-screenshot -w -f /home/ubuntu/.ghvmctl-window-ready.png && test -s /home/ubuntu/.ghvmctl-window-ready.png'){}else if(is(['screenshot-full'])||is(['screenshot-window'])){const kind=a[0]==='screenshot-full'?'screen':'window',d=p.join(process.env.SNAP_REAL_HOME,'ghvmctl-screenshots');fs.mkdirSync(d,{recursive:true});const b=Buffer.from('${pngBytes().toString("base64")}','base64');const file='screenshot-'+kind+'-2026-09-06_120000.png';fs.writeFileSync(p.join(d,file),b);fs.symlinkSync(file,p.join(d,'screenshot-'+kind+'.png'));}else bad();}
 else if(tool==='lxc'&&a.length===3&&a[0]==='delete'&&a[1]==='--force'&&a[2]===process.env.VM_NAME){}else bad();`;
   for (const tool of [
     "sudo",
@@ -236,7 +270,9 @@ else if(tool==='lxc'&&a.length===3&&a[0]==='delete'&&a[1]==='--force'&&a[2]===pr
     GITHUB_ACTION_PATH: copy,
     GITHUB_WORKSPACE: work,
     GITHUB_OUTPUT: out,
-    GITHUB_STEP_SUMMARY: join(dir, "summary"),
+    GITHUB_STEP_SUMMARY: options.summaryFailure
+      ? join(dir, "missing-parent", "summary")
+      : join(dir, "summary"),
     GITHUB_EVENT_PATH: join(dir, "event.json"),
     GITHUB_REPOSITORY: "owner/repo",
     GITHUB_RUN_ID: "1",
@@ -251,6 +287,7 @@ else if(tool==='lxc'&&a.length===3&&a[0]==='delete'&&a[1]==='--force'&&a[2]===pr
   };
   const steps: Record<string, Record<string, string>> = {},
     uses: string[] = [];
+  let diagnostic = "";
   let nodes = 0,
     code = 0;
   const render = (text: unknown) =>
@@ -262,9 +299,11 @@ else if(tool==='lxc'&&a.length===3&&a[0]==='delete'&&a[1]==='--force'&&a[2]===pr
   try {
     for (const s of a.runs.steps) {
       if (s.if) {
-        if (s.if === "github.run_attempt != '1'" || s.if.startsWith("failure()")) continue;
+        if (s.if === "github.run_attempt != '1'") continue;
+        if (s.if.startsWith("failure()") && (!code || !steps.publish)) continue;
         if (s.if === "inputs.install == 'true'" && inputs.install !== "true") continue;
       }
+      if (code && !s.if?.startsWith("failure()")) continue;
       if (s.uses) {
         const [tool, sha] = s.uses.split("@");
         if (sha !== pins[tool as keyof typeof pins] || !expectedUses[name].includes(tool))
@@ -277,9 +316,22 @@ else if(tool==='lxc'&&a.length===3&&a[0]==='delete'&&a[1]==='--force'&&a[2]===pr
           throw Error(
             `Node 24 required: ${process.version}, ${process.execPath}, ${s.with?.["node-version"]}`,
           );
+        if (tool === "actions/upload-artifact" && options.artifactFailure) {
+          code = 1;
+          continue;
+        }
         if (tool === "snapcore/action-build") steps[s.id!] = { snap: join(work, "built.snap") };
         if (tool === "actions/upload-artifact" && !existsSync(join(work, render(s.with!.path)))) {
           if (!existsSync(render(s.with!.path))) throw Error("Missing artifact");
+        }
+        if (tool === "actions/upload-artifact" && render(s.with!.name).startsWith("manifest-")) {
+          const name = render(s.with!.name);
+          artifacts.push({
+            id: 1,
+            name,
+            expired: false,
+            data: zip([[name + ".yaml", readFileSync(join(work, render(s.with!.path)), "utf8")]]),
+          });
         }
         continue;
       }
@@ -299,8 +351,9 @@ else if(tool==='lxc'&&a.length===3&&a[0]==='delete'&&a[1]==='--force'&&a[2]===pr
           typeof (error as { code?: unknown }).code === "number"
             ? (error as { code: number }).code
             : 1;
-        if (!patch.RUNNER_ENVIRONMENT) throw error;
-        break;
+        diagnostic += (error as { stderr?: string }).stderr || String(error);
+        if (!patch.RUNNER_ENVIRONMENT && !options.expectFailure) throw error;
+        if (patch.RUNNER_ENVIRONMENT) break;
       }
       const values: Record<string, string> = {};
       const lines = readFileSync(out, "utf8").split("\n");
@@ -319,6 +372,8 @@ else if(tool==='lxc'&&a.length===3&&a[0]==='delete'&&a[1]==='--force'&&a[2]===pr
     }
     return {
       code,
+      diagnostic,
+      messages,
       nodes,
       uses,
       requests,

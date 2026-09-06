@@ -13,6 +13,16 @@ test("testing issue binds exact snap/repository/channels and revisions with lega
   expect(body).toContain("<tr><td>amd64</td><td>9007199254740993</td></tr>");
   expect(body).toContain("Try sample on latest/candidate");
   expect(testingIssue(body, "owner/repo", "sample", "latest/stable")).toEqual(context);
+  expect(() =>
+    testingIssue(
+      body.replace("of `sample`", "of `other`"),
+      "owner/repo",
+      "sample",
+      "latest/stable",
+    ),
+  ).toThrow(/context/);
+  const legacy = body.slice(0, body.indexOf("<!-- snapcrafters-testing:"));
+  expect(testingIssue(legacy, "owner/repo", "sample", "latest/stable")).toEqual(context);
   for (const args of [
     ["other/repo", "sample", "latest/stable"],
     ["owner/repo", "other", "latest/stable"],

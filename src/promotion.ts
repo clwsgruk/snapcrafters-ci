@@ -122,13 +122,19 @@ export async function promote(
     }
   }
   const outcome = `Promoted revisions: ${succeeded.join(", ") || "none"}.${failed ? ` Revision ${failed} is unconfirmed; remaining revisions were not attempted.` : ` All requested revisions are active on ${destination}.`}`;
-  await marked(
-    `${issuePath}/comments`,
-    { body: outcome },
-    marker([repo, commentId, succeeded, failed]),
-    token,
-    base,
-  );
+  try {
+    await marked(
+      `${issuePath}/comments`,
+      { body: outcome },
+      marker([repo, commentId, succeeded, failed]),
+      token,
+      base,
+    );
+  } catch {
+    throw Error(
+      `${outcome} GitHub reporting failed; replay will verify Store state before writing.`,
+    );
+  }
   if (failed) throw Error(outcome);
   const reactionsPath = `/repos/${repo}/issues/comments/${commentId}/reactions`;
   const user = await request<{ id: number }>("GET", "/user", token, undefined, base);

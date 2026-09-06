@@ -85,3 +85,44 @@ with its state in /tmp and unrelated global tool configuration excluded.
   accepted. GREEN: marker recovery requires exact body/title identity.
 - `mise run test -- test/screenshots.test.ts` — RED: unrelated 422 plus concurrent ref movement
   created a second commit. GREEN: retry also requires the explicit non-fast-forward error.
+
+- Full `mise run ci` passed after commit d95ad7c, including two independent frozen builds
+  matching all 24 committed generated artifacts and copied execution on Node 24.20.0.
+- Promotion reporting RED: after a confirmed Store release, a comment 403 discarded the precise
+  outcome. GREEN: error retains promoted revisions, and retry verifies Store state without
+  repeating the release. Added current-permission, edited-comment and PR zero-write cases.
+- Screenshot recovery RED: absent history recovery function. GREEN: reachable commit markers
+  recover immutable URLs without uploading again; unrelated markers fail without writes.
+- Multiline credential RED: `payload` leaked into live output/summary. GREEN: redact nonempty
+  credential lines as well as full values; private raw output remains complete.
+- Release boundary table RED: digest mismatch and post-upload auth failure omitted that upload
+  had occurred. GREEN: errors report the one attempted upload; tests also cover failure-before-
+  upload, disconnect-after-upload, baseline exclusion, and exact-state replay.
+- Stale manifest RED: a local architecture outside the current artifact set was accepted. GREEN:
+  reject it before writes. Added real second-page artifact responses and bounded HTTP/pagination
+  checks; these added checks are not claimed as historical RED.
+- Signal-status RED: SIGTERM returned 128 instead of 143. GREEN: preserve the conventional
+  128 + signal status. While green, grouped version synchronization with script execution and
+  reused the bounded no-follow reader for release/screenshot state, leaving ten feature modules.
+- `mise run test -- test/execution.test.ts` — RED: an ignored untracked file escaped the
+  pre-commit check. GREEN: `git ls-files --others` also lists ignored paths.
+- `mise run test -- test/project.test.ts` — RED: a legacy cross-architecture run-on mapping
+  returned an ambiguous builder matrix. GREEN: reject unsupported cross-architecture semantics.
+- `mise run test -- test/testing.test.ts` — RED: visible snap prose could disagree with hidden
+  context. GREEN: require the exact bound introduction as well as the architecture table.
+- `mise run test -- test/release.test.ts` — RED: absent manifest readback function. GREEN:
+  exact artifact identity/revision required, including existing-artifact replay and absence.
+- `mise run test -- test/wrappers.test.ts` — RED: manifest upload used overwrite=true. GREEN:
+  preserve an existing artifact and verify its content before tagging. Copied-wrapper tests then
+  exposed the mock's old token expectation; artifact reads now explicitly expect the repo token.
+- `mise run test -- test/release.test.ts` — RED: unexpected fresh components were accepted.
+  GREEN: require the exact fresh component set. Added core18/20/24 and component success/mismatch
+  cases while green; these supplementary cases are not claimed as historical RED.
+- Same command — RED: missing downloaded snap during saved-state verification caused a second
+  upload. GREEN: only an absent state file permits first publication; verification errors escape.
+- `mise run test -- test/smoke.test.ts -t 'adopted versions'` — RED: copied call-for-testing
+  emitted `A new version (null)`. GREEN: derive one consistent version from exact active revisions.
+- Final boundary suite GREEN: 89 tests, including copied wrappers on both supported Ubuntu image
+  identities. Added exact per-action step routing snapshots while green and rendered existing
+  multiline shell bodies as readable YAML blocks without changing their values. Removed the
+  obsolete unused template; issue rendering lives with its parser.

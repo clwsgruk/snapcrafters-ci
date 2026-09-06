@@ -57,3 +57,33 @@ test("an existing deterministic marker with different content cannot impersonate
     await new Promise<void>((r) => server.close(() => r()));
   }
 });
+
+test("HTTP deadlines are fresh per request and bodies/pagination are bounded", async () => {
+  const { bounded, pages } = await import("../src/github.ts");
+  let requests = 0;
+  const server = createServer((req, res) => {
+    requests++;
+    if (req.url === "/slow") return;
+    if (req.url?.startsWith("/pages?"))
+      res.end(JSON.stringify(Array.from({ length: 100 }, () => ({ id: 1 }))));
+    else res.end('{"ok":true}');
+  });
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+  const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  try {
+    await expect(
+      request("GET", "/slow", "token", undefined, base, Date.now() + 20),
+    ).rejects.toThrow();
+    expect(await request("GET", "/ok", "token", undefined, base)).toEqual({ ok: true });
+    await expect(pages("/pages", "token", undefined, base)).rejects.toThrow(/Pagination/);
+    expect(requests).toBe(12);
+    await expect(bounded(new Response(Buffer.alloc(64)), 32)).rejects.toThrow(/size/);
+    await expect(
+      request("POST", "/ok", "token", { body: "x".repeat(17 * 1024 * 1024) }, base),
+    ).rejects.toThrow(/size/);
+    expect(requests).toBe(12);
+  } finally {
+    server.closeAllConnections();
+    await new Promise<void>((r) => server.close(() => r()));
+  }
+});

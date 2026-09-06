@@ -86,3 +86,10 @@ test("unobserved architecture fields and non-scalar metadata fail clearly", asyn
     rmSync(dir, { recursive: true });
   }
 });
+
+test("legacy run-on cannot silently turn a build host into a different target", async () => {
+  const { architectures } = await import("../src/project.ts");
+  expect(() =>
+    architectures({ base: "core22", architectures: [{ "build-on": "amd64", "run-on": "arm64" }] }),
+  ).toThrow(/ambiguous/i);
+});

@@ -139,6 +139,10 @@ export async function fetchManifests(
       JSON.stringify([...expected.architectures].sort())
   )
     throw Error("Manifest architecture set mismatch");
+  if (
+    readdirSync(directory).some((p) => /^manifest-.*\.yaml$/.test(p) && !names.has(p.slice(0, -5)))
+  )
+    throw Error("Unexpected stale manifest outside this run's artifact set");
   for (const m of manifests) {
     const file = resolve(directory, `manifest-${m.architecture}.yaml`);
     try {

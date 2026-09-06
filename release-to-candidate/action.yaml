@@ -78,9 +78,9 @@ runs:
     - shell: bash
       env:
         SNAPCRAFT_CHANNEL: ${{ inputs.snapcraft-channel }}
-      run: 'sudo snap install snapcraft --channel "$SNAPCRAFT_CHANNEL" --classic
-
-        if ! snap list review-tools >/dev/null 2>&1; then sudo snap install review-tools; fi'
+      run: |-
+        sudo snap install snapcraft --channel "$SNAPCRAFT_CHANNEL" --classic
+        if ! snap list review-tools >/dev/null 2>&1; then sudo snap install review-tools; fi
     - shell: bash
       env:
         CI_PHASE: run
@@ -103,8 +103,16 @@ runs:
       with:
         name: manifest-${{ inputs.architecture }}
         path: manifest-${{ inputs.architecture }}.yaml
-        overwrite: "true"
+        overwrite: "false"
         if-no-files-found: error
+      continue-on-error: true
+    - shell: bash
+      env:
+        CI_PHASE: artifact
+        INPUT_ARCHITECTURE: ${{ inputs.architecture }}
+        INPUT_REPO_TOKEN: ${{ inputs.repo-token }}
+        INPUT_SNAPCRAFT_PROJECT_ROOT: ${{ inputs.snapcraft-project-root }}
+      run: node "$GITHUB_ACTION_PATH/dist/index.cjs"
     - shell: bash
       env:
         CI_PHASE: tag

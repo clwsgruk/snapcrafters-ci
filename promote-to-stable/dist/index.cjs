@@ -8693,26 +8693,6 @@ var import_node_fs2 = require("node:fs");
 
 // src/execution.ts
 var import_node_child_process = require("node:child_process");
-function safeEnv(env = process.env) {
-  const keys = /^(PATH|HOME|LANG|LC_ALL|TZ|CI|DISPLAY|XDG_RUNTIME_DIR|GITHUB_(WORKSPACE|SHA|REF|REF_NAME|REF_TYPE|REPOSITORY|REPOSITORY_OWNER|RUN_ID|RUN_NUMBER|RUN_ATTEMPT|JOB|ACTOR|EVENT_NAME|SERVER_URL|STEP_SUMMARY)|RUNNER_(OS|ARCH|TEMP))$/;
-  return Object.fromEntries(
-    Object.entries(env).filter(([k, v]) => keys.test(k) && v !== void 0)
-  );
-}
-function command(file, args, cwd = process.cwd(), env = safeEnv(), timeout = 6e5) {
-  try {
-    return (0, import_node_child_process.execFileSync)(file, args, {
-      cwd,
-      env,
-      encoding: "utf8",
-      timeout,
-      maxBuffer: 8 * 1024 * 1024,
-      stdio: ["ignore", "pipe", "pipe"]
-    });
-  } catch {
-    throw Error(`${file} ${args[0] || ""} failed`);
-  }
-}
 
 // src/project.ts
 var import_node_fs = require("node:fs");
@@ -8779,6 +8759,28 @@ function scalar(value) {
   if (!["string", "number", "bigint", "boolean"].includes(typeof value))
     throw Error("Expected a scalar");
   return String(value);
+}
+
+// src/execution.ts
+function safeEnv(env = process.env) {
+  const keys = /^(PATH|HOME|LANG|LC_ALL|TZ|CI|DISPLAY|XDG_RUNTIME_DIR|GITHUB_(WORKSPACE|SHA|REF|REF_NAME|REF_TYPE|REPOSITORY|REPOSITORY_OWNER|RUN_ID|RUN_NUMBER|RUN_ATTEMPT|JOB|ACTOR|EVENT_NAME|SERVER_URL|STEP_SUMMARY)|RUNNER_(OS|ARCH|TEMP))$/;
+  return Object.fromEntries(
+    Object.entries(env).filter(([k, v]) => keys.test(k) && v !== void 0)
+  );
+}
+function command(file, args, cwd = process.cwd(), env = safeEnv(), timeout = 6e5) {
+  try {
+    return (0, import_node_child_process.execFileSync)(file, args, {
+      cwd,
+      env,
+      encoding: "utf8",
+      timeout,
+      maxBuffer: 8 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch {
+    throw Error(`${file} ${args[0] || ""} failed`);
+  }
 }
 
 // src/runtime.ts
@@ -8971,6 +8973,10 @@ function testingIssue(body, repo, snap, destination) {
   if (repository(data.repository) !== repo || snapName(data.snap) !== snap || channel(data.destination) !== destination || typeof data.version !== "string")
     throw Error("Testing issue identity mismatch");
   channel(data.channel);
+  if (!body.trimStart().startsWith(
+    `A new version (${data.version}) of \`${data.snap}\` was just pushed to the \`${data.channel}\` channel`
+  ))
+    throw Error("Testing prose differs from bound context");
   if (!Array.isArray(data.rows) || !data.rows.length || data.rows.length > 7 || new Set(data.rows.map((r) => r.architecture)).size !== data.rows.length)
     throw Error("Invalid testing table");
   for (const row of data.rows) {
@@ -9053,13 +9059,19 @@ async function promote(event, repo, snap, destination, token, storeToken, base =
     }
   }
   const outcome = `Promoted revisions: ${succeeded.join(", ") || "none"}.${failed ? ` Revision ${failed} is unconfirmed; remaining revisions were not attempted.` : ` All requested revisions are active on ${destination}.`}`;
-  await marked(
-    `${issuePath}/comments`,
-    { body: outcome },
-    marker([repo, commentId, succeeded, failed]),
-    token,
-    base
-  );
+  try {
+    await marked(
+      `${issuePath}/comments`,
+      { body: outcome },
+      marker([repo, commentId, succeeded, failed]),
+      token,
+      base
+    );
+  } catch {
+    throw Error(
+      `${outcome} GitHub reporting failed; replay will verify Store state before writing.`
+    );
+  }
   if (failed) throw Error(outcome);
   const reactionsPath = `/repos/${repo}/issues/comments/${commentId}/reactions`;
   const user = await request("GET", "/user", token, void 0, base);
