@@ -10,6 +10,7 @@ import { parseProject } from "../project/parse.js";
 import type { Architecture } from "../project/types.js";
 import { InputError, PartialPublicationError } from "../runtime/errors.js";
 import { ownedTemp, removeOwned } from "../runtime/files.js";
+import { retryDelay, systemClock, type Clock } from "../runtime/clock.js";
 import type { ProcessResult, ProcessSpec } from "../runtime/process.js";
 import type { Published, ReleaseResult, SnapIdentity, StoreRevision } from "./types.js";
 
@@ -30,6 +31,8 @@ export interface ReleaseInput {
 }
 
 export interface ReleaseDependencies {
+  clock?: Clock;
+  random?: () => number;
   run(spec: ProcessSpec): Promise<ProcessResult>;
   inspectSnap(path: string, cwd: string, signal: AbortSignal): Promise<SnapIdentity>;
   review(
@@ -150,17 +153,31 @@ export async function runRelease(
       signal,
       redact: [input.launchpadToken, input.storeToken],
     });
-    let after: StoreRevision[];
-    try {
-      after = await deps.readback(source.name, input.channel, input.architecture, signal);
-    } catch (error) {
-      throw new PartialPublicationError(
-        "Upload attempted; exact Store readback failed and publication is ambiguous",
-        completed,
-        { cause: error },
-      );
+    const clock = deps.clock ?? systemClock;
+    const random = deps.random ?? Math.random;
+    let revision: string | undefined;
+    let lastReadbackError: unknown;
+    let lastReconcileError: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const after = await deps.readback(source.name, input.channel, input.architecture, signal);
+        revision = reconcilePublication(upload, source.name, identity, digest, before, after);
+        break;
+      } catch (error) {
+        if (error instanceof PartialPublicationError) lastReconcileError = error;
+        else lastReadbackError = error;
+        if (attempt < 2) await clock.sleep(retryDelay(attempt, undefined, random), signal);
+      }
     }
-    const revision = reconcilePublication(upload, source.name, identity, digest, before, after);
+    if (!revision) {
+      if (lastReadbackError)
+        throw new PartialPublicationError(
+          "Upload attempted; exact Store readback failed and publication is ambiguous",
+          completed,
+          { cause: lastReadbackError },
+        );
+      throw lastReconcileError ?? new Error("Publication reconciliation failed");
+    }
     published = {
       snap: source.name,
       revision,

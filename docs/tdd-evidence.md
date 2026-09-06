@@ -132,6 +132,9 @@ mutable sibling references, and public metadata drift.
   14 files, 88 tests; complete publication state (snap/version/revision/channel/architecture/digest/
   source SHA) is revalidated against the tag phase checkout, exact tags are idempotent, ambiguous
   push results are read back, and Launchpad/Store credentials are absent from the tag subprocess.
+- `mise run test:unit -- release` — RED: one empty post-upload Store view immediately failed an
+  otherwise bindable adopted-version release. GREEN: 14 files, 88 tests; publication performs
+  three bounded, injected-clock readback attempts and never repeats the upload.
 
 - Read-only `gh run list`/`gh run view --log` for public run `33880420814` — PASS: immutable
   consumer SHA `8e68f1ac9fed2dd7accd582bf80b81e0b1486bd2`, observed revisions 943/944 and

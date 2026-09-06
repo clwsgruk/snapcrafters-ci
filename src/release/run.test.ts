@@ -83,6 +83,7 @@ describe("staged release", () => {
     const specs: ProcessSpec[] = [];
     const readbacks: StoreRevision[][] = [
       [],
+      [],
       [
         {
           revision: "44",
@@ -93,6 +94,7 @@ describe("staged release", () => {
       ],
     ];
     const publications: string[] = [];
+    const delays: number[] = [];
     let stagedDocument: Record<string, unknown> | undefined;
     const result = await runRelease(
       {
@@ -106,6 +108,8 @@ describe("staged release", () => {
         sourceSha: "a".repeat(40),
       },
       {
+        clock: { now: () => 0, sleep: async (ms) => void delays.push(ms) },
+        random: () => 0,
         run: async (spec) => {
           specs.push(spec);
           if (spec.file === "snapcraft" && spec.args[0] === "remote-build") {
@@ -133,6 +137,7 @@ describe("staged release", () => {
     );
     expect(result.published).toMatchObject({ revision: "44", version: "9.4" });
     expect(publications).toEqual(["44"]);
+    expect(delays).toHaveLength(1);
     expect(readbacks).toEqual([]);
     expect(stagedDocument?.architectures).toEqual([{ "build-on": ["amd64"], "run-on": ["i386"] }]);
     expect(
@@ -195,7 +200,7 @@ describe("staged release", () => {
         },
       ),
     ).rejects.toThrow(/ambiguous.*publication/i);
-    expect({ reads, uploads, recorded }).toEqual({ reads: 2, uploads: 1, recorded: false });
+    expect({ reads, uploads, recorded }).toEqual({ reads: 4, uploads: 1, recorded: false });
     expect(buildArgs).toContain("--build-for=amd64");
   });
 
