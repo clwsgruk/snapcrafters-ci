@@ -25,3 +25,11 @@ test("wrapper output keys and prerequisite steps are wired to their public contr
   const screenshots = await readFile("src/screenshots/action.ts", "utf8");
   expect(screenshots).toContain("runGhvmctlSetupAction");
 });
+
+test("ShellCheck gate extracts every inline Bash wrapper step", async () => {
+  const mise = await readFile("mise.toml", "utf8");
+  expect(mise).toContain("bun scripts/shellcheck.ts");
+  const gate = await readFile("scripts/shellcheck.ts", "utf8");
+  expect(gate).toContain("for (const action of actions)");
+  expect(gate).toContain('step.shell === "bash"');
+});

@@ -53,7 +53,7 @@ run = "bun scripts/check-dist.ts"
 run = "actionlint"
 
 [tasks.shellcheck]
-run = "shellcheck get-screenshots/wait-for-window"
+run = "bun scripts/shellcheck.ts"
 
 [tasks.ci]
 depends = ["check", "test:coverage", "actionlint", "shellcheck", "check-dist"]
