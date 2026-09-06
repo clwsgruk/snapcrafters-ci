@@ -54,6 +54,9 @@ mutable sibling references, and public metadata drift.
   non-retried 401 authorization, response-size rejection, and deadline abort. GitHub read calls use
   bounded injected retry behavior; writes are not generically retried, and every request carries an
   action-cancellation plus explicit HTTP deadline signal.
+- `mise run test:unit -- github` — RED: two delayed comments reused the same factory-age timeout
+  signal. GREEN with `retry`: 12 files, 83 tests; each individual read or write now receives a
+  fresh bounded child signal while retaining the caller cancellation signal.
 - `mise run test:unit -- github retry` — GREEN: 12 files, 65 tests; deliberately distinct artifact,
   issue, screenshot, and promotion tokens reached only their intended API clients.
 

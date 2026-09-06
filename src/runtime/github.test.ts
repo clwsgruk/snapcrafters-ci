@@ -1,6 +1,7 @@
 import { expect, test, vi } from "vite-plus/test";
 
 const observed = vi.hoisted(() => [] as string[]);
+const requestSignals = vi.hoisted(() => [] as AbortSignal[]);
 
 vi.mock("@actions/github", () => ({
   getOctokit: (token: string) => {
@@ -18,8 +19,9 @@ vi.mock("@actions/github", () => ({
           },
         },
         issues: {
-          createComment: async () => {
+          createComment: async (options: { request: { signal: AbortSignal } }) => {
             call("comment");
+            requestSignals.push(options.request.signal);
           },
           create: async () => {
             call("issue");
@@ -81,4 +83,15 @@ test("routes artifact, issue, promotion, and screenshot calls through distinct s
     "screenshot-token:blob",
     "promotion-token:permission",
   ]);
+});
+
+test("creates a fresh live deadline signal for each delayed write", async () => {
+  requestSignals.length = 0;
+  const comment = issueCommenter("issue-token", "owner/repo", 1, new AbortController().signal);
+  await comment("first");
+  await Promise.resolve();
+  await comment("second");
+  expect(requestSignals).toHaveLength(2);
+  expect(requestSignals[0]).not.toBe(requestSignals[1]);
+  expect(requestSignals.every((signal) => !signal.aborted)).toBe(true);
 });
