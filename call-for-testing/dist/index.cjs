@@ -14374,7 +14374,7 @@ var require_util4 = __commonJS({
     var { DOMException: DOMException2 } = require_constants2();
     var { serializeAMimeType, parseMIMEType } = require_dataURL();
     var { types } = require("util");
-    var { StringDecoder } = require("string_decoder");
+    var { StringDecoder: StringDecoder2 } = require("string_decoder");
     var { btoa: btoa2 } = require("buffer");
     var staticPropertyDescriptors = {
       enumerable: true,
@@ -14465,7 +14465,7 @@ var require_util4 = __commonJS({
             dataURL += serializeAMimeType(parsed);
           }
           dataURL += ";base64,";
-          const decoder = new StringDecoder("latin1");
+          const decoder = new StringDecoder2("latin1");
           for (const chunk of bytes) {
             dataURL += btoa2(decoder.write(chunk));
           }
@@ -14494,7 +14494,7 @@ var require_util4 = __commonJS({
         }
         case "BinaryString": {
           let binaryString = "";
-          const decoder = new StringDecoder("latin1");
+          const decoder = new StringDecoder2("latin1");
           for (const chunk of bytes) {
             binaryString += decoder.write(chunk);
           }
@@ -33202,6 +33202,7 @@ function deliveryMarker(body) {
 // src/runtime/process.ts
 var import_node_child_process = require("node:child_process");
 var import_promises5 = require("node:fs/promises");
+var import_node_string_decoder = require("node:string_decoder");
 async function runProcess(spec) {
   if (!spec.file || spec.file.includes("\n")) throw new Error("Invalid executable");
   if (spec.signal.aborted) throw new Error("Process aborted before spawn");
@@ -33223,6 +33224,19 @@ async function runProcess(spec) {
   let stdout = Buffer.alloc(0);
   let stderr = Buffer.alloc(0);
   let combined = Buffer.alloc(0);
+  let streamedBytes = 0;
+  const sinks = typeof spec.streamOutput === "object" ? spec.streamOutput : {
+    stdout: (value) => void process.stdout.write(value),
+    stderr: (value) => void process.stderr.write(value)
+  };
+  const stream = (kind, value) => {
+    if (!spec.streamOutput || streamedBytes >= outputLimit) return;
+    const bounded = utf8Prefix(value, outputLimit - streamedBytes);
+    streamedBytes += Buffer.byteLength(bounded);
+    if (bounded) sinks[kind](bounded);
+  };
+  const liveStdout = new LiveRedactor(spec.redact ?? [], (value) => stream("stdout", value));
+  const liveStderr = new LiveRedactor(spec.redact ?? [], (value) => stream("stderr", value));
   let timedOut = false;
   let aborted = false;
   let terminationStarted = false;
@@ -33247,6 +33261,8 @@ async function runProcess(spec) {
     if (kind === "stdout") stdout = boundedAppend(stdout, chunk, outputLimit + redactionMargin);
     else stderr = boundedAppend(stderr, chunk, outputLimit + redactionMargin);
     combined = boundedAppend(combined, chunk, logLimit + redactionMargin);
+    if (kind === "stdout") liveStdout.push(chunk);
+    else liveStderr.push(chunk);
   };
   child.stdout.on("data", (chunk) => append("stdout", chunk));
   child.stderr.on("data", (chunk) => append("stderr", chunk));
@@ -33282,10 +33298,8 @@ async function runProcess(spec) {
     const cleanStdout = redactAndBound(stdout, spec.redact ?? [], outputLimit);
     const cleanStderr = redactAndBound(stderr, spec.redact ?? [], outputLimit);
     const cleanLog = Buffer.from(redactAndBound(combined, spec.redact ?? [], logLimit));
-    if (spec.streamOutput) {
-      process.stdout.write(cleanStdout);
-      process.stderr.write(cleanStderr);
-    }
+    liveStdout.finish();
+    liveStderr.finish();
     if (log) await log.writeFile(cleanLog);
     return {
       exitCode: timedOut ? 124 : aborted ? 130 : exitCode,
@@ -33300,6 +33314,49 @@ async function runProcess(spec) {
     spec.signal.removeEventListener("abort", abortListener);
     await log?.close();
   }
+}
+var LiveRedactor = class {
+  constructor(secrets, emit) {
+    this.emit = emit;
+    this.#secrets = [...secrets].filter(Boolean).sort((a, b) => b.length - a.length);
+  }
+  #decoder = new import_node_string_decoder.StringDecoder("utf8");
+  #secrets;
+  #pending = "";
+  push(chunk) {
+    this.#pending += this.#decoder.write(chunk);
+    this.#drain(false);
+  }
+  finish() {
+    this.#pending += this.#decoder.end();
+    this.#drain(true);
+  }
+  #drain(flush) {
+    let output = "";
+    while (this.#pending) {
+      const secret = this.#secrets.find((candidate) => this.#pending.startsWith(candidate));
+      if (secret) {
+        output += "***";
+        this.#pending = this.#pending.slice(secret.length);
+        continue;
+      }
+      if (!flush && this.#secrets.some((candidate) => candidate.startsWith(this.#pending))) break;
+      const character = String.fromCodePoint(this.#pending.codePointAt(0));
+      output += character;
+      this.#pending = this.#pending.slice(character.length);
+    }
+    if (output) this.emit(output);
+  }
+};
+function utf8Prefix(value, limit) {
+  if (Buffer.byteLength(value) <= limit) return value;
+  let end = limit;
+  const bytes = Buffer.from(value);
+  let result = bytes.subarray(0, end).toString("utf8");
+  while (result.endsWith("\uFFFD") && end > 0) {
+    result = bytes.subarray(0, --end).toString("utf8");
+  }
+  return result;
 }
 function boundedAppend(current, chunk, limit) {
   if (current.length >= limit) return current;

@@ -152,6 +152,55 @@ describe("process boundary", () => {
     expect(result.stdout).not.toContain("supe");
   });
 
+  test("streams bounded redacted output before exit in process event order", async () => {
+    const root = await mkdtemp(join(tmpdir(), "ci-live-output-"));
+    const release = join(root, "release");
+    const events: string[] = [];
+    const operation = runProcess({
+      file: "/bin/bash",
+      args: [
+        "--noprofile",
+        "--norc",
+        "-c",
+        "printf 'out-sec'; read -r -t 0.02 _ || true; printf 'ret\\n'; printf 'err-secret\\n' >&2; while [[ ! -f \"$1\" ]]; do read -r -t 0.01 _ || true; done",
+        "--",
+        release,
+      ],
+      cwd: root,
+      env: { PATH: "/missing" },
+      timeoutMs: 2_000,
+      signal: new AbortController().signal,
+      maxOutputBytes: 64,
+      redact: ["secret"],
+      streamOutput: {
+        stdout: (value) => events.push(`stdout:${value}`),
+        stderr: (value) => events.push(`stderr:${value}`),
+      },
+    });
+    let observedBeforeExit = false;
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const streamed = (kind: string) =>
+        events
+          .filter((event) => event.startsWith(`${kind}:`))
+          .map((event) => event.slice(kind.length + 1))
+          .join("");
+      if (streamed("stdout").includes("out-***") && streamed("stderr").includes("err-***")) {
+        observedBeforeExit = true;
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    await writeFile(release, "continue");
+    await operation;
+    expect(observedBeforeExit).toBe(true);
+    expect(events.join("")).not.toContain("secret");
+    const kinds = events
+      .map((event) => event.split(":", 1)[0])
+      .filter((kind, index, all) => kind !== all[index - 1]);
+    expect(kinds).toEqual(["stdout", "stderr"]);
+    expect(Buffer.byteLength(events.join(""))).toBeLessThanOrEqual(64);
+  });
+
   test("settles a log write failure and removes the abort listener", async () => {
     const root = await mkdtemp(join(tmpdir(), "ci-write-failure-"));
     const signal = new AbortController().signal;

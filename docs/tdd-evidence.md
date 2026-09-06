@@ -328,3 +328,9 @@ are forbidden`. GREEN: capture accepts only exact same-directory timestamp alias
   A separate contract RED proved the publish bundle still received `INPUT_REPO_TOKEN`; GREEN keeps
   that secret only on the pinned checkout step. The full gate passed 157 tests in 36 files,
   96.28% parser branches, static checks, and isolated Node 24 rebuilds.
+- Live-output RED: a child printed stdout, then stderr, and blocked; neither injected runner sink
+  observed bytes before release, while the old implementation dumped both streams only after
+  close. GREEN: incremental UTF-8 decoding holds only possible secret prefixes across chunks,
+  redacts before a shared byte bound, and emits in child event order. The regression splits
+  `secret` across writes and reaches both sinks before child exit. The full gate passed 158 tests
+  in 36 files, 96.28% parser branches, static checks, and isolated Node 24 rebuilds.
