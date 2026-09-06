@@ -316,7 +316,7 @@ async function localGitHub(): Promise<{ origin: string; writes: number; close():
     if (url.pathname.endsWith("/issues/1") && request.method === "GET")
       return reply(200, {
         number: 1,
-        body: "A new version (1.0) of `demo` was just pushed to the `latest/candidate` channel.\n<table><tr><td>amd64</td><td>11</td></tr><tr><td>amd64</td><td>12</td></tr></table>\n/promote 11,12 latest/stable done",
+        body: "A new version (1.0) of `demo` was just pushed to the `latest/candidate` channel. The following revisions are available.\n<table><thead><tr><th>CPU Architecture</th><th>Revision</th></tr></thead><tbody><tr><td>amd64</td><td>11</td></tr><tr><td>arm64</td><td>12</td></tr></tbody></table>\n/promote 11,12 latest/stable done",
         state: issueClosed ? "closed" : "open",
         labels: [{ name: "testing" }],
       });
