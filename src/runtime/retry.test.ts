@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 import type { Clock } from "./clock.js";
-import { retryRequest } from "./retry.js";
+import { retryRequest, withDeadline } from "./retry.js";
 
 describe("bounded request retries", () => {
   test("honours bounded Retry-After with injected clock and randomness", async () => {
@@ -44,5 +44,17 @@ describe("bounded request retries", () => {
     await expect(retryRequest(async () => "bad", { signal: controller.signal })).rejects.toThrow(
       /abort/i,
     );
+  });
+
+  test("aborts a request at its explicit deadline", async () => {
+    await expect(
+      withDeadline(new AbortController().signal, 10, async (signal) => {
+        await new Promise<void>((resolve, reject) => {
+          signal.addEventListener("abort", () => reject(new Error("deadline aborted")), {
+            once: true,
+          });
+        });
+      }),
+    ).rejects.toThrow(/deadline.*abort/i);
   });
 });

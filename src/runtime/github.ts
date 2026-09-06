@@ -11,6 +11,7 @@ export function manifestGitHub(
 ): ManifestGitHub {
   const [owner, repo] = repository.split("/") as [string, string];
   const client = getOctokit(token);
+  const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(60_000)]);
   return {
     async listArtifacts(page) {
       const response = await retryRequest(
@@ -21,9 +22,9 @@ export function manifestGitHub(
             run_id: Number(runId),
             per_page: 100,
             page,
-            request: { signal },
+            request: { signal: requestSignal },
           }),
-        { signal },
+        { signal: requestSignal },
       );
       return {
         artifacts: response.data.artifacts.map((item) => ({
@@ -42,9 +43,9 @@ export function manifestGitHub(
             repo,
             artifact_id: id,
             archive_format: "zip",
-            request: { signal },
+            request: { signal: requestSignal },
           }),
-        { signal },
+        { signal: requestSignal },
       );
       return Buffer.from(response.data as ArrayBuffer);
     },
@@ -59,13 +60,14 @@ export function issueCommenter(
 ) {
   const [owner, repo] = repository.split("/") as [string, string];
   const client = getOctokit(token);
+  const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(30_000)]);
   return async (body: string): Promise<void> => {
     await client.rest.issues.createComment({
       owner,
       repo,
       issue_number: issueNumber,
       body,
-      request: { signal },
+      request: { signal: requestSignal },
     });
   };
 }
@@ -77,6 +79,7 @@ export function issueCreator(
 ) {
   const [owner, repo] = repository.split("/") as [string, string];
   const client = getOctokit(token);
+  const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(30_000)]);
   return async (title: string, body: string, labels: string[]): Promise<number> => {
     const response = await client.rest.issues.create({
       owner,
@@ -84,7 +87,7 @@ export function issueCreator(
       title,
       body,
       labels,
-      request: { signal },
+      request: { signal: requestSignal },
     });
     return response.data.number;
   };
@@ -97,20 +100,33 @@ export function screenshotGitHub(
 ): ScreenshotGitHub {
   const [owner, repo] = repository.split("/") as [string, string];
   const client = getOctokit(token);
+  const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(60_000)]);
   return {
     async getRef() {
       return (
         await retryRequest(
-          () => client.rest.git.getRef({ owner, repo, ref: "heads/main", request: { signal } }),
-          { signal },
+          () =>
+            client.rest.git.getRef({
+              owner,
+              repo,
+              ref: "heads/main",
+              request: { signal: requestSignal },
+            }),
+          { signal: requestSignal },
         )
       ).data.object.sha;
     },
     async getCommitTree(sha) {
       return (
         await retryRequest(
-          () => client.rest.git.getCommit({ owner, repo, commit_sha: sha, request: { signal } }),
-          { signal },
+          () =>
+            client.rest.git.getCommit({
+              owner,
+              repo,
+              commit_sha: sha,
+              request: { signal: requestSignal },
+            }),
+          { signal: requestSignal },
         )
       ).data.tree.sha;
     },
@@ -121,7 +137,7 @@ export function screenshotGitHub(
           repo,
           content: content.toString("base64"),
           encoding: "base64",
-          request: { signal },
+          request: { signal: requestSignal },
         })
       ).data.sha;
     },
@@ -137,7 +153,7 @@ export function screenshotGitHub(
             mode: "100644",
             type: "blob",
           })),
-          request: { signal },
+          request: { signal: requestSignal },
         })
       ).data.sha;
     },
@@ -151,7 +167,7 @@ export function screenshotGitHub(
           message,
           author,
           committer: author,
-          request: { signal },
+          request: { signal: requestSignal },
         })
       ).data.sha;
     },
@@ -162,7 +178,7 @@ export function screenshotGitHub(
         ref: "heads/main",
         sha,
         force: false,
-        request: { signal },
+        request: { signal: requestSignal },
       });
     },
   };
@@ -176,6 +192,7 @@ export function promotionGitHub(
 ) {
   const [owner, repo] = repository.split("/") as [string, string];
   const client = getOctokit(token);
+  const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(60_000)]);
   return {
     async permission(actor: string): Promise<string> {
       return (
@@ -185,9 +202,9 @@ export function promotionGitHub(
               owner,
               repo,
               username: actor,
-              request: { signal },
+              request: { signal: requestSignal },
             }),
-          { signal },
+          { signal: requestSignal },
         )
       ).data.permission;
     },
@@ -200,9 +217,9 @@ export function promotionGitHub(
                 owner,
                 repo,
                 issue_number: issueNumber,
-                request: { signal },
+                request: { signal: requestSignal },
               }),
-            { signal },
+            { signal: requestSignal },
           )
         ).data.body ?? ""
       );
@@ -213,7 +230,7 @@ export function promotionGitHub(
         repo,
         issue_number: issueNumber,
         body,
-        request: { signal },
+        request: { signal: requestSignal },
       });
     },
     async close(): Promise<void> {
@@ -222,7 +239,7 @@ export function promotionGitHub(
         repo,
         issue_number: issueNumber,
         state: "closed",
-        request: { signal },
+        request: { signal: requestSignal },
       });
     },
   };

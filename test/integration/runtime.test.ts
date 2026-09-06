@@ -119,6 +119,23 @@ describe("process boundary", () => {
     expect(logged).not.toContain("secret");
     expect(logged).toContain("***");
   });
+
+  test("settles a log write failure and removes the abort listener", async () => {
+    const root = await mkdtemp(join(tmpdir(), "ci-write-failure-"));
+    const signal = new AbortController().signal;
+    await expect(
+      runProcess({
+        file: "bash",
+        args: ["--noprofile", "--norc", "-c", "printf output"],
+        cwd: root,
+        env: { PATH: process.env.PATH ?? "" },
+        timeoutMs: 2_000,
+        signal,
+        logPath: "/dev/full",
+      }),
+    ).rejects.toThrow();
+    expect(getEventListeners(signal, "abort")).toHaveLength(0);
+  });
 });
 
 describe("filesystem boundary", () => {

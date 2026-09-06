@@ -139,3 +139,72 @@ test("retries only the issue comment after an immutable upload", async () => {
   expect(urls.window).toContain("/commit/");
   expect({ blobs, comments }).toEqual({ blobs: 2, comments: 2 });
 });
+
+test("exhausts three confirmed conflicts without recreating blobs", async () => {
+  let parent = "p0";
+  let blobs = 0;
+  let updates = 0;
+  await expect(
+    uploadScreenshots(
+      {
+        repository: "shots/repo",
+        sourceRepository: "apps/demo",
+        snap: "demo",
+        issue: "7",
+        date: "20260906",
+        screen: Buffer.from("s"),
+        window: Buffer.from("w"),
+        author: { name: "bot", email: "bot@example.invalid" },
+      },
+      {
+        github: {
+          getRef: async () => parent,
+          getCommitTree: async () => "tree",
+          createBlob: async () => `b${++blobs}`,
+          createTree: async () => "newtree",
+          createCommit: async () => `commit-${parent}`,
+          updateRef: async () => {
+            updates++;
+            parent = `p${updates}`;
+            throw Object.assign(new Error("conflict"), { status: 409 });
+          },
+        },
+        sleep: async () => undefined,
+      },
+    ),
+  ).rejects.toThrow(/retry limit/i);
+  expect({ blobs, updates }).toEqual({ blobs: 2, updates: 3 });
+});
+
+test.each([403, 422])("does not retry an unconfirmed HTTP %s ref failure", async (status) => {
+  let updates = 0;
+  await expect(
+    uploadScreenshots(
+      {
+        repository: "shots/repo",
+        sourceRepository: "apps/demo",
+        snap: "demo",
+        issue: "7",
+        date: "20260906",
+        screen: Buffer.from("s"),
+        window: Buffer.from("w"),
+        author: { name: "bot", email: "bot@example.invalid" },
+      },
+      {
+        github: {
+          getRef: async () => "parent",
+          getCommitTree: async () => "tree",
+          createBlob: async () => "blob",
+          createTree: async () => "newtree",
+          createCommit: async () => "commit",
+          updateRef: async () => {
+            updates++;
+            throw Object.assign(new Error(`HTTP ${status}`), { status });
+          },
+        },
+        sleep: async () => undefined,
+      },
+    ),
+  ).rejects.toThrow(new RegExp(String(status)));
+  expect(updates).toBe(1);
+});

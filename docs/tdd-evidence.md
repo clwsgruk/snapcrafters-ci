@@ -39,6 +39,13 @@ mutable sibling references, and public metadata drift.
 - `mise run test:integration -- runtime` — GREEN: 2 files, 11 tests; abort-before-spawn,
   TERM→KILL process-group handling, listener cleanup, bounded logs, redaction, both streams,
   timeout, and ownership confinement passed.
+- `mise run test:integration -- http runtime` — GREEN: 4 files, 19 tests, including settled log
+  write failure cleanup and a real local HTTP server exercising pagination, 429 Retry-After,
+  non-retried 401 authorization, response-size rejection, and deadline abort. GitHub read calls use
+  bounded injected retry behavior; writes are not generically retried, and every request carries an
+  action-cancellation plus explicit HTTP deadline signal.
+- `mise run test:unit -- github retry` — GREEN: 12 files, 65 tests; deliberately distinct artifact,
+  issue, screenshot, and promotion tokens reached only their intended API clients.
 
 ## Inventory correction and Phase 3 project parsing
 
