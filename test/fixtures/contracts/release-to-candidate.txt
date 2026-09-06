@@ -1,0 +1,50 @@
+name: Release to Candidate
+description: Builds a snap using `snapcraft remote-build` and releases it to candidate
+author: Snapcrafters
+branding:
+  icon: tag
+  color: orange
+
+inputs:
+  architecture:
+    description: "The architecture to build the snap for"
+    default: amd64
+    required: false
+  bot-email:
+    description: "The email address of the bot account used to commit screenshots."
+    required: false
+    default: "snapforge.team@gmail.com"
+  bot-name:
+    description: "The name of the bot account used to commit screenshots."
+    required: false
+    default: "Snapcrafters Bot"
+  channel:
+    description: "The channel to publish the snap to"
+    default: "latest/candidate"
+    required: false
+  launchpad-token:
+    description: "A token with permissions to create remote builds on Launchpad"
+    required: true
+  multi-snap:
+    description: "Whether the repo contains the source for multiple snaps"
+    required: false
+    default: "false"
+  repo-token:
+    required: true
+    description: A token with privileges to create and push tags to the repository.
+  snapcraft-project-root:
+    description: "The root of the snapcraft project, where the `snapcraft` command would usually be executed from."
+    required: false
+  snapcraft-channel:
+    description: "The channel to install snapcraft from"
+    default: latest/stable
+    required: false
+  store-token:
+    description: "A token with permissions to upload to the specified channel"
+    required: true
+
+outputs:
+  revision:
+    description: "The revision of the uploaded snap"
+    value: ${{ steps.publish.outputs.revision }}
+

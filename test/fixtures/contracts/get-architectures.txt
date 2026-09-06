@@ -1,0 +1,20 @@
+name: Get Architectures
+description: Get the architectures supported by a given snap
+author: Snapcrafters
+branding:
+  icon: code
+  color: orange
+
+inputs:
+  snapcraft-project-root:
+    description: "The root of the snapcraft project, where the `snapcraft` command would usually be executed from."
+    required: false
+
+outputs:
+  architectures:
+    description: "A space-separated list of architectures supported by the snap"
+    value: ${{ steps.architectures.outputs.architectures }}
+  architectures-list:
+    description: "A JSON list of architectures supported by the snap"
+    value: ${{ steps.architectures.outputs.architectures_list }}
+

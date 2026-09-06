@@ -1,0 +1,25 @@
+name: Run tests
+description: Install a snap and run specified tests for it.
+author: Snapcrafters
+branding:
+  icon: check
+  color: orange
+
+inputs:
+  channel:
+    description: "The channel to install the snap from"
+    default: "latest/candidate"
+    required: false
+  github-token:
+    description: "A token with permissions to comment on issues"
+    required: true
+  snapcraft-project-root:
+    description: "The root of the snapcraft project, where the `snapcraft` command would usually be executed from."
+    required: false
+  issue-number:
+    description: "Number of the issue comment on."
+    required: true
+  test-script:
+    description: "A bash script to run the tests (or simply a command)."
+    required: true
+

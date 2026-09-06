@@ -1,0 +1,7 @@
+name: Setup ghvmctl
+description: Configure a runner for access to the KVM socket and install ghvmctl
+author: snapcrafters
+branding:
+  icon: refresh-cw
+  color: orange
+

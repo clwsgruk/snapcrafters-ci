@@ -1,0 +1,12 @@
+name: Fetch manifests
+description: Downloads and unzips all build manifest artifacts for the current workflow run.
+author: Snapcrafters
+branding:
+  icon: code
+  color: orange
+
+inputs:
+  token:
+    description: "A token with permissions to get artifacts from this repository"
+    required: true
+

@@ -1,0 +1,26 @@
+name: Promote snap
+description: Promotes a given set of revisions to a specified channel
+author: Snapcrafters
+branding:
+  icon: trending-up
+  color: orange
+
+inputs:
+  channel:
+    description: "The channel to promote the snap to"
+    default: "latest/stable"
+    required: false
+  github-token:
+    description: "A token with permissions to write issues on the repository"
+    required: true
+  snapcraft-project-root:
+    description: "The root of the snapcraft project, where the `snapcraft` command would usually be executed from."
+    required: false
+  snapcraft-channel:
+    description: "The channel to install snapcraft from"
+    default: latest/stable
+    required: false
+  store-token:
+    description: "A token with permissions to upload to the specified channel"
+    required: true
+

@@ -1,0 +1,21 @@
+name: Review Snap
+description: Review a built Snap package using the same tools as the Snap Store
+author: Snapcrafters
+branding:
+  icon: check-circle
+  color: orange
+
+inputs:
+  is-classic:
+    description: "Set this to 'true' if you are reviewing a classic snap"
+    required: false
+  plugs:
+    description: "The file holding plugs declarations as json to override default snap permissions"
+    required: false
+  slots:
+    description: "The file holding slots declarations as json to override default snap permissions"
+    required: false
+  snap:
+    description: "The snap file to review"
+    required: true
+

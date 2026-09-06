@@ -1,0 +1,16 @@
+[tools]
+node = "24.20.0"
+bun = "1.4.0"
+vp = "0.3.0"
+actionlint = "1.7.12"
+shellcheck = "0.11.0"
+[tasks.install]
+run = "bun install --frozen-lockfile"
+[tasks.fmt]
+run = "./node_modules/.bin/vp fmt"
+[tasks.check]
+run = "./node_modules/.bin/vp check"
+[tasks.test]
+run = "./node_modules/.bin/vp test run"
+[tasks.size]
+run = "node scripts/size.ts"

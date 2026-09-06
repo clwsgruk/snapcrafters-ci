@@ -1,0 +1,20 @@
+name: Test Snap Build
+description: Build the snap locally using Snapcraft and review the output.
+author: Snapcrafters
+branding:
+  icon: zap
+  color: orange
+
+inputs:
+  install:
+    description: "Option to install the snap on the runner after build"
+    default: "false"
+    required: false
+  snapcraft-channel:
+    description: "The channel to install snapcraft from"
+    default: latest/stable
+    required: false
+  snapcraft-project-root:
+    description: "The root of the snapcraft project, where the `snapcraft` command would usually be executed from."
+    required: false
+

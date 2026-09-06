@@ -1,0 +1,52 @@
+name: Get screenshots
+description: Install a snap in a VM and get screenshots of it running
+author: Snapcrafters
+branding:
+  icon: camera
+  color: orange
+
+inputs:
+  bot-email:
+    description: "The email address of the bot account used to commit screenshots."
+    required: false
+    default: "snapforge.team@gmail.com"
+  bot-name:
+    description: "The name of the bot account used to commit screenshots."
+    required: false
+    default: "Snapcrafters Bot"
+  issue-number:
+    description: "The issue number to post the screenshots into"
+    required: true
+  ci-repo:
+    description: "The repo to fetch tools/templates from. Only for debugging."
+    default: "snapcrafters/ci"
+    required: false
+  channel:
+    description: "The channel to install the snap from"
+    default: "latest/candidate"
+    required: false
+  github-token:
+    description: "A token with permissions to comment on issues"
+    required: true
+  snap-application-name:
+    description: "The name of the application defined in `snapcraft.yaml` to run for screenshots."
+    required: false
+  snapcraft-project-root:
+    description: "The root of the snapcraft project, where the `snapcraft` command would usually be executed from."
+    required: false
+  screenshots-repo:
+    description: "The repository where screenshots should be uploaded."
+    default: "snapcrafters/ci-screenshots"
+    required: false
+  screenshots-token:
+    description: "A token with permissions to commit files to the screenshots repo"
+    required: true
+
+outputs:
+  screen:
+    description: "URL to a screenshot of the full screen of the VM"
+    value: ${{ steps.screenshots.outputs.screen }}
+  window:
+    description: "URL to a screenshot of the full screen of the VM"
+    value: ${{ steps.screenshots.outputs.window }}
+
