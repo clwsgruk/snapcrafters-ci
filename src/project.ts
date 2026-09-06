@@ -1,5 +1,14 @@
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import {
+  closeSync,
+  constants,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+  realpathSync,
+} from "node:fs";
+import { resolve, sep } from "node:path";
 import { parse } from "yaml";
 
 export function mapping(value: unknown): Record<string, unknown> {
@@ -12,7 +21,13 @@ export function yaml(source: string) {
 }
 export function project(input = "", cwd = process.cwd()) {
   const publicRoot = input || ".";
-  const root = resolve(cwd, publicRoot);
+  const checkout = realpathSync(cwd),
+    requested = resolve(checkout, publicRoot);
+  if (requested !== checkout && !requested.startsWith(`${checkout}${sep}`))
+    throw Error("Project root must stay inside the checkout");
+  const root = realpathSync(requested);
+  if (root !== requested || !lstatSync(root).isDirectory())
+    throw Error("Project root must be a regular checkout directory");
   const candidates = [
     ".snapcraft.yaml",
     "build-aux/snap/snapcraft.yaml",
@@ -22,13 +37,15 @@ export function project(input = "", cwd = process.cwd()) {
   const file = candidates.filter((p) => existsSync(resolve(root, p))).at(-1);
   if (!file) throw Error(`No snapcraft.yaml found in ${root}`);
   const absoluteYaml = resolve(root, file);
-  const data = yaml(readFileSync(absoluteYaml, "utf8"));
+  const data = yaml(readProjectFile(absoluteYaml));
   const declaration = (kind: string) =>
     [`${kind}-declaration.json`, `.github/${kind}-declaration.json`]
       .filter((p) => existsSync(resolve(cwd, p)))
       .at(-1) || "";
   const plugs = declaration("plug"),
     slots = declaration("slot");
+  for (const declaration of [plugs, slots])
+    if (declaration) readProjectFile(resolve(checkout, declaration), 65536);
   const components = data.components == null ? {} : mapping(data.components);
   return {
     root,
@@ -49,6 +66,18 @@ export function project(input = "", cwd = process.cwd()) {
         .join(","),
     },
   };
+}
+
+function readProjectFile(file: string, limit = 1024 * 1024): string {
+  const fd = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    const stat = fstatSync(fd);
+    if (!stat.isFile() || stat.size > limit)
+      throw Error("Project input must be a bounded regular file");
+    return readFileSync(fd, "utf8");
+  } finally {
+    closeSync(fd);
+  }
 }
 
 export const supportedArchitectures = [

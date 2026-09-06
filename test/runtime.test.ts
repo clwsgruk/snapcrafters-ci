@@ -22,7 +22,20 @@ test("setup-ghvmctl validates before any privileged command", async () => {
   const { readFileSync } = await import("node:fs");
   const { parse } = await import("yaml");
   const action = parse(readFileSync("setup-ghvmctl/action.yaml", "utf8"));
-  expect(action.runs.steps[0].env.CI_PHASE).toBe("validate");
-  expect(action.runs.steps[0].run).toBe('node "$GITHUB_ACTION_PATH/dist/index.cjs"');
-  expect(action.runs.steps.at(-1).env.CI_PHASE).toBe("run");
+  const steps = action.runs.steps;
+  expect(steps[0].run).toContain("RUNNER_ENVIRONMENT");
+  expect(steps[0].run).not.toContain("sudo");
+  const node = steps.findIndex((step: { uses?: string }) =>
+    step.uses?.startsWith("actions/setup-node@"),
+  );
+  const runtime = steps.findIndex(
+    (step: { env?: Record<string, string> }) => step.env?.CI_PHASE === "validate",
+  );
+  const firstPrivileged = steps.findIndex(
+    (step: { run?: string; uses?: string }) =>
+      step.run?.includes("sudo") || step.uses?.startsWith("canonical/setup-lxd@"),
+  );
+  expect(runtime).toBeGreaterThan(node);
+  expect(runtime).toBeLessThan(firstPrivileged);
+  expect(steps.at(-1).env.CI_PHASE).toBe("run");
 });

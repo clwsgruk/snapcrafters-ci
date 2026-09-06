@@ -8,13 +8,20 @@ branding:
 runs:
   using: composite
   steps:
+    - name: Validate hosted runner before host setup
+      shell: bash
+      run: |
+        if [[ "${GITHUB_SERVER_URL:-}" != "https://github.com" || "${RUNNER_ENVIRONMENT:-}" != "github-hosted" || "${RUNNER_OS:-}" != "Linux" || ! "${ImageOS:-}" =~ ^ubuntu(22|24)$ ]]; then
+          echo "Requires github.com-hosted Ubuntu 22.04/24.04" >&2
+          exit 1
+        fi
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+      with:
+        node-version: "24"
     - shell: bash
       env:
         CI_PHASE: validate
       run: node "$GITHUB_ACTION_PATH/dist/index.cjs"
-    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
-      with:
-        node-version: "24"
     - name: Enable KVM on the Github Actions runner
       shell: bash
       run: |

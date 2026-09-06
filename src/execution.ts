@@ -12,7 +12,7 @@ import {
   rmSync,
 } from "node:fs";
 import { tmpdir, constants as osConstants } from "node:os";
-import { join, dirname } from "node:path";
+import { join } from "node:path";
 import { project } from "./project.ts";
 import { StringDecoder } from "node:string_decoder";
 
@@ -166,7 +166,14 @@ export async function script(
       console.warn("Could not append test summary");
     }
   }
-  return { code, script: file, stdout, stderr, summary };
+  return {
+    code,
+    script: file,
+    stdout,
+    stderr,
+    summary,
+    cleanup: () => rmSync(dir, { recursive: true, force: true }),
+  };
 }
 
 export function readBounded(file: string, limit: number, truncate = false): Buffer {
@@ -197,7 +204,11 @@ export async function syncVersion(
 ) {
   const before = project(root, cwd);
   const result = await script(source, cwd);
-  rmSync(dirname(result.script), { recursive: true });
+  try {
+    result.cleanup();
+  } catch {
+    console.warn("Could not remove private update logs");
+  }
   if (result.code) throw Error(`Update script failed with status ${result.code}`);
   const untracked = (
     command("git", ["ls-files", "--others", "-z"], cwd) +

@@ -52,6 +52,22 @@ test("release preserves existing manifest artifacts and verifies them before the
   expect(steps[verify].env?.INPUT_REPO_TOKEN).toBe("${{ inputs.repo-token }}");
 });
 
+test("setup validates host capability before setup-node, then validates Node 24 before mutations", () => {
+  const steps = action("setup-ghvmctl").runs.steps;
+  expect(steps[0].run).toContain("RUNNER_ENVIRONMENT");
+  expect(steps[0].run).not.toContain("dist/index.cjs");
+  const node = steps.findIndex((step) => step.uses?.startsWith("actions/setup-node@"));
+  const runtime = steps.findIndex(
+    (step) => step.env?.CI_PHASE === "validate" && step.run?.includes("dist/index.cjs"),
+  );
+  const firstMutation = steps.findIndex(
+    (step) => step.run?.includes("sudo") || step.uses?.startsWith("canonical/setup-lxd@"),
+  );
+  expect(node).toBeGreaterThan(0);
+  expect(runtime).toBeGreaterThan(node);
+  expect(runtime).toBeLessThan(firstMutation);
+});
+
 test("every action keeps the reviewed step input routes, output routes and conditions", async () => {
   const { default: routes } = await import("./fixtures/wrapper-routes.json");
   for (const name of Object.keys(expectedUses)) {

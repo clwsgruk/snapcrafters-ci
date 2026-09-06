@@ -181,5 +181,10 @@ export async function runTests() {
   } catch {
     console.warn("Test reporting failed; preserved the original test result");
   }
+  try {
+    result.cleanup();
+  } catch {
+    console.warn("Could not remove private test logs");
+  }
   process.exitCode = result.code;
 }

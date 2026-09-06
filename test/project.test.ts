@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vitest";
@@ -28,6 +28,22 @@ test("nested roots retain public spelling but resolve internal paths and last-ma
     });
   } finally {
     rmSync(cwd, { recursive: true });
+  }
+});
+
+test("project paths stay inside the checkout and recipes cannot be symlinks", () => {
+  const parent = mkdtempSync(join(tmpdir(), "project-boundary-"));
+  const cwd = join(parent, "work");
+  const outside = join(parent, "outside");
+  mkdirSync(cwd);
+  mkdirSync(outside);
+  writeFileSync(join(outside, "snapcraft.yaml"), "name: outside\nversion: '1'\n");
+  try {
+    expect(() => project("../outside", cwd)).toThrow(/checkout/i);
+    symlinkSync(join(outside, "snapcraft.yaml"), join(cwd, "snapcraft.yaml"));
+    expect(() => project("", cwd)).toThrow();
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
   }
 });
 

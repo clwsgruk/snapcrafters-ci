@@ -19,6 +19,8 @@ test("one trusted Bash script preserves both streams, failure status, private lo
     expect(readFileSync(result.stderr, "utf8")).toBe("stderr\n");
     expect(statSync(result.stdout).mode & 0o777).toBe(0o600);
     expect(result.summary).toContain("first");
+    result.cleanup();
+    expect(() => statSync(result.stdout)).toThrow();
   } finally {
     rmSync(cwd, { recursive: true });
   }

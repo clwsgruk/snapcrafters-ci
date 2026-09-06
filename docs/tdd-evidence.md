@@ -136,3 +136,12 @@ with its state in /tmp and unrelated global tool configuration excluded.
 - `mise run test -- test/execution.test.ts -t 'credential longer'` — RED: a synthetic credential
   spanning stream chunks leaked fragments into live output. GREEN: retain enough trailing input
   to identify the longest known credential before emitting a bounded chunk; raw output stays exact.
+- Parent `mise run test -- test/wrappers.test.ts test/execution.test.ts` — RED: the setup action
+  executed the Node 24 validator before setup-node, so a clean runner could fail before the requested
+  runtime existed; trusted-script results also exposed no cleanup operation for private raw logs.
+  GREEN: shell-only hosted-runner validation now precedes setup-node, the Node validator runs before
+  privileged steps, and both update/test callers remove owned private logs. Focused result: 22 tests.
+- Parent `mise run test -- test/project.test.ts` — RED: `../outside` was accepted as a project root
+  and a recipe symlink was followed. GREEN: project roots remain inside the canonical checkout and
+  project/declaration files use bounded regular no-follow reads. The combined focused review gate
+  passed 29 tests across four files; size remained 1,883 production nonblank lines.
