@@ -69,3 +69,21 @@ mutable sibling references, and public metadata drift.
   Git repositories covered untracked rejection, multiline early/stderr failure, bounded Markdown
   logs, report failure independence, missing summary no-op, cleanup, cancellation, and argument-array
   review construction.
+
+## Phase 5 — Release and partial publication
+
+- Read-only `gh run list`/`gh run view --log` for public run `33880420814` — PASS: immutable
+  consumer SHA `8e68f1ac9fed2dd7accd582bf80b81e0b1486bd2`, observed revisions 943/944 and
+  `Status: released`. Read-only GitHub code/API inspection of Snapcraft commit
+  `de384be8922b27770df948ce1ceb3a61d314f63b` captured the canonical upload message and revisions
+  table in `test/fixtures/snapcraft/upload-output.json`.
+- `mise run test:unit -- release` — RED: 5 failures proved the generic revision regex accepted an
+  unsupported message, adopted versions were rejected, a pre-existing Store revision was not
+  differentiated, publication-record errors lost known external state, and project symlinks were
+  copied. A later RED proved post-upload readback errors were not stage-aware.
+- `mise run test:unit -- release` — RED for the missing Snapcraft parser module, then GREEN: 9
+  files, 37 tests. The release suite now covers adopted artifact metadata, literal binding,
+  core18/20/22 target restriction versus core24 `--build-for`, configured Snapcraft channel,
+  nested staged Git, regular bounded artifacts/components, exact digest/version/architecture
+  before/after reconciliation, no blind upload retry, immediate publication journaling, and
+  stage-aware failures.

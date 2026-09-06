@@ -1,0 +1,11 @@
+{
+  "snapcraftCommit": "de384be8922b27770df948ce1ceb3a61d314f63b",
+  "snapcraftSource": "https://github.com/canonical/snapcraft/blob/de384be8922b27770df948ce1ceb3a61d314f63b/snapcraft/commands/upload.py",
+  "snapcraftTest": "https://github.com/canonical/snapcraft/blob/de384be8922b27770df948ce1ceb3a61d314f63b/tests/unit/commands/test_upload.py",
+  "publicRun": "https://github.com/snapcrafters/signal-desktop/actions/runs/33880420814",
+  "publicRunHeadSha": "8e68f1ac9fed2dd7accd582bf80b81e0b1486bd2",
+  "publicObservedRevisions": ["943", "944"],
+  "message": "Revision 10 created for 'basic' and released to 'latest/candidate'\n",
+  "revisionsSource": "https://github.com/canonical/snapcraft/blob/de384be8922b27770df948ce1ceb3a61d314f63b/tests/unit/commands/test_status.py",
+  "revisions": "Rev.    Uploaded              Arches    Version    Channels\n2       2016-09-27T19:23:40Z  i386      2.0.1      -\n1       2016-09-27T18:38:43Z  amd64     2.0.2      latest/edge*,latest/stable*"
+}
