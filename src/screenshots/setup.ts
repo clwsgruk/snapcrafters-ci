@@ -2,19 +2,22 @@ import { actionContext } from "../actions/context.js";
 import { actionSignal } from "../actions/signal.js";
 import { runProcess } from "../runtime/process.js";
 
-export async function runGhvmctlSetupAction(): Promise<void> {
-  await actionContext(process.env);
+export async function runGhvmctlSetupAction(
+  env: NodeJS.ProcessEnv = process.env,
+  dependencies: { context?: typeof actionContext; run?: typeof runProcess } = {},
+): Promise<void> {
+  await (dependencies.context ?? actionContext)(env);
   const cancellation = actionSignal();
   try {
     for (const args of [
       ["snap", "install", "ghvmctl"],
       ["snap", "connect", "ghvmctl:lxd", "lxd:lxd"],
     ]) {
-      const result = await runProcess({
+      const result = await (dependencies.run ?? runProcess)({
         file: "sudo",
         args,
         cwd: process.cwd(),
-        env: { PATH: process.env.PATH ?? "" },
+        env: { PATH: env.PATH ?? "" },
         timeoutMs: 5 * 60_000,
         signal: cancellation.signal,
       });

@@ -23,6 +23,8 @@ import { readReleaseState } from "./read-state.js";
 export interface ReleaseActionDependencies {
   context?: (env: NodeJS.ProcessEnv) => Promise<ActionContext>;
   release?: typeof runRelease;
+  recordTag?: typeof recordReleaseTag;
+  readState?: typeof readReleaseState;
 }
 
 export async function runReleaseAction(
@@ -36,13 +38,13 @@ export async function runReleaseAction(
   try {
     if (env.SNAPCRAFTERS_PHASE === "tag") {
       const requested = positiveDecimal(required(env, "published-revision"), "revision");
-      const state = await readReleaseState(statePath);
+      const state = await (dependencies.readState ?? readReleaseState)(statePath);
       if (state.revision !== requested) throw new InputError("Release state revision mismatch");
       if (state.architecture !== target)
         throw new InputError("Release state architecture mismatch");
       if (state.sourceSha !== context.sha)
         throw new InputError("Release state source SHA mismatch");
-      await recordReleaseTag(
+      await (dependencies.recordTag ?? recordReleaseTag)(
         {
           cwd: context.workspace,
           name: state.snap,
@@ -60,7 +62,10 @@ export async function runReleaseAction(
       await unlink(statePath);
       return;
     }
-    const resumed = await optionalReleaseState(statePath);
+    const resumed = await optionalReleaseState(
+      statePath,
+      dependencies.readState ?? readReleaseState,
+    );
     if (resumed) {
       if (resumed.architecture !== target)
         throw new InputError("Release state architecture mismatch");
@@ -107,9 +112,9 @@ export async function runReleaseAction(
   }
 }
 
-async function optionalReleaseState(path: string) {
+async function optionalReleaseState(path: string, readState: typeof readReleaseState) {
   try {
-    return await readReleaseState(path);
+    return await readState(path);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
     throw error;

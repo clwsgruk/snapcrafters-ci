@@ -28335,13 +28335,13 @@ async function runReleaseAction(env, dependencies = {}) {
   try {
     if (env.SNAPCRAFTERS_PHASE === "tag") {
       const requested = positiveDecimal(required(env, "published-revision"), "revision");
-      const state = await readReleaseState(statePath);
+      const state = await (dependencies.readState ?? readReleaseState)(statePath);
       if (state.revision !== requested) throw new InputError("Release state revision mismatch");
       if (state.architecture !== target)
         throw new InputError("Release state architecture mismatch");
       if (state.sourceSha !== context.sha)
         throw new InputError("Release state source SHA mismatch");
-      await recordReleaseTag(
+      await (dependencies.recordTag ?? recordReleaseTag)(
         {
           cwd: context.workspace,
           name: state.snap,
@@ -28359,7 +28359,10 @@ async function runReleaseAction(env, dependencies = {}) {
       await (0, import_promises8.unlink)(statePath);
       return;
     }
-    const resumed = await optionalReleaseState(statePath);
+    const resumed = await optionalReleaseState(
+      statePath,
+      dependencies.readState ?? readReleaseState
+    );
     if (resumed) {
       if (resumed.architecture !== target)
         throw new InputError("Release state architecture mismatch");
@@ -28403,9 +28406,9 @@ async function runReleaseAction(env, dependencies = {}) {
     cancellation.dispose();
   }
 }
-async function optionalReleaseState(path) {
+async function optionalReleaseState(path, readState) {
   try {
-    return await readReleaseState(path);
+    return await readState(path);
   } catch (error) {
     if (error.code === "ENOENT") return void 0;
     throw error;

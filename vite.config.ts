@@ -23,24 +23,24 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json-summary"],
-      include: [
-        "src/actions/context-validation.ts",
-        "src/actions/inputs.ts",
-        "src/manifests/codec.ts",
-        "src/project/architectures.ts",
-        "src/project/schema.ts",
-        "src/promotion/parse.ts",
-        "src/release/store-output.ts",
-        "src/release/state.ts",
-        "src/runtime/retry.ts",
-        "src/screenshots/validation.ts",
-      ],
+      include: ["src/**/*.ts"],
       thresholds: {
-        branches: 90,
-        functions: 90,
-        lines: 90,
-        statements: 90,
+        branches: 75,
+        functions: 85,
+        lines: 88,
+        statements: 85,
+        "src/actions/{context-validation,inputs}.ts": pureThresholds(),
+        "src/manifests/codec.ts": pureThresholds(),
+        "src/project/{architectures,schema}.ts": pureThresholds(),
+        "src/promotion/parse.ts": pureThresholds(),
+        "src/release/{state,store-output}.ts": pureThresholds(),
+        "src/runtime/retry.ts": pureThresholds(),
+        "src/screenshots/validation.ts": pureThresholds(),
       },
     },
   },
 });
+
+function pureThresholds() {
+  return { branches: 90, functions: 90, lines: 90, statements: 90 };
+}

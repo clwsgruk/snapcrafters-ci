@@ -33632,19 +33632,19 @@ async function readPng(path) {
 }
 
 // src/screenshots/setup.ts
-async function runGhvmctlSetupAction() {
-  await actionContext(process.env);
+async function runGhvmctlSetupAction(env = process.env, dependencies = {}) {
+  await (dependencies.context ?? actionContext)(env);
   const cancellation = actionSignal();
   try {
     for (const args of [
       ["snap", "install", "ghvmctl"],
       ["snap", "connect", "ghvmctl:lxd", "lxd:lxd"]
     ]) {
-      const result = await runProcess({
+      const result = await (dependencies.run ?? runProcess)({
         file: "sudo",
         args,
         cwd: process.cwd(),
-        env: { PATH: process.env.PATH ?? "" },
+        env: { PATH: env.PATH ?? "" },
         timeoutMs: 5 * 6e4,
         signal: cancellation.signal
       });

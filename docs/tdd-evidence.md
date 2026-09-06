@@ -343,3 +343,15 @@ are forbidden`. GREEN: capture accepts only exact same-directory timestamp alias
   `uses:` branch is skipped. All side-effect-capable wrapper commands remain isolated fakes. The
   full gate passed 159 tests in 36 files, 17 ShellCheck snippets, no check warnings, deterministic
   rebuilds, and 96.28% parser branches.
+- Coverage-surface RED: replacing the ten-file allowlist with `src/**/*.ts` exposed the honest
+  shipped-source baseline: 159 tests, 74.33% branches, 77.79% statements, 79.69% functions, and
+  79.21% lines; orchestration action modules were at zero. GREEN: action-level success,
+  fail-before-write, fail-after-write/auth/cleanup tests plus real setup tests bring 173 tests in
+  38 files to 79.86% branches, 87.95% statements, 87.73% functions, and 90.26% lines across every
+  shipped source file. The all-source floor is enforced separately from 90% thresholds on every
+  pure parser/validator group. No orchestration module is excluded.
+- The first widened full gate also reproduced `EDQUOT`: two 600 MiB independent Bun dependency
+  trees were installed concurrently in `/tmp`. GREEN retains two clean source-tree rebuilds but
+  builds them sequentially and removes each dependency tree after its bundle hashes are captured.
+  `mise run ci` then passed all 173 tests/38 files, full-source and pure-parser coverage gates,
+  actionlint, 17 ShellCheck snippets, clean type-aware checks, and deterministic Node 24 bundles.

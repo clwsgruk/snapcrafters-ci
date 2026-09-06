@@ -16,7 +16,10 @@ try {
   const first = await copySourceTree(join(temporary, "source-a"));
   const second = await copySourceTree(join(temporary, "source-b"));
   const consumer = join(temporary, "consumer");
-  await Promise.all([buildSource(first), buildSource(second)]);
+  await buildSource(first);
+  await rm(resolve(first, "node_modules"), { recursive: true, force: true });
+  await buildSource(second);
+  await rm(resolve(second, "node_modules"), { recursive: true, force: true });
   const allowedRequires = new Set([
     ...builtinModules,
     ...builtinModules.map((item) => `node:${item}`),
