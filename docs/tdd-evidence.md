@@ -97,3 +97,11 @@ mutable sibling references, and public metadata drift.
   issue rendering and override rejection pass, while two blobs remain one immutable non-force
   commit, confirmed conflicts/readback recover safely, public path fields validate before writes,
   and comment retries cannot repeat the upload.
+
+## Phase 7 — Promotion authorization
+
+- `mise run test:unit -- promotion` — RED: 2 failures proved that issue revision records were not
+  channel-bound and a post-release reporting failure erased the known released set.
+- `mise run test:unit -- promotion` — GREEN: 8 files, 41 tests; strict event/command grammar,
+  permission checks, whole-set revision/channel validation before Store writes, ordered partial
+  outcomes, and close-only-after-all-releases-and-report behavior passed.
