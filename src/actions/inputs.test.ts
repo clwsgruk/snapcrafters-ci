@@ -40,6 +40,7 @@ describe("public input validation", () => {
     expect(required({ INPUT_TEST_SCRIPT: "one\ntwo" }, "test-script", 20)).toBe("one\ntwo");
     expect(optional({ INPUT_ROOT: "nested" }, "root", "fallback")).toBe("nested");
     expect(optional({}, "root", "fallback")).toBe("fallback");
+    expect(optional({ INPUT_ROOT: "" }, "root", "fallback")).toBe("fallback");
     expect(() => required({}, "missing")).toThrow(/required/i);
     expect(() => required({ INPUT_VALUE: "12345" }, "value", 4)).toThrow(/size/i);
     expect(() => required({ INPUT_VALUE: "a\0b" }, "value")).toThrow(/NUL/i);

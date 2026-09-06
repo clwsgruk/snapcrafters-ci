@@ -21,7 +21,7 @@ export function required(env: NodeJS.ProcessEnv, name: string, maxBytes = 64 * 1
 }
 
 export function optional(env: NodeJS.ProcessEnv, name: string, fallback = ""): string {
-  return env[`INPUT_${name.toUpperCase().replaceAll("-", "_")}`] ?? fallback;
+  return env[`INPUT_${name.toUpperCase().replaceAll("-", "_")}`] || fallback;
 }
 
 export function boolean(value: string, name: string): boolean {
