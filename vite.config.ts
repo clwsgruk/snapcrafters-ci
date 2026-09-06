@@ -31,6 +31,7 @@ export default defineConfig({
         "src/project/schema.ts",
         "src/promotion/parse.ts",
         "src/release/store-output.ts",
+        "src/release/state.ts",
         "src/runtime/retry.ts",
         "src/screenshots/validation.ts",
       ],

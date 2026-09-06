@@ -1,5 +1,5 @@
 import * as core from "@actions/core";
-import { readFile, unlink, writeFile } from "node:fs/promises";
+import { unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { actionContext } from "../actions/context.js";
 import {
@@ -16,8 +16,7 @@ import { runProcess } from "../runtime/process.js";
 import { runReview } from "../review/run.js";
 import { recordReleaseTag, runRelease } from "./run.js";
 import { inspectSnapArtifact, snapcraftRevisionReader } from "./snapcraft.js";
-
-type ReleaseState = Awaited<ReturnType<typeof runRelease>>["published"];
+import { readReleaseState } from "./read-state.js";
 
 export async function runReleaseAction(env: NodeJS.ProcessEnv): Promise<void> {
   const context = await actionContext(env);
@@ -27,7 +26,7 @@ export async function runReleaseAction(env: NodeJS.ProcessEnv): Promise<void> {
   try {
     if (env.SNAPCRAFTERS_PHASE === "tag") {
       const requested = positiveDecimal(required(env, "published-revision"), "revision");
-      const state = parseReleaseState(await readFile(statePath, "utf8"));
+      const state = await readReleaseState(statePath);
       if (state.revision !== requested) throw new InputError("Release state revision mismatch");
       if (state.architecture !== target)
         throw new InputError("Release state architecture mismatch");
@@ -84,30 +83,4 @@ export async function runReleaseAction(env: NodeJS.ProcessEnv): Promise<void> {
   } finally {
     cancellation.dispose();
   }
-}
-
-function parseReleaseState(source: string): ReleaseState {
-  if (Buffer.byteLength(source) > 4_096) throw new InputError("Release state exceeds size limit");
-  const value = JSON.parse(source) as Record<string, unknown>;
-  if (
-    !value ||
-    typeof value !== "object" ||
-    typeof value.snap !== "string" ||
-    !/^[a-z0-9][a-z0-9-]{0,39}$/.test(value.snap) ||
-    typeof value.version !== "string" ||
-    !value.version ||
-    value.version.includes("\n") ||
-    typeof value.revision !== "string" ||
-    !/^[1-9][0-9]*$/.test(value.revision) ||
-    typeof value.channel !== "string" ||
-    typeof value.architecture !== "string" ||
-    typeof value.digest !== "string" ||
-    !/^[0-9a-f]{96}$/.test(value.digest) ||
-    typeof value.sourceSha !== "string" ||
-    !/^[0-9a-f]{40}$/.test(value.sourceSha)
-  )
-    throw new InputError("Invalid release state");
-  architecture(value.architecture);
-  channel(value.channel);
-  return value as unknown as ReleaseState;
 }
