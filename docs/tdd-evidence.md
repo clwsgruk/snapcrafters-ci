@@ -56,3 +56,13 @@ mutable sibling references, and public metadata drift.
   filenames, snap/architecture/revision binding, expired artifacts, duplicate records and
   destinations, traversal/absolute paths, symlinks, and archive limits passed.
 - `mise run test:contract` — GREEN: 2 files, 2 tests.
+
+## Phase 4 — Update, review, and trusted tests
+
+- `mise run test:integration -- workflows` — RED: 4 failures proved update/test caller
+  cancellation was ignored, the complete log was not returned independently of scratch storage,
+  and a removed step-summary file replaced the test result with an `ENOENT` error.
+- `mise run test:integration -- workflows` — GREEN: 2 files, 14 tests; real Bash and temporary
+  Git repositories covered untracked rejection, multiline early/stderr failure, bounded Markdown
+  logs, report failure independence, missing summary no-op, cleanup, cancellation, and argument-array
+  review construction.
