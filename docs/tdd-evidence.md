@@ -334,3 +334,12 @@ are forbidden`. GREEN: capture accepts only exact same-directory timestamp alias
   redacts before a shared byte bound, and emits in child event order. The regression splits
   `secret` across writes and reaches both sinks before child exit. The full gate passed 158 tests
   in 36 files, 96.28% parser branches, static checks, and isolated Node 24 rebuilds.
+- Wrapper-boundary RED: setup-ghvmctl's first step was the sudo udev mutation and the unsupported
+  context simulator observed three sudo calls plus two external actions before bundle rejection.
+  GREEN: setup-ghvmctl and get-screenshots begin with a Bash-builtin-only hosted-runner guard,
+  before checkout/KVM/LXD. A second RED showed all five SHA-pinned `uses:` dependencies absent from
+  smoke observations. GREEN: the disposable consumer now simulates and validates checkout, exact
+  Node 24 setup, LXD setup, action-build output, and bounded regular-file artifact upload; no
+  `uses:` branch is skipped. All side-effect-capable wrapper commands remain isolated fakes. The
+  full gate passed 159 tests in 36 files, 17 ShellCheck snippets, no check warnings, deterministic
+  rebuilds, and 96.28% parser branches.

@@ -1,7 +1,7 @@
 import { spawn, execFile as execFileCallback } from "node:child_process";
 import { once } from "node:events";
 import { createServer, type IncomingMessage } from "node:http";
-import { chmod, cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { chmod, cp, lstat, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -19,6 +19,15 @@ const permittedUses = new Set([
   "snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79",
 ]);
 
+interface WrapperStep {
+  id?: string;
+  name?: string;
+  uses?: string;
+  run?: string;
+  env?: Record<string, string>;
+  with?: Record<string, string>;
+}
+
 test("all twelve copied composite wrappers execute real success paths under Node 24", async () => {
   const api = await localGitHub();
   try {
@@ -31,6 +40,10 @@ test("all twelve copied composite wrappers execute real success paths under Node
     expect(observed.get("release-to-candidate")).toContain("snapcraft:upload");
     expect(observed.get("review-snap")).toContain("review:--allow-classic");
     expect(observed.get("test-snap-build")).toContain("--plugs");
+    const allObservations = [...observed.values()].join("\n");
+    for (const dependency of permittedUses) {
+      expect(allObservations, dependency).toContain(`uses:${dependency}`);
+    }
     expect(api.writes).toBeGreaterThan(0);
   } finally {
     await api.close();
@@ -63,6 +76,60 @@ test("all twelve bundles reject an invalid consumer context without the smoke by
   }
 }, 60_000);
 
+test("setup wrapper rejects unsupported context before host-capability steps", async () => {
+  const root = await mkdtemp(join(tmpdir(), "invalid-setup-wrapper-"));
+  const actionPath = join(root, "action");
+  const bin = join(root, "bin");
+  const observed = join(root, "observed");
+  await Promise.all([cp(resolve("setup-ghvmctl"), actionPath, { recursive: true }), mkdir(bin)]);
+  for (const command of ["sudo", "snap", "ghvmctl", "lxc"]) {
+    await writeFile(
+      join(bin, command),
+      `#!/bin/bash\nprintf '${command}\\n' >> '${observed}'\nexit 0\n`,
+      { mode: 0o700 },
+    );
+  }
+  const metadata = parse(await readFile(join(actionPath, "action.yaml"), "utf8")) as {
+    runs: { steps: Array<{ uses?: string; run?: string }> };
+  };
+  const node = await pinnedNode();
+  let failed = false;
+  for (const step of metadata.runs.steps) {
+    if (step.uses) {
+      await writeFile(observed, `uses:${step.uses}\n`, { flag: "a" });
+      continue;
+    }
+    if (!step.run) continue;
+    const result = await execute(
+      "/bin/bash",
+      [
+        "--noprofile",
+        "--norc",
+        "-e",
+        "-o",
+        "pipefail",
+        "-c",
+        step.run.replaceAll("${{ github.action_path }}", actionPath),
+      ],
+      root,
+      {
+        PATH: `${bin}:${dirname(node)}`,
+        GITHUB_ACTIONS: "true",
+        GITHUB_ACTION_PATH: actionPath,
+        RUNNER_ENVIRONMENT: "self-hosted",
+        RUNNER_OS: "Linux",
+        ImageOS: "ubuntu24",
+      },
+    );
+    if (result.code !== 0) {
+      failed = true;
+      break;
+    }
+  }
+  expect(failed).toBe(true);
+  await expect(readFile(observed, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+});
+
 async function runWrapper(action: string, apiOrigin: string): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), `wrapper-${action}-`));
   const workspace = join(root, "workspace");
@@ -93,11 +160,9 @@ async function runWrapper(action: string, apiOrigin: string): Promise<string> {
   ).stdout.trim();
   await fakeExecutables(bin, log, action);
   const node = await pinnedNode();
-  if (action === "test-snap-build") await writeFile(join(workspace, "built.snap"), "snap");
-
   const metadata = parse(await readFile(join(actionPath, "action.yaml"), "utf8")) as {
     inputs?: Record<string, { default?: string; required?: boolean }>;
-    runs: { steps: Array<{ uses?: string; run?: string; env?: Record<string, string> }> };
+    runs: { steps: WrapperStep[] };
   };
   const inputs = Object.fromEntries(
     Object.entries(metadata.inputs ?? {}).map(([name, value]) => [
@@ -106,15 +171,13 @@ async function runWrapper(action: string, apiOrigin: string): Promise<string> {
     ]),
   );
   Object.assign(inputs, requiredInputs(action, workspace));
-  const stepOutputs: Record<string, Record<string, string>> = {
-    build: { snap: join(workspace, "built.snap") },
-    publish: { revision: "44" },
-  };
+  const stepOutputs: Record<string, Record<string, string>> = {};
   let bundleSteps = 0;
   let runSteps = 0;
   for (const step of metadata.runs.steps) {
     if (step.uses) {
       expect(permittedUses.has(step.uses), `${action}: ${step.uses}`).toBe(true);
+      await simulateUse(step, { workspace, node, inputs, stepOutputs, log });
       continue;
     }
     if (!step.run) continue;
@@ -153,10 +216,82 @@ async function runWrapper(action: string, apiOrigin: string): Promise<string> {
       env,
     );
     expect(result.code, `${action}: ${result.stdout}\n${result.stderr}`).toBe(0);
+    if (step.id) stepOutputs[step.id] = parseActionOutput(await readFile(output, "utf8"));
   }
   expect(runSteps, `${action} executable wrapper steps`).toBeGreaterThanOrEqual(bundleSteps);
   expect(bundleSteps, action).toBe(action === "release-to-candidate" ? 2 : 1);
-  return `${await readFile(log, "utf8").catch(() => "")}\n${await readFile(output, "utf8")}`;
+  const observation = `${await readFile(log, "utf8").catch(() => "")}\n${await readFile(output, "utf8")}`;
+  await rm(root, { recursive: true, force: true });
+  return observation;
+}
+
+async function simulateUse(
+  step: WrapperStep,
+  context: {
+    workspace: string;
+    node: string;
+    inputs: Record<string, string>;
+    stepOutputs: Record<string, Record<string, string>>;
+    log: string;
+  },
+): Promise<void> {
+  const dependency = step.uses!;
+  const values = Object.fromEntries(
+    Object.entries(step.with ?? {}).map(([name, value]) => [
+      name,
+      expression(String(value), context.inputs, context.stepOutputs),
+    ]),
+  );
+  switch (dependency) {
+    case "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803":
+      expect(
+        (
+          await execFile("git", ["rev-parse", "--is-inside-work-tree"], { cwd: context.workspace })
+        ).stdout.trim(),
+      ).toBe("true");
+      break;
+    case "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38":
+      expect(values["node-version"]).toBe("24.20.0");
+      expect((await execFile(context.node, ["-p", "process.versions.node"])).stdout.trim()).toBe(
+        "24.20.0",
+      );
+      break;
+    case "canonical/setup-lxd@4e959f8e0d9c5feb27d44c5e4d9a330a782edee0":
+      break;
+    case "snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79": {
+      const artifact = join(context.workspace, "built.snap");
+      expect(values["snapcraft-channel"]).toBe("latest/stable");
+      await writeFile(artifact, "snap");
+      if (!step.id) throw new Error("Simulated action-build step requires an id");
+      context.stepOutputs[step.id] = { snap: artifact };
+      break;
+    }
+    case "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f": {
+      const artifact = resolve(context.workspace, values.path ?? "");
+      const metadata = await lstat(artifact);
+      expect(metadata.isFile()).toBe(true);
+      expect(metadata.isSymbolicLink()).toBe(false);
+      expect(values.name).toMatch(/^manifest-/);
+      break;
+    }
+    default:
+      throw new Error(`Unsimulated wrapper dependency: ${dependency}`);
+  }
+  await writeFile(context.log, `uses:${dependency}\n`, { flag: "a" });
+}
+
+function parseActionOutput(source: string): Record<string, string> {
+  const outputs: Record<string, string> = {};
+  const lines = source.split("\n");
+  for (let index = 0; index < lines.length; index++) {
+    const match = /^([A-Za-z0-9_-]+)<<(.+)$/.exec(lines[index] ?? "");
+    if (!match) continue;
+    const body: string[] = [];
+    while (++index < lines.length && lines[index] !== match[2]) body.push(lines[index]!);
+    if (index >= lines.length) throw new Error(`Unterminated action output ${match[1]}`);
+    outputs[match[1]!] = body.join("\n");
+  }
+  return outputs;
 }
 
 async function pinnedNode(): Promise<string> {
@@ -224,11 +359,12 @@ function expression(
   inputs: Record<string, string>,
   outputs: Record<string, Record<string, string>>,
 ): string {
-  const input = /^\$\{\{ inputs\.([a-z0-9-]+) \}\}$/.exec(value);
-  if (input) return inputs[input[1]!] ?? "";
-  const step = /^\$\{\{ steps\.([a-z0-9-]+)\.outputs\.([a-z0-9_-]+) \}\}$/.exec(value);
-  if (step) return outputs[step[1]!]?.[step[2]!] ?? "";
-  return value;
+  return value
+    .replaceAll(/\$\{\{ inputs\.([a-z0-9-]+) \}\}/g, (_, name: string) => inputs[name] ?? "")
+    .replaceAll(
+      /\$\{\{ steps\.([a-z0-9-]+)\.outputs\.([a-z0-9_-]+) \}\}/g,
+      (_, step: string, name: string) => outputs[step]?.[name] ?? "",
+    );
 }
 
 async function prepareGit(workspace: string): Promise<void> {

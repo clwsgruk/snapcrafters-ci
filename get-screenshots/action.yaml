@@ -53,6 +53,13 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Validate hosted runner
+      shell: bash
+      run: |
+        if [[ "${GITHUB_ACTIONS:-}" != "true" || "${GITHUB_SERVER_URL:-}" != "https://github.com" || "${RUNNER_ENVIRONMENT:-}" != "github-hosted" || "${RUNNER_OS:-}" != "Linux" || ! "${ImageOS:-}" =~ ^ubuntu(22|24)$ ]]; then
+          printf '%s\n' 'Unsupported GitHub Actions runner capability' >&2
+          exit 1
+        fi
     - name: Checkout the source
       uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
     - name: Enable KVM on the GitHub Actions runner

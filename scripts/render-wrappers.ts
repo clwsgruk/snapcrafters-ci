@@ -16,7 +16,7 @@ const actions: Record<
   "get-architectures": { id: "architectures", before: checkoutStep() },
   "get-screenshots": {
     id: "screenshots",
-    before: `${checkoutStep()}    - name: Enable KVM on the GitHub Actions runner
+    before: `${contextBoundaryStep()}${checkoutStep()}    - name: Enable KVM on the GitHub Actions runner
       shell: bash
       run: |
         echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -51,7 +51,7 @@ ${["architecture", "bot-email", "bot-name", "multi-snap"]
   "review-snap": {},
   "run-tests": { before: checkoutStep() },
   "setup-ghvmctl": {
-    before: `    - name: Enable KVM on the GitHub Actions runner
+    before: `${contextBoundaryStep()}    - name: Enable KVM on the GitHub Actions runner
       shell: bash
       run: |
         echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -80,6 +80,17 @@ function checkoutStep(withBlock = ""): string {
   return `    - name: Checkout the source
       uses: actions/checkout@${checkout} # v6
 ${withBlock ? `      with:\n${withBlock}\n` : ""}`;
+}
+
+function contextBoundaryStep(): string {
+  return `    - name: Validate hosted runner
+      shell: bash
+      run: |
+        if [[ "\${GITHUB_ACTIONS:-}" != "true" || "\${GITHUB_SERVER_URL:-}" != "https://github.com" || "\${RUNNER_ENVIRONMENT:-}" != "github-hosted" || "\${RUNNER_OS:-}" != "Linux" || ! "\${ImageOS:-}" =~ ^ubuntu(22|24)$ ]]; then
+          printf '%s\\n' 'Unsupported GitHub Actions runner capability' >&2
+          exit 1
+        fi
+`;
 }
 
 for (const [action, config] of Object.entries(actions)) {

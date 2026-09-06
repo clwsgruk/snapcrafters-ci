@@ -8,6 +8,13 @@ branding:
 runs:
   using: composite
   steps:
+    - name: Validate hosted runner
+      shell: bash
+      run: |
+        if [[ "${GITHUB_ACTIONS:-}" != "true" || "${GITHUB_SERVER_URL:-}" != "https://github.com" || "${RUNNER_ENVIRONMENT:-}" != "github-hosted" || "${RUNNER_OS:-}" != "Linux" || ! "${ImageOS:-}" =~ ^ubuntu(22|24)$ ]]; then
+          printf '%s\n' 'Unsupported GitHub Actions runner capability' >&2
+          exit 1
+        fi
     - name: Enable KVM on the GitHub Actions runner
       shell: bash
       run: |

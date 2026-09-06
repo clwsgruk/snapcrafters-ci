@@ -100,6 +100,14 @@ describe("public action contracts", () => {
         );
         expect(publish?.env).not.toHaveProperty("INPUT_REPO_TOKEN");
       }
+      if (action === "setup-ghvmctl") {
+        const steps = runs.steps as Array<Record<string, unknown>>;
+        expect(steps[0]?.name).toBe("Validate hosted runner");
+        expect(steps[0]?.run).not.toContain("sudo");
+        expect(
+          steps.findIndex((step) => typeof step.run === "string" && step.run.includes("sudo")),
+        ).toBeGreaterThan(0);
+      }
     }
   });
 });
