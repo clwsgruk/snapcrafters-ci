@@ -11,13 +11,26 @@ import { actions } from "../../scripts/actions.js";
 
 const execFile = promisify(execFileCallback);
 const repositoryRoot = resolve(import.meta.dirname, "../..");
-const permittedUses = new Set([
-  "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
-  "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38",
-  "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f",
-  "canonical/setup-lxd@4e959f8e0d9c5feb27d44c5e4d9a330a782edee0",
-  "snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79",
-]);
+const checkout = "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803";
+const setupNode = "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38";
+const uploadArtifact = "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f";
+const setupLxd = "canonical/setup-lxd@4e959f8e0d9c5feb27d44c5e4d9a330a782edee0";
+const actionBuild = "snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79";
+const permittedUses = new Set([checkout, setupNode, uploadArtifact, setupLxd, actionBuild]);
+const expectedUses: Record<string, string[]> = {
+  "call-for-testing": [checkout, setupNode],
+  "fetch-manifests": [setupNode],
+  "get-architectures": [checkout, setupNode],
+  "get-screenshots": [checkout, setupLxd, setupNode],
+  "parse-snapcraft-yaml": [setupNode],
+  "promote-to-stable": [checkout, setupNode],
+  "release-to-candidate": [checkout, setupNode, uploadArtifact],
+  "review-snap": [setupNode],
+  "run-tests": [checkout, setupNode],
+  "setup-ghvmctl": [setupNode, setupLxd],
+  "sync-version": [checkout, setupNode],
+  "test-snap-build": [checkout, actionBuild, setupNode],
+};
 
 interface WrapperStep {
   id?: string;
@@ -40,9 +53,10 @@ test("all twelve copied composite wrappers execute real success paths under Node
     expect(observed.get("release-to-candidate")).toContain("snapcraft:upload");
     expect(observed.get("review-snap")).toContain("review:--allow-classic");
     expect(observed.get("test-snap-build")).toContain("--plugs");
-    const allObservations = [...observed.values()].join("\n");
-    for (const dependency of permittedUses) {
-      expect(allObservations, dependency).toContain(`uses:${dependency}`);
+    for (const [action, dependencies] of Object.entries(expectedUses)) {
+      for (const dependency of dependencies) {
+        expect(observed.get(action), `${action}: ${dependency}`).toContain(`uses:${dependency}`);
+      }
     }
     expect(api.writes).toBeGreaterThan(0);
   } finally {
@@ -262,6 +276,7 @@ async function simulateUse(
       );
       break;
     case "canonical/setup-lxd@4e959f8e0d9c5feb27d44c5e4d9a330a782edee0":
+      expect(Object.keys(values)).toEqual([]);
       break;
     case "snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79": {
       const artifact = join(context.workspace, "built.snap");
@@ -386,7 +401,11 @@ async function prepareGit(workspace: string): Promise<void> {
 
 async function fakeExecutables(bin: string, log: string, action: string): Promise<void> {
   const scripts: Record<string, string> = {
-    sudo: `printf 'sudo:%s\\n' "$*" >> '${log}'\nexit 0`,
+    sudo: `printf 'sudo:%s\\n' "$*" >> '${log}'
+case "$1 $2" in
+  "snap install"|"snap connect"|"tee /etc/udev/rules.d/99-kvm4all.rules"|"udevadm control"|"udevadm trigger") exit 0 ;;
+  *) printf 'unsupported sudo command: %s\\n' "$*" >&2; exit 64 ;;
+esac`,
     snap: snapScript(log, action),
     dpkg: `printf amd64`,
     lxc: `printf 'lxc:%s\\n' "$*" >> '${log}'`,
@@ -395,12 +414,14 @@ async function fakeExecutables(bin: string, log: string, action: string): Promis
     ghvmctl: `printf 'ghvmctl:%s\\n' "$*" >> '${log}'
 mkdir -p "$SNAP_REAL_HOME/ghvmctl-screenshots"
 case "$1" in
+ prepare|snap-install|snap-run|exec) ;;
  screenshot-full)
    printf '\\211PNG\\r\\n\\032\\nscreen' > "$SNAP_REAL_HOME/ghvmctl-screenshots/screenshot-screen-2026-09-06_120000.png"
    ln -sf screenshot-screen-2026-09-06_120000.png "$SNAP_REAL_HOME/ghvmctl-screenshots/screenshot-screen.png" ;;
  screenshot-window)
    printf '\\211PNG\\r\\n\\032\\nwindow' > "$SNAP_REAL_HOME/ghvmctl-screenshots/screenshot-window-2026-09-06_120001.png"
    ln -sf screenshot-window-2026-09-06_120001.png "$SNAP_REAL_HOME/ghvmctl-screenshots/screenshot-window.png" ;;
+ *) printf 'unsupported ghvmctl command: %s\\n' "$*" >&2; exit 64 ;;
 esac`,
     snapcraft: snapcraftScript(log, action),
   };
@@ -426,6 +447,7 @@ case "${action}:$1" in
    test -f '${state}-11' && printf '11      2026-09-06T10:00:00Z  amd64     1.0        latest/stable*\\n' || true
    test -f '${state}-12' && printf '12      2026-09-06T10:00:00Z  amd64     1.0        latest/stable*\\n' || true ;;
  promote-to-stable:release) touch '${state}-'$3 ;;
+ *) printf 'unsupported snapcraft command: %s\\n' "$*" >&2; exit 64 ;;
 esac`;
 }
 
@@ -433,8 +455,8 @@ function snapScript(log: string, action: string): string {
   return `printf 'snap:%s\\n' "$*" >> '${log}'
 case "${action}:$1" in
  release-to-candidate:download) printf 'fresh snap' > demo_44.snap ;;
- setup-ghvmctl:install|setup-ghvmctl:connect) ;;
- *) test "${action}" != release-to-candidate || { printf 'unsupported snap command' >&2; exit 64; } ;;
+ release-to-candidate:list|review-snap:list|test-snap-build:list) exit 1 ;;
+ *) printf 'unsupported snap command: %s\\n' "$*" >&2; exit 64 ;;
 esac`;
 }
 

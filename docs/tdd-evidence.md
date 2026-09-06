@@ -297,6 +297,20 @@ mutable sibling references, and public metadata drift.
   accepting its revision. GREEN: 114 unit tests; full `mise run ci` passed 175 tests in 38 files,
   all per-parser 90% gates, and the deterministic 12-bundle checks.
 
+## Post-remediation review gate
+
+- A final read-only review of commit `217bf322746d8634c73ac4bfa11110127216fa7b`
+  found one remaining P1 and one P2. A caller-provided `SNAPCRAFTERS_PHASE=validate` could
+  leak into the final setup invocation and suppress installation; wrapper dependency observations
+  were aggregate and several fakes accepted unsupported commands.
+- RED evidence was the reviewer's valid-context direct bundle reproduction (exit 0 with inherited
+  validation phase). The final setup wrapper now explicitly clears that internal phase, contract
+  tests require that override and the setup-specific pinned LXD dependency, and the smoke simulator
+  asserts each action's exact pinned dependency set. Snapcraft, Snap, ghvmctl and privileged-command
+  fakes reject unsupported command shapes.
+- `mise run test:contract` passed 6 tests in 3 files and `mise run test:smoke` passed 3 tests in its
+  copied-wrapper suite after remediation.
+
 ## Intentionally unrun external acceptance
 
 No Launchpad remote build, Snap Store upload/release/promotion, GitHub issue/comment/tag/ref write,

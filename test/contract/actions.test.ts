@@ -114,6 +114,13 @@ describe("public action contracts", () => {
         ).toBeLessThan(
           steps.findIndex((step) => typeof step.run === "string" && step.run.includes("sudo")),
         );
+        expect(
+          steps.some(
+            (step) => step.uses === "canonical/setup-lxd@4e959f8e0d9c5feb27d44c5e4d9a330a782edee0",
+          ),
+        ).toBe(true);
+        const setup = steps.find((step) => step.name === "Run setup-ghvmctl");
+        expect(setup?.env).toMatchObject({ SNAPCRAFTERS_PHASE: "" });
       }
     }
   });

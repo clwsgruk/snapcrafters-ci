@@ -34,4 +34,6 @@ runs:
       uses: canonical/setup-lxd@4e959f8e0d9c5feb27d44c5e4d9a330a782edee0 # v0.1.1
     - name: Run setup-ghvmctl
       shell: bash
+      env:
+        SNAPCRAFTERS_PHASE: ""
       run: node "${{ github.action_path }}/dist/index.cjs"

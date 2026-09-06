@@ -52,6 +52,7 @@ ${["architecture", "bot-email", "bot-name", "multi-snap"]
   "run-tests": { before: checkoutStep() },
   "setup-ghvmctl": {
     before: contextBoundaryStep(),
+    extraEnv: '        SNAPCRAFTERS_PHASE: ""\n',
     afterNode: `    - name: Validate action context
       shell: bash
       env:
