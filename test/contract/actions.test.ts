@@ -64,6 +64,32 @@ describe("public action contracts", () => {
           `INPUT_${input.toUpperCase().replaceAll("-", "_")}:`,
         );
       }
+      const runs = metadata.runs as { using?: unknown; steps?: unknown };
+      expect(runs.using, action).toBe("composite");
+      expect(Array.isArray(runs.steps), action).toBe(true);
+      const ids = new Set<string>();
+      for (const [index, rawStep] of (runs.steps as unknown[]).entries()) {
+        expect(rawStep && typeof rawStep === "object", `${action}:step ${index}`).toBe(true);
+        const step = rawStep as Record<string, unknown>;
+        expect(
+          typeof step.uses === "string" || typeof step.run === "string",
+          `${action}:step ${index}`,
+        ).toBe(true);
+        if (step.uses !== undefined) {
+          expect(step.uses, `${action}:step ${index}`).toMatch(
+            /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+@[0-9a-f]{40}$/,
+          );
+        }
+        if (step.run !== undefined) expect(step.shell, `${action}:step ${index}`).toBe("bash");
+        expect(
+          step.env === undefined || (step.env !== null && typeof step.env === "object"),
+          `${action}:step ${index} env`,
+        ).toBe(true);
+        if (typeof step.id === "string") {
+          expect(ids.has(step.id), `${action}:duplicate step id ${step.id}`).toBe(false);
+          ids.add(step.id);
+        }
+      }
     }
   });
 });
