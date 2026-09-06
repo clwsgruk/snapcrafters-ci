@@ -128,6 +128,11 @@ mutable sibling references, and public metadata drift.
   issue rendering and override rejection pass, while two blobs remain one immutable non-force
   commit, confirmed conflicts/readback recover safely, public path fields validate before writes,
   and comment retries cannot repeat the upload.
+- `mise run test:unit -- screenshots` — RED: an empty/non-PNG capture was accepted and both blobs
+  were written. GREEN with `github retry`: 14 files, 76 tests; input metadata and PNG signatures,
+  every returned Git object SHA, success/error ref readback, descendant ancestry, and confirmed
+  conflict semantics are checked. Bounded retries use the shared injected clock/random/Retry-After
+  policy, while comment retries reuse the single immutable upload.
 
 ## Phase 7 — Promotion authorization
 

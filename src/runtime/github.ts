@@ -181,6 +181,19 @@ export function screenshotGitHub(
         request: { signal: requestSignal },
       });
     },
+    async isAncestor(ancestor, descendant) {
+      const response = await retryRequest(
+        () =>
+          client.rest.repos.compareCommitsWithBasehead({
+            owner,
+            repo,
+            basehead: `${ancestor}...${descendant}`,
+            request: { signal: requestSignal },
+          }),
+        { signal: requestSignal },
+      );
+      return response.data.status === "ahead" || response.data.status === "identical";
+    },
   };
 }
 

@@ -1,4 +1,6 @@
 import { InputError } from "../runtime/errors.js";
+import { retryDelay, systemClock, type Clock } from "../runtime/clock.js";
+import { retryAfterMilliseconds } from "../runtime/retry.js";
 
 export interface ScreenshotGitHub {
   getRef(): Promise<string>;
@@ -12,6 +14,7 @@ export interface ScreenshotGitHub {
     author: { name: string; email: string },
   ): Promise<string>;
   updateRef(sha: string): Promise<void>;
+  isAncestor(ancestor: string, descendant: string): Promise<boolean>;
 }
 
 export interface ScreenshotUpload {
@@ -27,8 +30,16 @@ export interface ScreenshotUpload {
 
 export async function uploadScreenshots(
   input: ScreenshotUpload,
-  deps: { github: ScreenshotGitHub; sleep(ms: number): Promise<void> },
+  deps: {
+    github: ScreenshotGitHub;
+    clock?: Clock;
+    random?: () => number;
+    signal?: AbortSignal;
+  },
 ): Promise<{ screen: string; window: string }> {
+  const clock = deps.clock ?? systemClock;
+  const signal = deps.signal ?? new AbortController().signal;
+  const random = deps.random ?? Math.random;
   if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(input.snap) || !/^[1-9][0-9]*$/.test(input.issue)) {
     throw new InputError("Invalid screenshot snap or issue");
   }
@@ -46,37 +57,73 @@ export async function uploadScreenshots(
   if (input.screen.length > 10 * 1024 * 1024 || input.window.length > 10 * 1024 * 1024) {
     throw new InputError("Screenshot exceeds size limit");
   }
+  validatePng(input.screen);
+  validatePng(input.window);
   const prefix = `${input.date}-${input.snap}-${input.issue}`;
   const entries = [
-    { path: `${prefix}-screen.png`, sha: await deps.github.createBlob(input.screen) },
-    { path: `${prefix}-window.png`, sha: await deps.github.createBlob(input.window) },
+    {
+      path: `${prefix}-screen.png`,
+      sha: gitSha(await deps.github.createBlob(input.screen), "blob"),
+    },
+    {
+      path: `${prefix}-window.png`,
+      sha: gitSha(await deps.github.createBlob(input.window), "blob"),
+    },
   ];
   let commit = "";
   for (let attempt = 0; attempt < 3; attempt++) {
-    const parent = await deps.github.getRef();
-    const base = await deps.github.getCommitTree(parent);
-    const tree = await deps.github.createTree(base, entries);
-    commit = await deps.github.createCommit(
-      tree,
-      parent,
-      `data: screenshots for ${input.sourceRepository}/${input.snap}#${input.issue}`,
-      input.author,
+    const parent = gitSha(await deps.github.getRef(), "ref");
+    const base = gitSha(await deps.github.getCommitTree(parent), "tree");
+    const tree = gitSha(await deps.github.createTree(base, entries), "tree");
+    commit = gitSha(
+      await deps.github.createCommit(
+        tree,
+        parent,
+        `data: screenshots for ${input.sourceRepository}/${input.snap}#${input.issue}`,
+        input.author,
+      ),
+      "commit",
     );
     try {
       await deps.github.updateRef(commit);
+      const current = gitSha(await deps.github.getRef(), "ref readback");
+      if (current !== commit && !(await deps.github.isAncestor(commit, current)))
+        throw new Error("Screenshot ref update could not be confirmed");
       break;
     } catch (error) {
-      const current = await deps.github.getRef();
-      if (current === commit) break;
-      const status = (error as { status?: number }).status;
-      if (current === parent || (status !== 409 && status !== 422)) throw error;
+      const current = gitSha(await deps.github.getRef(), "ref readback");
+      if (current === commit || (await deps.github.isAncestor(commit, current))) break;
+      if (current === parent || !confirmedRefConflict(error)) throw error;
       if (attempt === 2)
         throw new Error("Screenshot ref conflict retry limit exhausted", { cause: error });
-      await deps.sleep(100 * (attempt + 1));
+      const retryAfter = retryAfterMilliseconds(error, clock.now());
+      await clock.sleep(retryDelay(attempt, retryAfter, random), signal);
     }
   }
   const baseUrl = `https://raw.githubusercontent.com/${input.repository}/${commit}`;
   return { screen: `${baseUrl}/${entries[0]!.path}`, window: `${baseUrl}/${entries[1]!.path}` };
+}
+
+function gitSha(value: string, label: string): string {
+  if (!/^[0-9a-f]{40}$/.test(value)) throw new InputError(`Invalid Git ${label} SHA`);
+  return value;
+}
+
+function validatePng(value: Buffer): void {
+  if (
+    value.length < 8 ||
+    !value.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+  )
+    throw new InputError("Screenshot must be a non-empty PNG image");
+}
+
+function confirmedRefConflict(error: unknown): boolean {
+  const status = (error as { status?: number }).status;
+  const message = error instanceof Error ? error.message : "";
+  return (
+    (status === 409 && /conflict/i.test(message)) ||
+    (status === 422 && /reference update failed|not a fast forward/i.test(message))
+  );
 }
 
 export async function publishScreenshots(
@@ -84,7 +131,9 @@ export async function publishScreenshots(
   deps: {
     github: ScreenshotGitHub;
     comment(body: string): Promise<void>;
-    sleep(ms: number): Promise<void>;
+    clock?: Clock;
+    random?: () => number;
+    signal?: AbortSignal;
   },
 ): Promise<{ screen: string; window: string }> {
   const urls = await uploadScreenshots(input, deps);
@@ -96,7 +145,15 @@ export async function publishScreenshots(
     } catch (error) {
       if (attempt >= 2)
         throw new Error("Screenshot comment retry limit exhausted", { cause: error });
-      await deps.sleep(100 * (attempt + 1));
+      const clock = deps.clock ?? systemClock;
+      await clock.sleep(
+        retryDelay(
+          attempt,
+          retryAfterMilliseconds(error, clock.now()),
+          deps.random ?? Math.random,
+        ),
+        deps.signal ?? new AbortController().signal,
+      );
     }
   }
 }

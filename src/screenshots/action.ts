@@ -56,7 +56,7 @@ export async function runScreenshotsAction(env: NodeJS.ProcessEnv): Promise<void
           Number(issue),
           cancellation.signal,
         ),
-        sleep: async (ms) => void (await new Promise((resolve) => setTimeout(resolve, ms))),
+        signal: cancellation.signal,
       },
     );
     core.setOutput("screen", urls.screen);

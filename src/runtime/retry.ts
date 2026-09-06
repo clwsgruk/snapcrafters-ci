@@ -21,7 +21,7 @@ export async function retryRequest<T>(
       return await request();
     } catch (error) {
       if (attempt + 1 >= attempts || !retryable(error)) throw error;
-      const retryAfter = retryAfterMs(error, clock.now());
+      const retryAfter = retryAfterMilliseconds(error, clock.now());
       await clock.sleep(retryDelay(attempt, retryAfter, random), options.signal);
     }
   }
@@ -50,7 +50,7 @@ function retryable(error: unknown): boolean {
   return status === 429 || status === 502 || status === 503 || status === 504;
 }
 
-function retryAfterMs(error: unknown, now: number): number | undefined {
+export function retryAfterMilliseconds(error: unknown, now: number): number | undefined {
   const headers = (error as { response?: { headers?: Record<string, unknown> } }).response
     ?.headers;
   const value = headers?.["retry-after"];

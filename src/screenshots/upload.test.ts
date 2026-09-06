@@ -1,210 +1,171 @@
+import type { Clock } from "../runtime/clock.js";
 import { expect, test } from "vite-plus/test";
-import { publishScreenshots, uploadScreenshots } from "./upload.js";
+import { publishScreenshots, type ScreenshotGitHub, uploadScreenshots } from "./upload.js";
 
-test("uploads two blobs in one commit and retries a confirmed non-force ref conflict", async () => {
-  let parent = "p1";
-  let updates = 0;
-  const trees: unknown[] = [];
-  const result = await uploadScreenshots(
-    {
-      repository: "shots/repo",
-      sourceRepository: "apps/demo",
-      snap: "demo",
-      issue: "7",
-      date: "20260906",
-      screen: Buffer.from("screen"),
-      window: Buffer.from("window"),
-      author: { name: "bot", email: "bot@example.invalid" },
-    },
-    {
-      github: {
-        getRef: async () => parent,
-        getCommitTree: async (sha) => `tree-${sha}`,
-        createBlob: async (data) => `blob-${data.toString()}`,
-        createTree: async (base, entries) => {
-          trees.push([base, entries]);
-          return `tree-new-${base}`;
-        },
-        createCommit: async (_tree, current) => `commit-${current}`,
-        updateRef: async (sha) => {
-          updates++;
-          if (updates === 1) {
-            parent = "p2";
-            throw Object.assign(new Error("conflict"), { status: 422 });
-          }
-          parent = sha;
-        },
-      },
-      sleep: async () => undefined,
-    },
-  );
-  expect(updates).toBe(2);
-  expect(trees).toHaveLength(2);
-  expect(result.screen).toContain("/commit-p2/");
-  expect(result.window).toContain("/commit-p2/");
+const sha = (digit: string) => digit.repeat(40);
+const png = (body: string) =>
+  Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), Buffer.from(body)]);
+const input = () => ({
+  repository: "shots/repo",
+  sourceRepository: "apps/demo",
+  snap: "demo",
+  issue: "7",
+  date: "20260906",
+  screen: png("screen"),
+  window: png("window"),
+  author: { name: "bot", email: "bot@example.invalid" },
 });
 
-test("readback recovers disconnect after successful ref update without re-upload", async () => {
-  let ref = "parent";
-  let blobs = 0;
-  const result = await uploadScreenshots(
-    {
-      repository: "shots/repo",
-      sourceRepository: "apps/demo",
-      snap: "demo",
-      issue: "7",
-      date: "20260906",
-      screen: Buffer.from("s"),
-      window: Buffer.from("w"),
-      author: { name: "bot", email: "bot@example.invalid" },
-    },
-    {
-      github: {
-        getRef: async () => ref,
-        getCommitTree: async () => "tree",
-        createBlob: async () => `b${++blobs}`,
-        createTree: async () => "newtree",
-        createCommit: async () => "commit",
-        updateRef: async () => {
-          ref = "commit";
-          throw new Error("disconnect");
-        },
-      },
-      sleep: async () => undefined,
-    },
-  );
-  expect(result.screen).toContain("/commit/");
-  expect(blobs).toBe(2);
-});
+function client(overrides: Partial<ScreenshotGitHub> = {}): ScreenshotGitHub {
+  return {
+    getRef: async () => sha("1"),
+    getCommitTree: async () => sha("2"),
+    createBlob: async (content) => (content.equals(input().screen) ? sha("3") : sha("4")),
+    createTree: async () => sha("5"),
+    createCommit: async () => sha("6"),
+    updateRef: async () => undefined,
+    isAncestor: async () => false,
+    ...overrides,
+  };
+}
 
-test("rejects invalid repositories and dates before creating either blob", async () => {
-  let blobs = 0;
+function clock(delays: number[] = []): Clock {
+  return { now: () => 0, sleep: async (ms) => void delays.push(ms) };
+}
+
+test("rejects invalid metadata and non-PNG images before GitHub writes", async () => {
+  let writes = 0;
+  const github = client({
+    createBlob: async () => {
+      writes++;
+      return sha("3");
+    },
+  });
   await expect(
-    uploadScreenshots(
-      {
-        repository: "bad repository",
-        sourceRepository: "apps/demo",
-        snap: "demo",
-        issue: "7",
-        date: "../../etc",
-        screen: Buffer.from("s"),
-        window: Buffer.from("w"),
-        author: { name: "bot", email: "bot@example.invalid" },
-      },
-      {
-        github: {
-          getRef: async () => "parent",
-          getCommitTree: async () => "tree",
-          createBlob: async () => `b${++blobs}`,
-          createTree: async () => "tree",
-          createCommit: async () => "commit",
-          updateRef: async () => undefined,
-        },
-        sleep: async () => undefined,
-      },
-    ),
-  ).rejects.toThrow(/repository|date/i);
-  expect(blobs).toBe(0);
+    uploadScreenshots({ ...input(), screen: Buffer.alloc(0) }, { github }),
+  ).rejects.toThrow(/PNG|empty/i);
+  await expect(uploadScreenshots({ ...input(), date: "20260230" }, { github })).rejects.toThrow(
+    /date/i,
+  );
+  expect(writes).toBe(0);
 });
 
-test("retries only the issue comment after an immutable upload", async () => {
+test("uploads two blobs in one commit and confirms a successful ref update", async () => {
+  let ref = sha("1");
+  let blobs = 0;
+  const result = await uploadScreenshots(input(), {
+    github: client({
+      getRef: async () => ref,
+      createBlob: async () => [sha("3"), sha("4")][blobs++]!,
+      updateRef: async (value) => {
+        ref = value;
+      },
+    }),
+  });
+  expect({ blobs, ref }).toEqual({ blobs: 2, ref: sha("6") });
+  expect(result.screen).toContain(`/${sha("6")}/`);
+});
+
+test("retries confirmed non-fast-forward contention without recreating blobs", async () => {
+  let ref = sha("1");
+  let blobs = 0;
+  let updates = 0;
+  const commits = [sha("6"), sha("7")];
+  const result = await uploadScreenshots(input(), {
+    github: client({
+      getRef: async () => ref,
+      createBlob: async () => [sha("3"), sha("4")][blobs++]!,
+      createCommit: async () => commits[updates]!,
+      updateRef: async (value) => {
+        updates++;
+        if (updates === 1) {
+          ref = sha("2");
+          throw Object.assign(new Error("Reference update failed"), { status: 422 });
+        }
+        ref = value;
+      },
+    }),
+    clock: clock(),
+    random: () => 0,
+  });
+  expect({ blobs, updates }).toEqual({ blobs: 2, updates: 2 });
+  expect(result.window).toContain(`/${sha("7")}/`);
+});
+
+test("readback recovers a disconnect after the commit became reachable", async () => {
+  let ref = sha("1");
+  let updates = 0;
+  const result = await uploadScreenshots(input(), {
+    github: client({
+      getRef: async () => ref,
+      updateRef: async (value) => {
+        updates++;
+        ref = value;
+        throw new Error("disconnect");
+      },
+    }),
+  });
+  expect(updates).toBe(1);
+  expect(result.screen).toContain(`/${sha("6")}/`);
+});
+
+test("accepts an advanced ref only when the created commit is its ancestor", async () => {
+  let reads = 0;
+  const result = await uploadScreenshots(input(), {
+    github: client({
+      getRef: async () => (reads++ === 0 ? sha("1") : sha("8")),
+      isAncestor: async (ancestor, descendant) => ancestor === sha("6") && descendant === sha("8"),
+    }),
+  });
+  expect(result.screen).toContain(`/${sha("6")}/`);
+});
+
+test.each([
+  Object.assign(new Error("HTTP 403"), { status: 403 }),
+  Object.assign(new Error("Validation failed"), { status: 422 }),
+])("does not retry an unconfirmed ref failure", async (failure) => {
+  let updates = 0;
+  await expect(
+    uploadScreenshots(input(), {
+      github: client({
+        getRef: async () => (updates ? sha("2") : sha("1")),
+        updateRef: async () => {
+          updates++;
+          throw failure;
+        },
+      }),
+    }),
+  ).rejects.toThrow(failure.message);
+  expect(updates).toBe(1);
+});
+
+test("rejects malformed Git object identifiers", async () => {
+  await expect(
+    uploadScreenshots(input(), {
+      github: client({ createBlob: async () => "not-a-sha" }),
+    }),
+  ).rejects.toThrow(/blob SHA/i);
+});
+
+test("retries only the issue comment after one immutable upload", async () => {
+  let ref = sha("1");
   let blobs = 0;
   let comments = 0;
-  const urls = await publishScreenshots(
-    {
-      repository: "shots/repo",
-      sourceRepository: "apps/demo",
-      snap: "demo",
-      issue: "7",
-      date: "20260906",
-      screen: Buffer.from("s"),
-      window: Buffer.from("w"),
-      author: { name: "bot", email: "bot@example.invalid" },
+  const delays: number[] = [];
+  const urls = await publishScreenshots(input(), {
+    github: client({
+      getRef: async () => ref,
+      createBlob: async () => [sha("3"), sha("4")][blobs++]!,
+      updateRef: async (value) => {
+        ref = value;
+      },
+    }),
+    comment: async () => {
+      if (++comments === 1) throw new Error("transient");
     },
-    {
-      github: {
-        getRef: async () => "parent",
-        getCommitTree: async () => "tree",
-        createBlob: async () => `b${++blobs}`,
-        createTree: async () => "newtree",
-        createCommit: async () => "commit",
-        updateRef: async () => undefined,
-      },
-      comment: async () => {
-        if (++comments === 1) throw new Error("transient report failure");
-      },
-      sleep: async () => undefined,
-    },
-  );
-  expect(urls.window).toContain("/commit/");
-  expect({ blobs, comments }).toEqual({ blobs: 2, comments: 2 });
-});
-
-test("exhausts three confirmed conflicts without recreating blobs", async () => {
-  let parent = "p0";
-  let blobs = 0;
-  let updates = 0;
-  await expect(
-    uploadScreenshots(
-      {
-        repository: "shots/repo",
-        sourceRepository: "apps/demo",
-        snap: "demo",
-        issue: "7",
-        date: "20260906",
-        screen: Buffer.from("s"),
-        window: Buffer.from("w"),
-        author: { name: "bot", email: "bot@example.invalid" },
-      },
-      {
-        github: {
-          getRef: async () => parent,
-          getCommitTree: async () => "tree",
-          createBlob: async () => `b${++blobs}`,
-          createTree: async () => "newtree",
-          createCommit: async () => `commit-${parent}`,
-          updateRef: async () => {
-            updates++;
-            parent = `p${updates}`;
-            throw Object.assign(new Error("conflict"), { status: 409 });
-          },
-        },
-        sleep: async () => undefined,
-      },
-    ),
-  ).rejects.toThrow(/retry limit/i);
-  expect({ blobs, updates }).toEqual({ blobs: 2, updates: 3 });
-});
-
-test.each([403, 422])("does not retry an unconfirmed HTTP %s ref failure", async (status) => {
-  let updates = 0;
-  await expect(
-    uploadScreenshots(
-      {
-        repository: "shots/repo",
-        sourceRepository: "apps/demo",
-        snap: "demo",
-        issue: "7",
-        date: "20260906",
-        screen: Buffer.from("s"),
-        window: Buffer.from("w"),
-        author: { name: "bot", email: "bot@example.invalid" },
-      },
-      {
-        github: {
-          getRef: async () => "parent",
-          getCommitTree: async () => "tree",
-          createBlob: async () => "blob",
-          createTree: async () => "newtree",
-          createCommit: async () => "commit",
-          updateRef: async () => {
-            updates++;
-            throw Object.assign(new Error(`HTTP ${status}`), { status });
-          },
-        },
-        sleep: async () => undefined,
-      },
-    ),
-  ).rejects.toThrow(new RegExp(String(status)));
-  expect(updates).toBe(1);
+    clock: clock(delays),
+    random: () => 0,
+  });
+  expect(urls.window).toContain(`/${sha("6")}/`);
+  expect({ blobs, comments, delays: delays.length }).toEqual({ blobs: 2, comments: 2, delays: 1 });
 });
