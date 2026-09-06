@@ -33,6 +33,11 @@ mutable sibling references, and public metadata drift.
 
 ## Phase 2 — Execution boundary
 
+- `mise run test:unit -- context` — RED: unsupported GitHub Enterprise/self-hosted/Windows/Ubuntu
+  20 contexts reached the missing event file instead of failing the capability boundary. GREEN:
+  12 files, 70 tests; github.com, hosted Linux Ubuntu 22.04/24.04, Node 24, repository, run ID,
+  commit SHA and event-name constraints are enforced before a bounded regular-file event read.
+
 - `mise run test:integration -- runtime` — RED: 3 failures proved pre-aborted work spawned,
   TERM-resistant descendants outlived the parent until timeout, and secrets remained in bounded
   output.
