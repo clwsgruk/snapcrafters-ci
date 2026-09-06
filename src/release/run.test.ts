@@ -397,6 +397,42 @@ describe("staged release", () => {
     expect({ reads, uploads }).toEqual({ reads: 0, uploads: 0 });
   });
 
+  test("does not reuse a stale snap artifact already present in the source checkout", async () => {
+    const input = await recipe("name: demo\nbase: core24\nversion: '1.2'\nplatforms:\n  amd64:\n");
+    await writeFile(join(input.workspace, "nested", "demo_1.2_amd64.snap"), "stale snap");
+    let reads = 0;
+    let uploads = 0;
+    await expect(
+      runRelease(
+        {
+          ...input,
+          projectRoot: "nested",
+          architecture: "amd64",
+          channel: "latest/candidate",
+          snapcraftChannel: "latest/stable",
+          launchpadToken: "lp",
+          storeToken: "store",
+          sourceSha: "7".repeat(40),
+        },
+        {
+          run: async (spec) => {
+            if (spec.args[0] === "upload") uploads++;
+            return ok;
+          },
+          inspectSnap: async () => ({ name: "demo", version: "1.2", architecture: "amd64" }),
+          review: async () => undefined,
+          readback: async () => {
+            reads++;
+            return [];
+          },
+          recordPublication: async () => undefined,
+          writeManifest: async () => undefined,
+        },
+      ),
+    ).rejects.toThrow(/0 snap artifacts/i);
+    expect({ reads, uploads }).toEqual({ reads: 0, uploads: 0 });
+  });
+
   test("reports manifest failure after recording the exact publication", async () => {
     const input = await recipe("name: demo\nbase: core24\nversion: '1.2'\nplatforms:\n  amd64:\n");
     let read = 0;
