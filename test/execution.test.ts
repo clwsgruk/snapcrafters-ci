@@ -141,6 +141,23 @@ test("a credential crossing the caller-summary byte limit is redacted before pub
   }
 });
 
+test("earlier redactions cannot pull a later partial secret inside the summary limit", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "summary-shift-")),
+    file = join(dir, "summary"),
+    secret = "q".repeat(32),
+    source = `${secret}${secret}${"x".repeat(15937)}${secret}`;
+  try {
+    await script(`printf '%s' '${source}' > "$GITHUB_STEP_SUMMARY"`, dir, {
+      PATH: process.env.PATH,
+      GITHUB_STEP_SUMMARY: file,
+      INPUT_TOKEN: secret,
+    });
+    expect(readFileSync(file, "utf8")).not.toContain("q".repeat(31));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("multiline credential fragments never appear in live output or summary", async () => {
   const { vi } = await import("vitest");
   const output: string[] = [];

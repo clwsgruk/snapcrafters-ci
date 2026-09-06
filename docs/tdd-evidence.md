@@ -169,3 +169,8 @@ with its state in /tmp and unrelated global tool configuration excluded.
   intermediate `snap/` or `.github/` directory symlink could also escape the canonical checkout.
   GREEN: caller-summary reads retain the longest-secret overlap, redact, then byte-bound published
   text; complete canonical input paths must be symlink-free. Focused result: 13 tests passed.
+- A second narrow Astra review found one deeper RED: earlier complete-secret redactions could shrink
+  expanded input and pull a later incomplete credential fragment beneath the output cap. The final
+  algorithm now chooses its publication boundary in raw bytes, extends it only to finish a secret
+  crossing byte 16,000, redacts that exact raw prefix, and then applies the output cap. The exact
+  shrink-and-shift regression and all eight existing execution tests passed.

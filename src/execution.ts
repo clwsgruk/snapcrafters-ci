@@ -147,7 +147,17 @@ export async function script(
   if (env.GITHUB_STEP_SUMMARY) {
     try {
       const overlap = Math.max(0, ...secrets.map((secret) => Buffer.byteLength(secret)));
-      const sanitized = redact(readBounded(callerSummary, 16000 + overlap, true).toString("utf8"));
+      const source = readBounded(callerSummary, 16000 + overlap, true);
+      let boundary = Math.min(16000, source.length);
+      for (const secret of secrets) {
+        const bytes = Buffer.from(secret);
+        let at = source.indexOf(bytes, Math.max(0, 16000 - bytes.length + 1));
+        while (at >= 0 && at < 16000) {
+          if (at + bytes.length > 16000) boundary = Math.max(boundary, at + bytes.length);
+          at = source.indexOf(bytes, at + 1);
+        }
+      }
+      const sanitized = redact(source.subarray(0, boundary).toString("utf8"));
       extra =
         "\nWorkflow summary:\n" +
         Buffer.from(sanitized)
