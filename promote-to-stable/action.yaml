@@ -27,132 +27,25 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Checkout the source
-      uses: actions/checkout@v6
-
-    - name: Parse slash command
-      id: command
-      uses: xt0rted/slash-command-action@v2
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
       with:
-        repo-token: ${{ inputs.github-token }}
-        command: promote
-        reaction: "true"
-        reaction-type: "eyes"
-        allow-edits: "false"
-        permission-level: write
-
-    - name: Get valid revisions for promotion
-      id: valid-revisions
-      uses: actions/github-script@v8
-      with:
-        result-encoding: string
-        script: |
-          const issue = await github.rest.issues.get({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-          })
-
-          return issue.data.body.match(/\/promote ([0-9,]+)/)[1].split(",").join(" ")
-
-    - name: Install snapcraft
-      shell: bash
-      run: |
-        sudo snap install --classic --channel "${{inputs.snapcraft-channel}}" snapcraft
-
-    - name: Find and parse snapcraft.yaml
-      id: snapcraft-yaml
-      uses: snapcrafters/ci/parse-snapcraft-yaml@main
-      with:
-        snapcraft-project-root: ${{ inputs.snapcraft-project-root }}
-
-    - name: Promote snap
-      id: promote
+        node-version: "24"
+    - shell: bash
       env:
-        channel: ${{ inputs.channel }}
-        SNAPCRAFT_STORE_CREDENTIALS: ${{ inputs.store-token }}
-        snap_name: ${{ steps.snapcraft-yaml.outputs.snap-name }}
-        valid_revisions: ${{ steps.valid-revisions.outputs.result }}
-      shell: bash
-      run: |
-        echo "The command was '${{ steps.command.outputs.command-name }}' with arguments '${{ steps.command.outputs.command-arguments }}'"
-
-        # shellcheck disable=SC1083,SC2206
-        arguments=(${{ steps.command.outputs.command-arguments }})
-        revision=${arguments[0]}
-        requested_channel=${arguments[1]}
-        done=${arguments[2]}
-
-        re='^[0-9]+([,][0-9]+)*$'
-        if [[ ! "$revision" =~ $re ]]; then
-          echo "revision must be a number or a comma separated list of numbers, not '$revision'!"
-          exit 1
-        fi
-
-        if [[ "$requested_channel" != "$channel" ]]; then
-          echo "I can only promote to ${channel}, not '$requested_channel'!"
-          exit 1
-        fi
-
-        if [[ -n "$done" && "$done" != "done"  ]]; then
-          echo "The third argument should be 'done' or empty"
-          exit 1
-        fi
-
-        # Iterate over each specified revision and release
-        revs=$(echo "$revision" | tr "," "\n")
-        released_revs=()
-        rejected_revs=()
-
-        for r in $revs; do
-          if [[ "$valid_revisions" =~ (^|[[:space:]])"$r"($|[[:space:]]) ]]; then
-            snapcraft release "$snap_name" "$r" "$requested_channel"
-            released_revs+=("$r")
-          else
-            rejected_revs+=("$r")
-            echo "Not promoting revision '$r' because the revision is not related to this test."
-          fi
-        done
-
-        # Get a comma separated list of released revisions
-        printf -v joined '%s,' "${released_revs[@]}"
-        printf -v joined_rejected '%s,' "${rejected_revs[@]}"
-
-        echo "revisions=${joined%,}" >> "$GITHUB_OUTPUT"
-        echo "rejected=${joined_rejected%,}" >> "$GITHUB_OUTPUT"
-        echo "channel=$requested_channel" >> "$GITHUB_OUTPUT"
-        echo "done=$done" >> "$GITHUB_OUTPUT"
-
-    - name: Comment on call for testing issue
-      uses: actions/github-script@v8
-      with:
-        script: |
-          let message = ""
-          if ("${{ steps.promote.outputs.revisions }}".length > 0) {
-            message += 'The following revisions were released to the `${{ steps.promote.outputs.channel }}` channel: `${{ steps.promote.outputs.revisions }}`. '
-          }
-
-          if ("${{ steps.promote.outputs.rejected }}".length > 0) {
-            message += 'The following revisions were not released, because they are unrelated to this call for testing: `${{ steps.promote.outputs.rejected }}`. '
-          }
-
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: message
-          })
-
-    - name: Close call for testing issue
-      if: ${{ steps.promote.outputs.done }} == "done"
-      uses: actions/github-script@v8
-      with:
-        script: |
-          if ("${{ steps.promote.outputs.done }}" === "done" && "${{ steps.promote.outputs.revisions }}".length > 0) {
-            github.rest.issues.update({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'closed'
-            })
-          }
+        CI_PHASE: validate
+      run: node "$GITHUB_ACTION_PATH/dist/index.cjs"
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+    - shell: bash
+      env:
+        SNAPCRAFT_CHANNEL: ${{ inputs.snapcraft-channel }}
+      run: sudo snap install snapcraft --channel "$SNAPCRAFT_CHANNEL" --classic
+    - shell: bash
+      env:
+        CI_PHASE: run
+        INPUT_CHANNEL: ${{ inputs.channel }}
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
+        INPUT_SNAPCRAFT_PROJECT_ROOT: ${{ inputs.snapcraft-project-root }}
+        INPUT_SNAPCRAFT_CHANNEL: ${{ inputs.snapcraft-channel }}
+        INPUT_STORE_TOKEN: ${{ inputs.store-token }}
+      run: node "$GITHUB_ACTION_PATH/dist/index.cjs"
+      id: promote

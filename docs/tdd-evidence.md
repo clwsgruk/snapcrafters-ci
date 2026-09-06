@@ -46,3 +46,11 @@ with its state in /tmp and unrelated global tool configuration excluded.
   annotated tag readback verified, replay made no further writes.
 
 - GREEN: 14 tests passed; eight public adapters built.
+
+- `mise run test -- test/testing.test.ts` — RED: absent testing module; GREEN: exact table,
+  repository, snap/channel binding and caller instruction substitution.
+- `mise run test -- test/promotion.test.ts` — RED: absent whole-command parser; GREEN: strict
+  command grammar. Second RED: `promote is not a function`; added fresh permission/comment/issue
+  checks and prevalidation of the complete requested revision set before sequential releases.
+
+- GREEN: 17 tests passed; eleven adapters built.
