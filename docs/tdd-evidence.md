@@ -225,10 +225,50 @@ mutable sibling references, and public metadata drift.
   YAML sequence was accepted as a manifest mapping. After the fix: 27 files, 91 tests; the measured
   input/manifest/architecture parsers reached 96.66% branch, 96.82% statement, 98.11% line, and
   100% function coverage.
-- `mise run test:smoke` — GREEN: 1 file, 1 consumer-simulator test parsed all 12 real composite
+- `mise run test:smoke` — RED after rebuilding the stale bundles: `get-screenshots` reached its
+  real input validation and rejected the empty-string optional application input. A focused
+  `mise run test:unit -- inputs` RED then proved Actions-style empty optional values bypassed
+  defaults. GREEN after fixing shared input semantics: 1 file, 2 tests. The consumer simulator
+  parsed all 12 real composite
   wrappers, admitted only the five approved SHA-pinned external actions, mapped wrapper input
   environments, and executed every wrapper-owned bundle step from a disposable external checkout;
-  release-to-candidate exercised both its publish and tag bundle invocations.
+  release-to-candidate exercised both its publish and tag bundle invocations. Its second test runs
+  every bundle in an invalid consumer context and verifies there is no production bypass.
+- `mise run test:smoke` — RED: the simulator's ambient `node` was 22.22.3. GREEN after resolving
+  the exact mise-installed Node executable: every bundle step asserted runtime 24.x before running.
+- `mise run test:coverage` with the complete parser/validator list — RED: 140 tests passed, but the
+  honest expanded surface was 76.99% branch and 85.23% line coverage. Pure context, project-schema,
+  promotion-legacy, Store-output, and screenshot validation were separated into their feature
+  folders (not excluded), then exercised with malformed/boundary tables. GREEN: 151 tests across
+  35 files; 96.21% branch, 97.74% statement, 99.01% line, and 100% function coverage. Every listed
+  module is individually at least 90% branch coverage.
+- `mise run test:integration -- workflows` — RED: an oversized multibyte summary lost its
+  truncation marker during a second formatting cut. GREEN: UTF-8-safe byte truncation reserves the
+  notice; the test result remains independent of summary/report behavior.
+- `mise run check-dist` — RED twice: nested mise resolution failed in this sandbox, then the
+  verifier incorrectly required `stderr` even though Actions reports failures on `stdout`. GREEN:
+  the verifier resolves the exact Node pin from mise's install layout, independently copies every
+  tracked source input twice, performs two frozen Bun installs/builds, compares both builds and the
+  committed dist by SHA-256, rejects smoke markers/external requires, and executes all 12 copied
+  bundles with Node 24.20.0.
+- Final `mise run ci` — PASS: formatting, type-aware lint/typecheck (95 source files), 151 tests in
+  35 files with the coverage figures above, actionlint, ShellCheck for the standalone helper plus
+  all 15 inline Bash steps, and the isolated deterministic 12-bundle check all passed.
+
+## Independent-review closure
+
+- Wrapper regressions for the architecture output key, promotion checkout/Snapcraft channel,
+  screenshot ghvmctl setup, and local classic/declaration review all have public-wrapper or adapter
+  coverage and observable fake side effects.
+- Fresh per-request GitHub deadlines, timeout/abort exit codes, update-message timing, bounded safe
+  logs/summaries, adopted versions, streamed artifact limits/label binding, redaction-before-bound,
+  and issue/comment/promotion idempotency each have focused unit or local HTTP/process regressions.
+- Promotion now binds repository, open non-PR testing state, snap header, source/destination channel,
+  exact architecture/revision table, and the single command before any Store write. Store readback
+  uses the shared strict Snapcraft table parser.
+- Release tests cover a stale source artifact, pre-existing revisions, eventual readback, exact
+  digest/version/architecture binding, bounded complete state files, immediate publication records,
+  manifest/tag/cleanup partial states, and exact-tag recovery.
 
 ## Intentionally unrun external acceptance
 
