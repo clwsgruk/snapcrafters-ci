@@ -13051,7 +13051,7 @@ var require_fetch = __commonJS({
         this.emit("terminated", error);
       }
     };
-    function fetch(input, init = {}) {
+    function fetch2(input, init = {}) {
       webidl.argumentLengthCheck(arguments, 1, { header: "globalThis.fetch" });
       const p = createDeferredPromise();
       let requestObject;
@@ -13981,7 +13981,7 @@ var require_fetch = __commonJS({
       }
     }
     module2.exports = {
-      fetch,
+      fetch: fetch2,
       Fetch,
       fetching,
       finalizeAndReportTiming
@@ -17237,7 +17237,7 @@ var require_undici = __commonJS({
     module2.exports.getGlobalDispatcher = getGlobalDispatcher;
     if (util.nodeMajor > 16 || util.nodeMajor === 16 && util.nodeMinor >= 8) {
       let fetchImpl = null;
-      module2.exports.fetch = async function fetch(resource) {
+      module2.exports.fetch = async function fetch2(resource) {
         if (!fetchImpl) {
           fetchImpl = require_fetch().fetch;
         }
@@ -20713,16 +20713,16 @@ var require_dist_node5 = __commonJS({
       let headers = {};
       let status;
       let url;
-      let { fetch } = globalThis;
+      let { fetch: fetch2 } = globalThis;
       if ((_b = requestOptions.request) == null ? void 0 : _b.fetch) {
-        fetch = requestOptions.request.fetch;
+        fetch2 = requestOptions.request.fetch;
       }
-      if (!fetch) {
+      if (!fetch2) {
         throw new Error(
           "fetch is not set. Please pass a fetch implementation as new Octokit({ request: { fetch }}). Learn more at https://github.com/octokit/octokit.js/#fetch-missing"
         );
       }
-      return fetch(requestOptions.url, {
+      return fetch2(requestOptions.url, {
         method: requestOptions.method,
         body: requestOptions.body,
         redirect: (_c = requestOptions.request) == null ? void 0 : _c.redirect,
@@ -24526,7 +24526,7 @@ var require_yauzl = __commonJS({
     var Transform = require("stream").Transform;
     var PassThrough = require("stream").PassThrough;
     var Writable = require("stream").Writable;
-    exports2.open = open;
+    exports2.open = open2;
     exports2.fromFd = fromFd;
     exports2.fromBuffer = fromBuffer;
     exports2.fromRandomAccessReader = fromRandomAccessReader;
@@ -24538,7 +24538,7 @@ var require_yauzl = __commonJS({
     exports2.Entry = Entry;
     exports2.LocalFileHeader = LocalFileHeader;
     exports2.RandomAccessReader = RandomAccessReader;
-    function open(path, options2, callback) {
+    function open2(path, options2, callback) {
       if (typeof options2 === "function") {
         callback = options2;
         options2 = null;
@@ -32557,12 +32557,14 @@ var core = __toESM(require_core(), 1);
 
 // src/actions/context.ts
 var import_promises = require("node:fs/promises");
-var import_node_path = require("node:path");
 
 // src/runtime/errors.ts
 var InputError = class extends Error {
   name = "InputError";
 };
+
+// src/actions/context-validation.ts
+var import_node_path = require("node:path");
 
 // src/actions/inputs.ts
 function required(env, name, maxBytes = 64 * 1024) {
@@ -32583,31 +32585,68 @@ function repository(value) {
   return { owner: match[1], name: match[2] };
 }
 
-// src/actions/context.ts
-async function actionContext(env) {
+// src/actions/context-validation.ts
+function validateContextEnvironment(env, nodeVersion) {
   const eventPath = env.GITHUB_EVENT_PATH;
-  if (!env.GITHUB_WORKSPACE || !env.GITHUB_REPOSITORY || !env.GITHUB_RUN_ID || !env.GITHUB_SHA || !eventPath) {
+  if (!env.GITHUB_WORKSPACE || !env.GITHUB_REPOSITORY || !env.GITHUB_RUN_ID || !env.GITHUB_SHA || !eventPath)
     throw new InputError("Incomplete GitHub Actions context");
-  }
   if (!(0, import_node_path.isAbsolute)(env.GITHUB_WORKSPACE) || !(0, import_node_path.isAbsolute)(eventPath))
     throw new InputError("GitHub workspace and event paths must be absolute");
+  if (env.GITHUB_ACTIONS !== "true" || env.GITHUB_SERVER_URL !== "https://github.com" || env.RUNNER_ENVIRONMENT !== "github-hosted" || env.RUNNER_OS !== "Linux" || !(/* @__PURE__ */ new Set(["ubuntu22", "ubuntu24"])).has(env.ImageOS ?? "") || nodeVersion.split(".")[0] !== "24")
+    throw new InputError("Unsupported GitHub Actions runner capability");
   repository(env.GITHUB_REPOSITORY);
   positiveDecimal(env.GITHUB_RUN_ID, "GITHUB_RUN_ID");
   if (!/^[0-9a-f]{40}$/.test(env.GITHUB_SHA)) throw new InputError("Invalid GITHUB_SHA");
-  if (env.GITHUB_EVENT_NAME?.includes("\n")) throw new InputError("Invalid GITHUB_EVENT_NAME");
-  const bytes = await (0, import_promises.readFile)(eventPath);
-  if (bytes.length > 2 * 1024 * 1024) throw new InputError("Event payload exceeds size limit");
-  const event = JSON.parse(bytes.toString("utf8"));
-  if (!event || typeof event !== "object" || Array.isArray(event))
-    throw new InputError("Event payload must be an object");
+  if (!/^[A-Za-z0-9_]+$/.test(env.GITHUB_EVENT_NAME ?? ""))
+    throw new InputError("Invalid GITHUB_EVENT_NAME");
   return {
     workspace: env.GITHUB_WORKSPACE,
     repository: env.GITHUB_REPOSITORY,
     runId: env.GITHUB_RUN_ID,
     sha: env.GITHUB_SHA,
     eventName: env.GITHUB_EVENT_NAME ?? "",
+    eventPath
+  };
+}
+function parseEventPayload(bytes) {
+  const event = JSON.parse(bytes.toString("utf8"));
+  if (!event || typeof event !== "object" || Array.isArray(event))
+    throw new InputError("Event payload must be an object");
+  return event;
+}
+
+// src/actions/context.ts
+async function actionContext(env, nodeVersion = process.versions.node) {
+  const validated = validateContextEnvironment(env, nodeVersion);
+  const event = parseEventPayload(await readBoundedEvent(validated.eventPath));
+  return {
+    workspace: validated.workspace,
+    repository: validated.repository,
+    runId: validated.runId,
+    sha: validated.sha,
+    eventName: validated.eventName,
     event
   };
+}
+async function readBoundedEvent(path) {
+  const limit = 2 * 1024 * 1024;
+  const handle = await (0, import_promises.open)(path, "r");
+  try {
+    const metadata = await handle.stat();
+    if (!metadata.isFile()) throw new InputError("Event payload must be a regular file");
+    if (metadata.size > limit) throw new InputError("Event payload exceeds size limit");
+    const buffer = Buffer.alloc(Math.min(metadata.size + 1, limit + 1));
+    let offset = 0;
+    while (offset < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
+      if (bytesRead === 0) break;
+      offset += bytesRead;
+    }
+    if (offset > limit) throw new InputError("Event payload exceeds size limit");
+    return buffer.subarray(0, offset);
+  } finally {
+    await handle.close();
+  }
 }
 
 // src/actions/signal.ts
@@ -32643,8 +32682,8 @@ var systemClock = {
     signal.addEventListener("abort", aborted, { once: true });
   })
 };
-function retryDelay(attempt, retryAfterMs2, random = Math.random) {
-  const requested = retryAfterMs2 ?? 250 * 2 ** attempt;
+function retryDelay(attempt, retryAfterMs, random = Math.random) {
+  const requested = retryAfterMs ?? 250 * 2 ** attempt;
   return Math.min(1e4, requested) + Math.floor(random() * 100);
 }
 
@@ -32660,16 +32699,29 @@ async function retryRequest(request, options2) {
       return await request();
     } catch (error) {
       if (attempt + 1 >= attempts || !retryable(error)) throw error;
-      const retryAfter = retryAfterMs(error, clock.now());
+      const retryAfter = retryAfterMilliseconds(error, clock.now());
       await clock.sleep(retryDelay(attempt, retryAfter, random), options2.signal);
     }
+  }
+}
+async function withDeadline(parent, timeoutMs, operation) {
+  if (parent.aborted) throw parent.reason ?? new Error("Operation aborted before dispatch");
+  const controller = new AbortController();
+  const abort = () => controller.abort(parent.reason ?? new Error("Operation aborted"));
+  parent.addEventListener("abort", abort, { once: true });
+  const timer = setTimeout(() => controller.abort(new Error("HTTP deadline aborted")), timeoutMs);
+  try {
+    return await operation(controller.signal);
+  } finally {
+    clearTimeout(timer);
+    parent.removeEventListener("abort", abort);
   }
 }
 function retryable(error) {
   const status = error.status;
   return status === 429 || status === 502 || status === 503 || status === 504;
 }
-function retryAfterMs(error, now) {
+function retryAfterMilliseconds(error, now) {
   const headers = error.response?.headers;
   const value = headers?.["retry-after"];
   if (typeof value !== "string") return void 0;
@@ -32679,21 +32731,29 @@ function retryAfterMs(error, now) {
 }
 
 // src/runtime/github.ts
-function manifestGitHub(token, repository2, runId, signal = new AbortController().signal) {
+function readRequest(parent, timeoutMs, request) {
+  return withDeadline(
+    parent,
+    timeoutMs,
+    (signal) => retryRequest(() => request(signal), { signal })
+  );
+}
+function manifestGitHub(token, repository2, runId, signal = new AbortController().signal, options2 = {}) {
   const [owner, repo] = repository2.split("/");
   const client = (0, import_github.getOctokit)(token);
   return {
     async listArtifacts(page) {
-      const response = await retryRequest(
-        () => client.rest.actions.listWorkflowRunArtifacts({
+      const response = await readRequest(
+        signal,
+        6e4,
+        (requestSignal) => client.rest.actions.listWorkflowRunArtifacts({
           owner,
           repo,
           run_id: Number(runId),
           per_page: 100,
           page,
-          request: { signal }
-        }),
-        { signal }
+          request: { signal: requestSignal }
+        })
       );
       return {
         artifacts: response.data.artifacts.map((item) => ({
@@ -32705,19 +32765,49 @@ function manifestGitHub(token, repository2, runId, signal = new AbortController(
       };
     },
     async downloadArtifact(id) {
-      const response = await retryRequest(
-        () => client.rest.actions.downloadArtifact({
-          owner,
-          repo,
-          artifact_id: id,
-          archive_format: "zip",
-          request: { signal }
-        }),
-        { signal }
-      );
-      return Buffer.from(response.data);
+      return readRequest(signal, 6e4, async (requestSignal) => {
+        const response = await (options2.fetcher ?? fetch)(
+          `${options2.apiBase ?? "https://api.github.com"}/repos/${owner}/${repo}/actions/artifacts/${id}/zip`,
+          {
+            headers: {
+              accept: "application/vnd.github+json",
+              authorization: `Bearer ${token}`,
+              "user-agent": "snapcrafters-ci",
+              "x-github-api-version": "2022-11-28"
+            },
+            redirect: "follow",
+            signal: requestSignal
+          }
+        );
+        if (!response.ok)
+          throw Object.assign(new Error(`Artifact download failed (${response.status})`), {
+            status: response.status
+          });
+        return readBoundedResponse(response, 5 * 1024 * 1024);
+      });
     }
   };
+}
+async function readBoundedResponse(response, limit) {
+  const declared = response.headers.get("content-length");
+  if (declared && (!/^[0-9]+$/.test(declared) || Number(declared) > limit))
+    throw new Error("Artifact response exceeds size limit");
+  if (!response.body) return Buffer.alloc(0);
+  const reader = response.body.getReader();
+  const chunks = [];
+  let size = 0;
+  try {
+    for (; ; ) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > limit) throw new Error("Artifact response exceeds size limit");
+      chunks.push(Buffer.from(value));
+    }
+    return Buffer.concat(chunks, size);
+  } finally {
+    await reader.cancel().catch(() => void 0);
+  }
 }
 
 // src/manifests/collect.ts
@@ -32733,7 +32823,8 @@ function decodeManifest(source, filename) {
   const match = manifestName.exec(filename);
   if (!match) throw new InputError(`Invalid manifest filename: ${filename}`);
   const value = (0, import_yaml.parse)(source, { uniqueKeys: true });
-  if (!value || typeof value !== "object") throw new InputError("Manifest must be a mapping");
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new InputError("Manifest must be a mapping");
   if (typeof value.name !== "string" || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(value.name)) {
     throw new InputError("Invalid manifest snap name");
   }
@@ -32741,7 +32832,15 @@ function decodeManifest(source, filename) {
     throw new InputError("Manifest architecture does not match filename");
   const revision = String(value.revision);
   if (!/^[1-9][0-9]*$/.test(revision)) throw new InputError("Revision must be a positive decimal");
-  return { name: value.name, architecture: value.architecture, revision };
+  const version = value.version;
+  if (version !== void 0 && (typeof version !== "string" || !version || version.includes("\n") || Buffer.byteLength(version) > 128))
+    throw new InputError("Manifest version is invalid");
+  return {
+    name: value.name,
+    architecture: value.architecture,
+    revision,
+    ...version === void 0 ? {} : { version }
+  };
 }
 function validateArchiveEntry(name, size, limit) {
   if (name.startsWith("/") || name.startsWith("\\") || /^[A-Za-z]:/.test(name)) {
@@ -32770,13 +32869,20 @@ async function collectManifests(api, destination, expected) {
   let archiveBytes = 0;
   for (const artifact of artifacts) {
     if (artifact.expired) throw new InputError(`Manifest artifact ${artifact.name} is expired`);
+    const artifactMatch = /^manifest-(amd64|arm64|armhf|i386|ppc64el|riscv64|s390x)$/.exec(
+      artifact.name
+    );
+    if (!artifactMatch) throw new InputError(`Invalid manifest artifact label: ${artifact.name}`);
     const archive = await api.downloadArtifact(artifact.id);
     archiveBytes += archive.length;
     if (archive.length > 5 * 1024 * 1024)
       throw new InputError("Manifest archive exceeds size limit");
     if (archiveBytes > 25 * 1024 * 1024)
       throw new InputError("Combined manifest archives exceed size limit");
-    for (const entry of await unzipEntries(archive)) {
+    const entries = await unzipEntries(archive);
+    if (entries.length !== 1 || entries[0].name !== `${artifact.name}.yaml`)
+      throw new InputError("Manifest artifact label does not match its single archive entry");
+    for (const entry of entries) {
       validateArchiveEntry(entry.name, entry.data.length, 64 * 1024);
       const filename = (0, import_node_path2.basename)(entry.name);
       if (destinations.has(filename))
@@ -32784,6 +32890,8 @@ async function collectManifests(api, destination, expected) {
       destinations.add(filename);
       const text = entry.data.toString("utf8");
       const manifest = decodeManifest(text, filename);
+      if (manifest.architecture !== artifactMatch[1])
+        throw new InputError("Manifest artifact architecture does not match its label");
       if (expected && manifest.name !== expected.snap)
         throw new InputError(`Manifest snap ${manifest.name} does not match ${expected.snap}`);
       if (manifests.some((item) => item.architecture === manifest.architecture))
@@ -32879,7 +32987,6 @@ async function runFetchManifestsAction(env) {
 
 // fetch-manifests/main.ts
 async function main() {
-  if (process.env.SNAPCRAFTERS_CI_SMOKE === "1") return;
   await runFetchManifestsAction(process.env);
 }
 if (process.env.NODE_ENV !== "test") {

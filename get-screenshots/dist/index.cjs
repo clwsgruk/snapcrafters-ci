@@ -7247,7 +7247,7 @@ var require_client = __commonJS({
       );
       resume(client);
     }
-    var constants = require_constants3();
+    var constants2 = require_constants3();
     var createRedirectInterceptor = require_redirectInterceptor();
     var EMPTY_BUF = Buffer.alloc(0);
     async function lazyllhttp() {
@@ -7314,7 +7314,7 @@ var require_client = __commonJS({
       constructor(client, socket, { exports: exports3 }) {
         assert(Number.isFinite(client[kMaxHeadersSize]) && client[kMaxHeadersSize] > 0);
         this.llhttp = exports3;
-        this.ptr = this.llhttp.llhttp_alloc(constants.TYPE.RESPONSE);
+        this.ptr = this.llhttp.llhttp_alloc(constants2.TYPE.RESPONSE);
         this.client = client;
         this.socket = socket;
         this.timeout = null;
@@ -7406,19 +7406,19 @@ var require_client = __commonJS({
             currentBufferRef = null;
           }
           const offset = llhttp.llhttp_get_error_pos(this.ptr) - currentBufferPtr;
-          if (ret === constants.ERROR.PAUSED_UPGRADE) {
+          if (ret === constants2.ERROR.PAUSED_UPGRADE) {
             this.onUpgrade(data.slice(offset));
-          } else if (ret === constants.ERROR.PAUSED) {
+          } else if (ret === constants2.ERROR.PAUSED) {
             this.paused = true;
             socket.unshift(data.slice(offset));
-          } else if (ret !== constants.ERROR.OK) {
+          } else if (ret !== constants2.ERROR.OK) {
             const ptr = llhttp.llhttp_get_error_reason(this.ptr);
             let message = "";
             if (ptr) {
               const len = new Uint8Array(llhttp.memory.buffer, ptr).indexOf(0);
               message = "Response does not match the HTTP/1.1 protocol (" + Buffer.from(llhttp.memory.buffer, ptr, len).toString() + ")";
             }
-            throw new HTTPParserError(message, constants.ERROR[ret], data.slice(offset));
+            throw new HTTPParserError(message, constants2.ERROR[ret], data.slice(offset));
           }
         } catch (err) {
           util.destroy(socket, err);
@@ -7588,7 +7588,7 @@ var require_client = __commonJS({
           socket[kBlocking] = false;
           resume(client);
         }
-        return pause ? constants.ERROR.PAUSED : 0;
+        return pause ? constants2.ERROR.PAUSED : 0;
       }
       onBody(buf) {
         const { client, socket, statusCode, maxResponseSize } = this;
@@ -7610,7 +7610,7 @@ var require_client = __commonJS({
         }
         this.bytesRead += buf.length;
         if (request.onData(buf) === false) {
-          return constants.ERROR.PAUSED;
+          return constants2.ERROR.PAUSED;
         }
       }
       onMessageComplete() {
@@ -7645,13 +7645,13 @@ var require_client = __commonJS({
         if (socket[kWriting]) {
           assert.strictEqual(client[kRunning], 0);
           util.destroy(socket, new InformationalError("reset"));
-          return constants.ERROR.PAUSED;
+          return constants2.ERROR.PAUSED;
         } else if (!shouldKeepAlive) {
           util.destroy(socket, new InformationalError("reset"));
-          return constants.ERROR.PAUSED;
+          return constants2.ERROR.PAUSED;
         } else if (socket[kReset] && client[kRunning] === 0) {
           util.destroy(socket, new InformationalError("reset"));
-          return constants.ERROR.PAUSED;
+          return constants2.ERROR.PAUSED;
         } else if (client[kPipelining] === 1) {
           setImmediate(resume, client);
         } else {
@@ -11645,12 +11645,12 @@ var require_headers = __commonJS({
       append(name, value) {
         this[kHeadersSortedMap] = null;
         const lowercaseName = name.toLowerCase();
-        const exists2 = this[kHeadersMap].get(lowercaseName);
-        if (exists2) {
+        const exists = this[kHeadersMap].get(lowercaseName);
+        if (exists) {
           const delimiter = lowercaseName === "cookie" ? "; " : ", ";
           this[kHeadersMap].set(lowercaseName, {
-            name: exists2.name,
-            value: `${exists2.value}${delimiter}${value}`
+            name: exists.name,
+            value: `${exists.value}${delimiter}${value}`
           });
         } else {
           this[kHeadersMap].set(lowercaseName, { name, value });
@@ -13051,7 +13051,7 @@ var require_fetch = __commonJS({
         this.emit("terminated", error);
       }
     };
-    function fetch(input, init = {}) {
+    function fetch2(input, init = {}) {
       webidl.argumentLengthCheck(arguments, 1, { header: "globalThis.fetch" });
       const p = createDeferredPromise();
       let requestObject;
@@ -13981,7 +13981,7 @@ var require_fetch = __commonJS({
       }
     }
     module2.exports = {
-      fetch,
+      fetch: fetch2,
       Fetch,
       fetching,
       finalizeAndReportTiming
@@ -17237,7 +17237,7 @@ var require_undici = __commonJS({
     module2.exports.getGlobalDispatcher = getGlobalDispatcher;
     if (util.nodeMajor > 16 || util.nodeMajor === 16 && util.nodeMinor >= 8) {
       let fetchImpl = null;
-      module2.exports.fetch = async function fetch(resource) {
+      module2.exports.fetch = async function fetch2(resource) {
         if (!fetchImpl) {
           fetchImpl = require_fetch().fetch;
         }
@@ -18145,7 +18145,7 @@ var require_summary = __commonJS({
     exports2.summary = exports2.markdownSummary = exports2.SUMMARY_DOCS_URL = exports2.SUMMARY_ENV_VAR = void 0;
     var os_1 = require("os");
     var fs_1 = require("fs");
-    var { access: access2, appendFile, writeFile: writeFile2 } = fs_1.promises;
+    var { access, appendFile, writeFile: writeFile2 } = fs_1.promises;
     exports2.SUMMARY_ENV_VAR = "GITHUB_STEP_SUMMARY";
     exports2.SUMMARY_DOCS_URL = "https://docs.github.com/actions/using-workflows/workflow-commands-for-github-actions#adding-a-job-summary";
     var Summary = class {
@@ -18168,7 +18168,7 @@ var require_summary = __commonJS({
             throw new Error(`Unable to find environment variable for $${exports2.SUMMARY_ENV_VAR}. Check if your runtime environment supports job summaries.`);
           }
           try {
-            yield access2(pathFromEnv, fs_1.constants.R_OK | fs_1.constants.W_OK);
+            yield access(pathFromEnv, fs_1.constants.R_OK | fs_1.constants.W_OK);
           } catch (_a) {
             throw new Error(`Unable to access summary file: '${pathFromEnv}'. Check if the file has correct read/write permissions.`);
           }
@@ -18516,7 +18516,7 @@ var require_io_util = __commonJS({
     exports2.IS_WINDOWS = process.platform === "win32";
     exports2.UV_FS_O_EXLOCK = 268435456;
     exports2.READONLY = fs.constants.O_RDONLY;
-    function exists2(fsPath) {
+    function exists(fsPath) {
       return __awaiter(this, void 0, void 0, function* () {
         try {
           yield exports2.stat(fsPath);
@@ -18529,7 +18529,7 @@ var require_io_util = __commonJS({
         return true;
       });
     }
-    exports2.exists = exists2;
+    exports2.exists = exists;
     function isDirectory(fsPath, useStat = false) {
       return __awaiter(this, void 0, void 0, function* () {
         const stats = useStat ? yield exports2.stat(fsPath) : yield exports2.lstat(fsPath);
@@ -20457,7 +20457,7 @@ var require_yauzl = __commonJS({
     var Transform = require("stream").Transform;
     var PassThrough = require("stream").PassThrough;
     var Writable = require("stream").Writable;
-    exports2.open = open2;
+    exports2.open = open5;
     exports2.fromFd = fromFd;
     exports2.fromBuffer = fromBuffer;
     exports2.fromRandomAccessReader = fromRandomAccessReader;
@@ -20469,7 +20469,7 @@ var require_yauzl = __commonJS({
     exports2.Entry = Entry;
     exports2.LocalFileHeader = LocalFileHeader;
     exports2.RandomAccessReader = RandomAccessReader;
-    function open2(path, options2, callback) {
+    function open5(path, options2, callback) {
       if (typeof options2 === "function") {
         callback = options2;
         options2 = null;
@@ -29375,16 +29375,16 @@ var require_dist_node5 = __commonJS({
       let headers = {};
       let status;
       let url;
-      let { fetch } = globalThis;
+      let { fetch: fetch2 } = globalThis;
       if ((_b = requestOptions.request) == null ? void 0 : _b.fetch) {
-        fetch = requestOptions.request.fetch;
+        fetch2 = requestOptions.request.fetch;
       }
-      if (!fetch) {
+      if (!fetch2) {
         throw new Error(
           "fetch is not set. Please pass a fetch implementation as new Octokit({ request: { fetch }}). Learn more at https://github.com/octokit/octokit.js/#fetch-missing"
         );
       }
-      return fetch(requestOptions.url, {
+      return fetch2(requestOptions.url, {
         method: requestOptions.method,
         body: requestOptions.body,
         redirect: (_c = requestOptions.request) == null ? void 0 : _c.redirect,
@@ -32557,12 +32557,14 @@ var core = __toESM(require_core(), 1);
 
 // src/actions/context.ts
 var import_promises = require("node:fs/promises");
-var import_node_path = require("node:path");
 
 // src/runtime/errors.ts
 var InputError = class extends Error {
   name = "InputError";
 };
+
+// src/actions/context-validation.ts
+var import_node_path = require("node:path");
 
 // src/actions/inputs.ts
 function required(env, name, maxBytes = 64 * 1024) {
@@ -32574,7 +32576,7 @@ function required(env, name, maxBytes = 64 * 1024) {
   return value;
 }
 function optional(env, name, fallback = "") {
-  return env[`INPUT_${name.toUpperCase().replaceAll("-", "_")}`] ?? fallback;
+  return env[`INPUT_${name.toUpperCase().replaceAll("-", "_")}`] || fallback;
 }
 function positiveDecimal(value, name) {
   if (!/^[1-9][0-9]*$/.test(value)) throw new InputError(`${name} must be a positive decimal`);
@@ -32594,31 +32596,68 @@ function repository(value) {
   return { owner: match[1], name: match[2] };
 }
 
-// src/actions/context.ts
-async function actionContext(env) {
+// src/actions/context-validation.ts
+function validateContextEnvironment(env, nodeVersion) {
   const eventPath = env.GITHUB_EVENT_PATH;
-  if (!env.GITHUB_WORKSPACE || !env.GITHUB_REPOSITORY || !env.GITHUB_RUN_ID || !env.GITHUB_SHA || !eventPath) {
+  if (!env.GITHUB_WORKSPACE || !env.GITHUB_REPOSITORY || !env.GITHUB_RUN_ID || !env.GITHUB_SHA || !eventPath)
     throw new InputError("Incomplete GitHub Actions context");
-  }
   if (!(0, import_node_path.isAbsolute)(env.GITHUB_WORKSPACE) || !(0, import_node_path.isAbsolute)(eventPath))
     throw new InputError("GitHub workspace and event paths must be absolute");
+  if (env.GITHUB_ACTIONS !== "true" || env.GITHUB_SERVER_URL !== "https://github.com" || env.RUNNER_ENVIRONMENT !== "github-hosted" || env.RUNNER_OS !== "Linux" || !(/* @__PURE__ */ new Set(["ubuntu22", "ubuntu24"])).has(env.ImageOS ?? "") || nodeVersion.split(".")[0] !== "24")
+    throw new InputError("Unsupported GitHub Actions runner capability");
   repository(env.GITHUB_REPOSITORY);
   positiveDecimal(env.GITHUB_RUN_ID, "GITHUB_RUN_ID");
   if (!/^[0-9a-f]{40}$/.test(env.GITHUB_SHA)) throw new InputError("Invalid GITHUB_SHA");
-  if (env.GITHUB_EVENT_NAME?.includes("\n")) throw new InputError("Invalid GITHUB_EVENT_NAME");
-  const bytes = await (0, import_promises.readFile)(eventPath);
-  if (bytes.length > 2 * 1024 * 1024) throw new InputError("Event payload exceeds size limit");
-  const event = JSON.parse(bytes.toString("utf8"));
-  if (!event || typeof event !== "object" || Array.isArray(event))
-    throw new InputError("Event payload must be an object");
+  if (!/^[A-Za-z0-9_]+$/.test(env.GITHUB_EVENT_NAME ?? ""))
+    throw new InputError("Invalid GITHUB_EVENT_NAME");
   return {
     workspace: env.GITHUB_WORKSPACE,
     repository: env.GITHUB_REPOSITORY,
     runId: env.GITHUB_RUN_ID,
     sha: env.GITHUB_SHA,
     eventName: env.GITHUB_EVENT_NAME ?? "",
+    eventPath
+  };
+}
+function parseEventPayload(bytes) {
+  const event = JSON.parse(bytes.toString("utf8"));
+  if (!event || typeof event !== "object" || Array.isArray(event))
+    throw new InputError("Event payload must be an object");
+  return event;
+}
+
+// src/actions/context.ts
+async function actionContext(env, nodeVersion = process.versions.node) {
+  const validated = validateContextEnvironment(env, nodeVersion);
+  const event = parseEventPayload(await readBoundedEvent(validated.eventPath));
+  return {
+    workspace: validated.workspace,
+    repository: validated.repository,
+    runId: validated.runId,
+    sha: validated.sha,
+    eventName: validated.eventName,
     event
   };
+}
+async function readBoundedEvent(path) {
+  const limit = 2 * 1024 * 1024;
+  const handle = await (0, import_promises.open)(path, "r");
+  try {
+    const metadata = await handle.stat();
+    if (!metadata.isFile()) throw new InputError("Event payload must be a regular file");
+    if (metadata.size > limit) throw new InputError("Event payload exceeds size limit");
+    const buffer = Buffer.alloc(Math.min(metadata.size + 1, limit + 1));
+    let offset = 0;
+    while (offset < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
+      if (bytesRead === 0) break;
+      offset += bytesRead;
+    }
+    if (offset > limit) throw new InputError("Event payload exceeds size limit");
+    return buffer.subarray(0, offset);
+  } finally {
+    await handle.close();
+  }
 }
 
 // src/actions/signal.ts
@@ -32649,7 +32688,8 @@ function decodeManifest(source, filename) {
   const match = manifestName.exec(filename);
   if (!match) throw new InputError(`Invalid manifest filename: ${filename}`);
   const value = (0, import_yaml.parse)(source, { uniqueKeys: true });
-  if (!value || typeof value !== "object") throw new InputError("Manifest must be a mapping");
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new InputError("Manifest must be a mapping");
   if (typeof value.name !== "string" || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(value.name)) {
     throw new InputError("Invalid manifest snap name");
   }
@@ -32657,7 +32697,15 @@ function decodeManifest(source, filename) {
     throw new InputError("Manifest architecture does not match filename");
   const revision = String(value.revision);
   if (!/^[1-9][0-9]*$/.test(revision)) throw new InputError("Revision must be a positive decimal");
-  return { name: value.name, architecture: value.architecture, revision };
+  const version = value.version;
+  if (version !== void 0 && (typeof version !== "string" || !version || version.includes("\n") || Buffer.byteLength(version) > 128))
+    throw new InputError("Manifest version is invalid");
+  return {
+    name: value.name,
+    architecture: value.architecture,
+    revision,
+    ...version === void 0 ? {} : { version }
+  };
 }
 function validateArchiveEntry(name, size, limit) {
   if (name.startsWith("/") || name.startsWith("\\") || /^[A-Za-z]:/.test(name)) {
@@ -32686,13 +32734,20 @@ async function collectManifests(api, destination, expected) {
   let archiveBytes = 0;
   for (const artifact of artifacts) {
     if (artifact.expired) throw new InputError(`Manifest artifact ${artifact.name} is expired`);
+    const artifactMatch = /^manifest-(amd64|arm64|armhf|i386|ppc64el|riscv64|s390x)$/.exec(
+      artifact.name
+    );
+    if (!artifactMatch) throw new InputError(`Invalid manifest artifact label: ${artifact.name}`);
     const archive = await api.downloadArtifact(artifact.id);
     archiveBytes += archive.length;
     if (archive.length > 5 * 1024 * 1024)
       throw new InputError("Manifest archive exceeds size limit");
     if (archiveBytes > 25 * 1024 * 1024)
       throw new InputError("Combined manifest archives exceed size limit");
-    for (const entry of await unzipEntries(archive)) {
+    const entries = await unzipEntries(archive);
+    if (entries.length !== 1 || entries[0].name !== `${artifact.name}.yaml`)
+      throw new InputError("Manifest artifact label does not match its single archive entry");
+    for (const entry of entries) {
       validateArchiveEntry(entry.name, entry.data.length, 64 * 1024);
       const filename = (0, import_node_path2.basename)(entry.name);
       if (destinations.has(filename))
@@ -32700,6 +32755,8 @@ async function collectManifests(api, destination, expected) {
       destinations.add(filename);
       const text = entry.data.toString("utf8");
       const manifest = decodeManifest(text, filename);
+      if (manifest.architecture !== artifactMatch[1])
+        throw new InputError("Manifest artifact architecture does not match its label");
       if (expected && manifest.name !== expected.snap)
         throw new InputError(`Manifest snap ${manifest.name} does not match ${expected.snap}`);
       if (manifests.some((item) => item.architecture === manifest.architecture))
@@ -32778,9 +32835,9 @@ async function readZip(zip) {
 }
 
 // src/project/parse.ts
+var import_node_fs = require("node:fs");
 var import_promises4 = require("node:fs/promises");
 var import_node_path4 = require("node:path");
-var import_yaml2 = __toESM(require_dist(), 1);
 
 // src/runtime/files.ts
 var import_promises3 = require("node:fs/promises");
@@ -32794,6 +32851,56 @@ async function resolveProjectRoot(workspace, input) {
     throw new Error("Project root escapes workspace");
   return requestedReal;
 }
+async function ownedTemp(parent, prefix, owner) {
+  const { writeFile: writeFile2 } = await import("node:fs/promises");
+  const directory = await (0, import_promises3.mkdtemp)((0, import_node_path3.join)(parent, prefix));
+  await writeFile2((0, import_node_path3.join)(directory, ".owner"), owner, { mode: 384 });
+  return directory;
+}
+async function removeOwned(directory, owner) {
+  const marker = await (0, import_promises3.readFile)((0, import_node_path3.join)(directory, ".owner"), "utf8");
+  if (marker !== owner) throw new Error("Refusing to remove resource not owned by this run");
+  await (0, import_promises3.rm)(directory, { recursive: true });
+}
+
+// src/project/schema.ts
+var import_yaml2 = __toESM(require_dist(), 1);
+function parseProjectDocument(source) {
+  const parsed = (0, import_yaml2.parseDocument)(source.toString("utf8"), { uniqueKeys: true });
+  if (parsed.errors.length)
+    throw new InputError(`Invalid snapcraft YAML: ${parsed.errors[0].message}`);
+  const document = parsed.toJS();
+  if (!document || typeof document !== "object" || Array.isArray(document))
+    throw new InputError("snapcraft.yaml must be a mapping");
+  const mapping = document;
+  if (typeof mapping.name !== "string" || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(mapping.name))
+    throw new InputError("Invalid snap name");
+  return {
+    document: mapping,
+    name: mapping.name,
+    ...typeof mapping.version === "string" || typeof mapping.version === "number" ? { version: String(mapping.version) } : {},
+    ...typeof mapping["adopt-info"] === "string" ? { adoptInfo: mapping["adopt-info"] } : {},
+    classic: mapping.confinement === "classic",
+    ...typeof mapping.base === "string" ? { base: mapping.base } : {},
+    components: parseComponents(mapping.components)
+  };
+}
+function parseComponents(value) {
+  if (value === void 0 || value === null) return [];
+  if (typeof value !== "object" || Array.isArray(value))
+    throw new InputError("components must be a mapping");
+  return Object.entries(value).map(([name, raw]) => {
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(name) || !raw || typeof raw !== "object")
+      throw new InputError(`Invalid component ${name}`);
+    const version = raw.version;
+    if (version !== void 0 && version !== null && typeof version !== "string" && typeof version !== "number")
+      throw new InputError(`Invalid component version for ${name}`);
+    return {
+      name,
+      ...version === void 0 || version === null ? {} : { version: String(version) }
+    };
+  });
+}
 
 // src/project/parse.ts
 var candidates = [
@@ -32802,11 +32909,14 @@ var candidates = [
   "snap/snapcraft.yaml",
   "snapcraft.yaml"
 ];
-async function exists(path) {
+async function regularFile(path, label) {
   try {
-    await (0, import_promises4.access)(path);
+    const metadata = await (0, import_promises4.lstat)(path);
+    if (metadata.isSymbolicLink()) throw new InputError(`${label} must not be a symlink`);
+    if (!metadata.isFile()) throw new InputError(`${label} must be a regular file`);
     return true;
-  } catch {
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
     return false;
   }
 }
@@ -32815,20 +32925,12 @@ async function parseProject(workspace, inputRoot = "") {
   const root = await resolveProjectRoot(workspace, publicRoot);
   const matches = [];
   for (const candidate of candidates)
-    if (await exists((0, import_node_path4.resolve)(root, candidate))) matches.push(candidate);
+    if (await regularFile((0, import_node_path4.resolve)(root, candidate), "snapcraft.yaml")) matches.push(candidate);
   const selected = matches.at(-1);
   if (!selected) throw new InputError("No snapcraft.yaml found");
   const yamlPath = (0, import_node_path4.resolve)(root, selected);
-  const bytes = await (0, import_promises4.readFile)(yamlPath);
-  if (bytes.length > 2 * 1024 * 1024) throw new InputError("snapcraft.yaml exceeds 2 MiB limit");
-  const parsed = (0, import_yaml2.parseDocument)(bytes.toString("utf8"), { uniqueKeys: true });
-  if (parsed.errors.length)
-    throw new InputError(`Invalid snapcraft YAML: ${parsed.errors[0].message}`);
-  const document = parsed.toJS();
-  if (typeof document.name !== "string" || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(document.name)) {
-    throw new InputError("Invalid snap name");
-  }
-  const components = parseComponents(document.components);
+  const bytes = await readBoundedRegular(yamlPath, 2 * 1024 * 1024, "snapcraft.yaml");
+  const parsed = parseProjectDocument(bytes);
   const plugsFile = await declaration(workspace, [
     "plug-declaration.json",
     ".github/plug-declaration.json"
@@ -32842,39 +32944,40 @@ async function parseProject(workspace, inputRoot = "") {
     yamlPath,
     publicRoot,
     publicYamlPath: `${publicRoot.replace(/\/$/, "")}/${selected}`,
-    name: document.name,
-    ...typeof document.version === "string" || typeof document.version === "number" ? { version: String(document.version) } : {},
-    ...typeof document["adopt-info"] === "string" ? { adoptInfo: document["adopt-info"] } : {},
-    classic: document.confinement === "classic",
-    ...typeof document.base === "string" ? { base: document.base } : {},
-    components,
+    ...parsed,
     ...plugsFile ? { plugsFile } : {},
-    ...slotsFile ? { slotsFile } : {},
-    document
+    ...slotsFile ? { slotsFile } : {}
   };
-}
-function parseComponents(value) {
-  if (value === void 0 || value === null) return [];
-  if (typeof value !== "object" || Array.isArray(value))
-    throw new InputError("components must be a mapping");
-  return Object.entries(value).map(([name, raw]) => {
-    if (!/^[a-z0-9][a-z0-9-]*$/.test(name) || !raw || typeof raw !== "object") {
-      throw new InputError(`Invalid component ${name}`);
-    }
-    const version = raw.version;
-    if (version !== void 0 && version !== null && typeof version !== "string" && typeof version !== "number") {
-      throw new InputError(`Invalid component version for ${name}`);
-    }
-    return {
-      name,
-      ...version === void 0 || version === null ? {} : { version: String(version) }
-    };
-  });
 }
 async function declaration(workspace, paths) {
   let found;
-  for (const path of paths) if (await exists((0, import_node_path4.resolve)(workspace, path))) found = path;
+  for (const path of paths)
+    if (await regularFile((0, import_node_path4.resolve)(workspace, path), "declaration file")) {
+      const metadata = await (0, import_promises4.lstat)((0, import_node_path4.resolve)(workspace, path));
+      if (metadata.size > 1024 * 1024)
+        throw new InputError("Declaration file exceeds 1 MiB limit");
+      found = path;
+    }
   return found;
+}
+async function readBoundedRegular(path, limit, label) {
+  const handle = await (0, import_promises4.open)(path, import_node_fs.constants.O_RDONLY | import_node_fs.constants.O_NOFOLLOW);
+  try {
+    const metadata = await handle.stat();
+    if (!metadata.isFile()) throw new InputError(`${label} must be a regular file`);
+    if (metadata.size > limit) throw new InputError(`${label} exceeds 2 MiB limit`);
+    const buffer = Buffer.alloc(Math.min(metadata.size + 1, limit + 1));
+    let offset = 0;
+    while (offset < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
+      if (!bytesRead) break;
+      offset += bytesRead;
+    }
+    if (offset > limit) throw new InputError(`${label} exceeds 2 MiB limit`);
+    return buffer.subarray(0, offset);
+  } finally {
+    await handle.close();
+  }
 }
 
 // src/runtime/github.ts
@@ -32895,8 +32998,8 @@ var systemClock = {
     signal.addEventListener("abort", aborted, { once: true });
   })
 };
-function retryDelay(attempt, retryAfterMs2, random = Math.random) {
-  const requested = retryAfterMs2 ?? 250 * 2 ** attempt;
+function retryDelay(attempt, retryAfterMs, random = Math.random) {
+  const requested = retryAfterMs ?? 250 * 2 ** attempt;
   return Math.min(1e4, requested) + Math.floor(random() * 100);
 }
 
@@ -32912,16 +33015,29 @@ async function retryRequest(request, options2) {
       return await request();
     } catch (error) {
       if (attempt + 1 >= attempts || !retryable(error)) throw error;
-      const retryAfter = retryAfterMs(error, clock.now());
+      const retryAfter = retryAfterMilliseconds(error, clock.now());
       await clock.sleep(retryDelay(attempt, retryAfter, random), options2.signal);
     }
+  }
+}
+async function withDeadline(parent, timeoutMs, operation) {
+  if (parent.aborted) throw parent.reason ?? new Error("Operation aborted before dispatch");
+  const controller = new AbortController();
+  const abort = () => controller.abort(parent.reason ?? new Error("Operation aborted"));
+  parent.addEventListener("abort", abort, { once: true });
+  const timer = setTimeout(() => controller.abort(new Error("HTTP deadline aborted")), timeoutMs);
+  try {
+    return await operation(controller.signal);
+  } finally {
+    clearTimeout(timer);
+    parent.removeEventListener("abort", abort);
   }
 }
 function retryable(error) {
   const status = error.status;
   return status === 429 || status === 502 || status === 503 || status === 504;
 }
-function retryAfterMs(error, now) {
+function retryAfterMilliseconds(error, now) {
   const headers = error.response?.headers;
   const value = headers?.["retry-after"];
   if (typeof value !== "string") return void 0;
@@ -32931,21 +33047,32 @@ function retryAfterMs(error, now) {
 }
 
 // src/runtime/github.ts
-function manifestGitHub(token, repository2, runId, signal = new AbortController().signal) {
+function readRequest(parent, timeoutMs, request) {
+  return withDeadline(
+    parent,
+    timeoutMs,
+    (signal) => retryRequest(() => request(signal), { signal })
+  );
+}
+function writeRequest(parent, timeoutMs, request) {
+  return withDeadline(parent, timeoutMs, request);
+}
+function manifestGitHub(token, repository2, runId, signal = new AbortController().signal, options2 = {}) {
   const [owner, repo] = repository2.split("/");
   const client = (0, import_github.getOctokit)(token);
   return {
     async listArtifacts(page) {
-      const response = await retryRequest(
-        () => client.rest.actions.listWorkflowRunArtifacts({
+      const response = await readRequest(
+        signal,
+        6e4,
+        (requestSignal) => client.rest.actions.listWorkflowRunArtifacts({
           owner,
           repo,
           run_id: Number(runId),
           per_page: 100,
           page,
-          request: { signal }
-        }),
-        { signal }
+          request: { signal: requestSignal }
+        })
       );
       return {
         artifacts: response.data.artifacts.map((item) => ({
@@ -32957,100 +33084,207 @@ function manifestGitHub(token, repository2, runId, signal = new AbortController(
       };
     },
     async downloadArtifact(id) {
-      const response = await retryRequest(
-        () => client.rest.actions.downloadArtifact({
-          owner,
-          repo,
-          artifact_id: id,
-          archive_format: "zip",
-          request: { signal }
-        }),
-        { signal }
-      );
-      return Buffer.from(response.data);
+      return readRequest(signal, 6e4, async (requestSignal) => {
+        const response = await (options2.fetcher ?? fetch)(
+          `${options2.apiBase ?? "https://api.github.com"}/repos/${owner}/${repo}/actions/artifacts/${id}/zip`,
+          {
+            headers: {
+              accept: "application/vnd.github+json",
+              authorization: `Bearer ${token}`,
+              "user-agent": "snapcrafters-ci",
+              "x-github-api-version": "2022-11-28"
+            },
+            redirect: "follow",
+            signal: requestSignal
+          }
+        );
+        if (!response.ok)
+          throw Object.assign(new Error(`Artifact download failed (${response.status})`), {
+            status: response.status
+          });
+        return readBoundedResponse(response, 5 * 1024 * 1024);
+      });
     }
   };
+}
+async function readBoundedResponse(response, limit) {
+  const declared = response.headers.get("content-length");
+  if (declared && (!/^[0-9]+$/.test(declared) || Number(declared) > limit))
+    throw new Error("Artifact response exceeds size limit");
+  if (!response.body) return Buffer.alloc(0);
+  const reader = response.body.getReader();
+  const chunks = [];
+  let size = 0;
+  try {
+    for (; ; ) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > limit) throw new Error("Artifact response exceeds size limit");
+      chunks.push(Buffer.from(value));
+    }
+    return Buffer.concat(chunks, size);
+  } finally {
+    await reader.cancel().catch(() => void 0);
+  }
 }
 function issueCommenter(token, repository2, issueNumber, signal = new AbortController().signal) {
   const [owner, repo] = repository2.split("/");
   const client = (0, import_github.getOctokit)(token);
   return async (body) => {
-    await client.rest.issues.createComment({
-      owner,
-      repo,
-      issue_number: issueNumber,
-      body,
-      request: { signal }
-    });
+    const marker = deliveryMarker(body);
+    const exists = async () => {
+      if (!marker) return false;
+      for (let page = 1; page <= 10; page++) {
+        const response = await readRequest(
+          signal,
+          3e4,
+          (requestSignal) => client.rest.issues.listComments({
+            owner,
+            repo,
+            issue_number: issueNumber,
+            per_page: 100,
+            page,
+            request: { signal: requestSignal }
+          })
+        );
+        if (response.data.some((comment) => comment.body?.includes(marker))) return true;
+        if (response.data.length < 100) return false;
+      }
+      throw new Error("Issue comment pagination limit exceeded");
+    };
+    if (await exists()) return;
+    try {
+      await writeRequest(
+        signal,
+        3e4,
+        (requestSignal) => client.rest.issues.createComment({
+          owner,
+          repo,
+          issue_number: issueNumber,
+          body,
+          request: { signal: requestSignal }
+        })
+      );
+    } catch (error) {
+      if (await exists()) return;
+      throw error;
+    }
   };
+}
+function deliveryMarker(body) {
+  const matches = body.match(/<!-- snapcrafters-ci:[a-z-]+:[A-Za-z0-9:._/-]+ -->/g) ?? [];
+  if (matches.length > 1) throw new Error("Ambiguous delivery marker");
+  return matches[0];
 }
 function screenshotGitHub(token, repository2, signal = new AbortController().signal) {
   const [owner, repo] = repository2.split("/");
   const client = (0, import_github.getOctokit)(token);
   return {
     async getRef() {
-      return (await retryRequest(
-        () => client.rest.git.getRef({ owner, repo, ref: "heads/main", request: { signal } }),
-        { signal }
+      return (await readRequest(
+        signal,
+        6e4,
+        (requestSignal) => client.rest.git.getRef({
+          owner,
+          repo,
+          ref: "heads/main",
+          request: { signal: requestSignal }
+        })
       )).data.object.sha;
     },
     async getCommitTree(sha) {
-      return (await retryRequest(
-        () => client.rest.git.getCommit({ owner, repo, commit_sha: sha, request: { signal } }),
-        { signal }
+      return (await readRequest(
+        signal,
+        6e4,
+        (requestSignal) => client.rest.git.getCommit({
+          owner,
+          repo,
+          commit_sha: sha,
+          request: { signal: requestSignal }
+        })
       )).data.tree.sha;
     },
     async createBlob(content) {
-      return (await client.rest.git.createBlob({
-        owner,
-        repo,
-        content: content.toString("base64"),
-        encoding: "base64",
-        request: { signal }
-      })).data.sha;
+      return (await writeRequest(
+        signal,
+        6e4,
+        (requestSignal) => client.rest.git.createBlob({
+          owner,
+          repo,
+          content: content.toString("base64"),
+          encoding: "base64",
+          request: { signal: requestSignal }
+        })
+      )).data.sha;
     },
     async createTree(baseTree, entries) {
-      return (await client.rest.git.createTree({
-        owner,
-        repo,
-        base_tree: baseTree,
-        tree: entries.map((entry) => ({
-          path: entry.path,
-          sha: entry.sha,
-          mode: "100644",
-          type: "blob"
-        })),
-        request: { signal }
-      })).data.sha;
+      return (await writeRequest(
+        signal,
+        6e4,
+        (requestSignal) => client.rest.git.createTree({
+          owner,
+          repo,
+          base_tree: baseTree,
+          tree: entries.map((entry) => ({
+            path: entry.path,
+            sha: entry.sha,
+            mode: "100644",
+            type: "blob"
+          })),
+          request: { signal: requestSignal }
+        })
+      )).data.sha;
     },
     async createCommit(tree, parent, message, author) {
-      return (await client.rest.git.createCommit({
-        owner,
-        repo,
-        tree,
-        parents: [parent],
-        message,
-        author,
-        committer: author,
-        request: { signal }
-      })).data.sha;
+      return (await writeRequest(
+        signal,
+        6e4,
+        (requestSignal) => client.rest.git.createCommit({
+          owner,
+          repo,
+          tree,
+          parents: [parent],
+          message,
+          author,
+          committer: author,
+          request: { signal: requestSignal }
+        })
+      )).data.sha;
     },
     async updateRef(sha) {
-      await client.rest.git.updateRef({
-        owner,
-        repo,
-        ref: "heads/main",
-        sha,
-        force: false,
-        request: { signal }
-      });
+      await writeRequest(
+        signal,
+        6e4,
+        (requestSignal) => client.rest.git.updateRef({
+          owner,
+          repo,
+          ref: "heads/main",
+          sha,
+          force: false,
+          request: { signal: requestSignal }
+        })
+      );
+    },
+    async isAncestor(ancestor, descendant) {
+      const response = await readRequest(
+        signal,
+        6e4,
+        (requestSignal) => client.rest.repos.compareCommitsWithBasehead({
+          owner,
+          repo,
+          basehead: `${ancestor}...${descendant}`,
+          request: { signal: requestSignal }
+        })
+      );
+      return response.data.status === "ahead" || response.data.status === "identical";
     }
   };
 }
 
 // src/screenshots/run.ts
 var import_promises6 = require("node:fs/promises");
-var import_node_path5 = require("node:path");
+var import_node_path6 = require("node:path");
 
 // src/runtime/process.ts
 var import_node_child_process = require("node:child_process");
@@ -33069,6 +33303,10 @@ async function runProcess(spec) {
   }
   const outputLimit = spec.maxOutputBytes ?? 1024 * 1024;
   const logLimit = spec.maxLogBytes ?? 10 * 1024 * 1024;
+  const redactionMargin = Math.max(
+    0,
+    ...(spec.redact ?? []).map((item) => Buffer.byteLength(item))
+  );
   let stdout = Buffer.alloc(0);
   let stderr = Buffer.alloc(0);
   let combined = Buffer.alloc(0);
@@ -33093,9 +33331,9 @@ async function runProcess(spec) {
     throw error;
   }
   const append = (kind, chunk) => {
-    if (kind === "stdout") stdout = boundedAppend(stdout, chunk, outputLimit);
-    else stderr = boundedAppend(stderr, chunk, outputLimit);
-    combined = boundedAppend(combined, chunk, logLimit);
+    if (kind === "stdout") stdout = boundedAppend(stdout, chunk, outputLimit + redactionMargin);
+    else stderr = boundedAppend(stderr, chunk, outputLimit + redactionMargin);
+    combined = boundedAppend(combined, chunk, logLimit + redactionMargin);
   };
   child.stdout.on("data", (chunk) => append("stdout", chunk));
   child.stderr.on("data", (chunk) => append("stderr", chunk));
@@ -33128,18 +33366,21 @@ async function runProcess(spec) {
     });
     if (terminationStarted) await killComplete;
     else finishKill?.();
-    const cleanStdout = redact(stdout.toString(), spec.redact ?? []);
-    const cleanStderr = redact(stderr.toString(), spec.redact ?? []);
-    const cleanLog = Buffer.from(redact(combined.toString(), spec.redact ?? [])).subarray(
-      0,
-      logLimit
-    );
+    const cleanStdout = redactAndBound(stdout, spec.redact ?? [], outputLimit);
+    const cleanStderr = redactAndBound(stderr, spec.redact ?? [], outputLimit);
+    const cleanLog = Buffer.from(redactAndBound(combined, spec.redact ?? [], logLimit));
     if (spec.streamOutput) {
       process.stdout.write(cleanStdout);
       process.stderr.write(cleanStderr);
     }
     if (log) await log.writeFile(cleanLog);
-    return { exitCode, stdout: cleanStdout, stderr: cleanStderr, timedOut, aborted };
+    return {
+      exitCode: timedOut ? 124 : aborted ? 130 : exitCode,
+      stdout: cleanStdout,
+      stderr: cleanStderr,
+      timedOut,
+      aborted
+    };
   } finally {
     clearTimeout(timeout);
     if (killTimer && !terminationStarted) clearTimeout(killTimer);
@@ -33154,108 +33395,51 @@ function boundedAppend(current, chunk, limit) {
 function redact(value, secrets) {
   return secrets.filter(Boolean).sort((a, b) => b.length - a.length).reduce((text, secret) => text.replaceAll(secret, "***"), value);
 }
-
-// src/screenshots/run.ts
-async function captureScreenshots(input) {
-  const env = { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? input.cwd };
-  const amd64 = input.manifests.find((manifest) => manifest.architecture === "amd64");
-  if (amd64 && amd64.name !== input.snap) throw new Error("Manifest snap does not match project");
-  const commands = [
-    ["ghvmctl", ["prepare"]],
-    [
-      "ghvmctl",
-      [
-        "snap-install",
-        input.snap,
-        ...amd64 ? ["--revision", amd64.revision] : ["--channel", input.channel]
-      ]
-    ],
-    ["ghvmctl", ["snap-run", `${input.snap}.${input.app}`]],
-    [(0, import_node_path5.join)(input.actionPath, "wait-for-window"), ["60", "2"]],
-    ["ghvmctl", ["screenshot-full"]],
-    ["ghvmctl", ["screenshot-window"]],
-    ["ghvmctl", ["exec", `cat /home/ubuntu/${input.snap}.${input.app}.log`]]
-  ];
-  for (const [file, args] of commands) {
-    const result = await runProcess({
-      file,
-      args,
-      cwd: input.cwd,
-      env,
-      timeoutMs: 10 * 6e4,
-      signal: input.signal
-    });
-    if (result.exitCode !== 0) throw new Error(`${file} failed (${result.exitCode})`);
-  }
-  const directory = (0, import_node_path5.join)(env.HOME, "ghvmctl-screenshots");
-  return {
-    screen: await (0, import_promises6.readFile)((0, import_node_path5.join)(directory, "screenshot-screen.png")),
-    window: await (0, import_promises6.readFile)((0, import_node_path5.join)(directory, "screenshot-window.png"))
-  };
+function redactAndBound(value, secrets, limit) {
+  return Buffer.from(redact(value.toString(), secrets)).subarray(0, limit).toString();
 }
 
-// src/screenshots/upload.ts
-async function uploadScreenshots(input, deps) {
-  if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(input.snap) || !/^[1-9][0-9]*$/.test(input.issue)) {
+// src/screenshots/validation.ts
+var import_node_path5 = require("node:path");
+function validateCaptureRequest(input) {
+  if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(input.snap)) throw new InputError("Invalid snap name");
+  if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(input.app))
+    throw new InputError("Invalid snap application name");
+  if (!(0, import_node_path5.isAbsolute)(input.actionPath)) throw new InputError("Action path must be absolute");
+  const amd64 = input.manifests.find(
+    (manifest) => manifest.architecture === "amd64" && manifest.name === input.snap
+  );
+  if (input.manifests.some((manifest) => manifest.architecture === "amd64") && !amd64)
+    throw new InputError("Manifest snap does not match project");
+  return amd64;
+}
+function validateScreenshotUpload(input) {
+  if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(input.snap) || !/^[1-9][0-9]*$/.test(input.issue))
     throw new InputError("Invalid screenshot snap or issue");
-  }
   if (!validRepository(input.repository) || !validRepository(input.sourceRepository))
     throw new InputError("Invalid screenshot repository");
   if (!validDate(input.date)) throw new InputError("Invalid screenshot date");
+  if (!/^[1-9][0-9]*$/.test(input.runId) || !/^[0-9a-f]{40}$/.test(input.sourceSha))
+    throw new InputError("Invalid screenshot source identity");
   if (!input.author.name || input.author.name.includes("\n") || Buffer.byteLength(input.author.name) > 100 || !/^[^\s@]+@[^\s@]+$/.test(input.author.email) || Buffer.byteLength(input.author.email) > 254)
     throw new InputError("Invalid screenshot commit author");
-  if (input.screen.length > 10 * 1024 * 1024 || input.window.length > 10 * 1024 * 1024) {
+  if (input.screen.length > 10 * 1024 * 1024 || input.window.length > 10 * 1024 * 1024)
     throw new InputError("Screenshot exceeds size limit");
-  }
-  const prefix = `${input.date}-${input.snap}-${input.issue}`;
-  const entries = [
-    { path: `${prefix}-screen.png`, sha: await deps.github.createBlob(input.screen) },
-    { path: `${prefix}-window.png`, sha: await deps.github.createBlob(input.window) }
-  ];
-  let commit = "";
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const parent = await deps.github.getRef();
-    const base = await deps.github.getCommitTree(parent);
-    const tree = await deps.github.createTree(base, entries);
-    commit = await deps.github.createCommit(
-      tree,
-      parent,
-      `data: screenshots for ${input.sourceRepository}/${input.snap}#${input.issue}`,
-      input.author
-    );
-    try {
-      await deps.github.updateRef(commit);
-      break;
-    } catch (error) {
-      const current = await deps.github.getRef();
-      if (current === commit) break;
-      const status = error.status;
-      if (current === parent || status !== 409 && status !== 422) throw error;
-      if (attempt === 2)
-        throw new Error("Screenshot ref conflict retry limit exhausted", { cause: error });
-      await deps.sleep(100 * (attempt + 1));
-    }
-  }
-  const baseUrl = `https://raw.githubusercontent.com/${input.repository}/${commit}`;
-  return { screen: `${baseUrl}/${entries[0].path}`, window: `${baseUrl}/${entries[1].path}` };
+  validatePng(input.screen);
+  validatePng(input.window);
 }
-async function publishScreenshots(input, deps) {
-  const urls = await uploadScreenshots(input, deps);
-  const body = `The following screenshots were taken during automated testing:
-
-![window](${urls.window})
-
-![screen](${urls.screen})`;
-  for (let attempt = 0; ; attempt++) {
-    try {
-      await deps.comment(body);
-      return urls;
-    } catch (error) {
-      if (attempt >= 2)
-        throw new Error("Screenshot comment retry limit exhausted", { cause: error });
-      await deps.sleep(100 * (attempt + 1));
-    }
-  }
+function gitSha(value, label) {
+  if (!/^[0-9a-f]{40}$/.test(value)) throw new InputError(`Invalid Git ${label} SHA`);
+  return value;
+}
+function validatePng(value) {
+  if (value.length < 8 || !value.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])))
+    throw new InputError("Screenshot must be a non-empty PNG image");
+}
+function confirmedRefConflict(error) {
+  const status = error.status;
+  const message = error instanceof Error ? error.message : "";
+  return status === 409 && /conflict/i.test(message) || status === 422 && /reference update failed|not a fast forward/i.test(message);
 }
 function validRepository(value) {
   return /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})\/[A-Za-z0-9_.-]{1,100}$/.test(value);
@@ -33267,6 +33451,211 @@ function validDate(value) {
   const day = Number(value.slice(6, 8));
   const date = new Date(Date.UTC(year, month - 1, day));
   return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
+// src/screenshots/run.ts
+async function captureScreenshots(input) {
+  const amd64 = validateCaptureRequest(input);
+  const helper = (0, import_node_path6.join)(input.actionPath, "wait-for-window");
+  const helperMetadata = await (0, import_promises6.lstat)(helper, { bigint: false });
+  if (helperMetadata.isSymbolicLink() || !helperMetadata.isFile() || (helperMetadata.mode & 73) === 0)
+    throw new Error("Screenshot helper must be an executable regular file");
+  const owner = input.owner ?? `${process.pid}-${Date.now()}`;
+  if (!/^[A-Za-z0-9-]{1,80}$/.test(owner)) throw new Error("Invalid screenshot owner");
+  const scratch = await ownedTemp(input.home ?? input.cwd, ".snapcrafters-screenshots-", owner);
+  const vmName = `snapcrafters-${owner}`.toLowerCase();
+  const env = {
+    PATH: input.path ?? process.env.PATH ?? "",
+    HOME: scratch,
+    SNAP_REAL_HOME: scratch,
+    VM_NAME: vmName
+  };
+  const commands = [
+    ["ghvmctl", ["prepare"]],
+    [
+      "ghvmctl",
+      [
+        "snap-install",
+        input.snap,
+        ...amd64 ? ["--revision", amd64.revision] : ["--channel", input.channel]
+      ]
+    ],
+    ["ghvmctl", ["snap-run", `${input.snap}.${input.app}`]],
+    [helper, ["60", "2"]],
+    ["ghvmctl", ["screenshot-full"]],
+    ["ghvmctl", ["screenshot-window"]],
+    ["ghvmctl", ["exec", "cat", "--", `/home/ubuntu/${input.snap}.${input.app}.log`]]
+  ];
+  let failure;
+  let images;
+  const cleanupErrors = [];
+  try {
+    for (const [file, args] of commands) {
+      const result = await runProcess({
+        file,
+        args,
+        cwd: input.cwd,
+        env,
+        timeoutMs: 10 * 6e4,
+        signal: input.signal
+      });
+      if (result.exitCode !== 0) throw new Error(`${file} failed (${result.exitCode})`);
+    }
+    const directory = (0, import_node_path6.join)(scratch, "ghvmctl-screenshots");
+    images = {
+      screen: await readPng((0, import_node_path6.join)(directory, "screenshot-screen.png")),
+      window: await readPng((0, import_node_path6.join)(directory, "screenshot-window.png"))
+    };
+  } catch (error) {
+    failure = error;
+  } finally {
+    try {
+      const result = await runProcess({
+        file: "lxc",
+        args: ["delete", "--force", vmName],
+        cwd: input.cwd,
+        env,
+        timeoutMs: 6e4,
+        signal: new AbortController().signal
+      });
+      if (result.exitCode !== 0)
+        cleanupErrors.push(new Error(`lxc cleanup failed (${result.exitCode})`));
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+    try {
+      await removeOwned(scratch, owner);
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+  }
+  if (failure !== void 0) throw failure;
+  if (cleanupErrors.length) throw new AggregateError(cleanupErrors, "Screenshot cleanup failed");
+  if (!images) throw new Error("Screenshots were not captured");
+  return images;
+}
+async function readPng(path) {
+  const limit = 10 * 1024 * 1024;
+  const pathMetadata = await (0, import_promises6.lstat)(path);
+  if (pathMetadata.isSymbolicLink()) throw new Error("Screenshot symlinks are forbidden");
+  const handle = await (0, import_promises6.open)(path, "r");
+  try {
+    const metadata = await handle.stat();
+    if (!metadata.isFile() || metadata.size < 8 || metadata.size > limit)
+      throw new Error("Screenshot must be a non-empty bounded regular PNG file");
+    const buffer = Buffer.alloc(metadata.size);
+    const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
+    if (bytesRead !== buffer.length) throw new Error("Screenshot changed while reading");
+    if (!buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])))
+      throw new Error("Screenshot does not have a PNG signature");
+    return buffer;
+  } finally {
+    await handle.close();
+  }
+}
+
+// src/screenshots/setup.ts
+async function runGhvmctlSetupAction() {
+  const cancellation = actionSignal();
+  try {
+    for (const args of [
+      ["snap", "install", "ghvmctl"],
+      ["snap", "connect", "ghvmctl:lxd", "lxd:lxd"]
+    ]) {
+      const result = await runProcess({
+        file: "sudo",
+        args,
+        cwd: process.cwd(),
+        env: { PATH: process.env.PATH ?? "" },
+        timeoutMs: 5 * 6e4,
+        signal: cancellation.signal
+      });
+      if (result.exitCode !== 0) throw new Error(`ghvmctl setup failed (${result.exitCode})`);
+    }
+  } finally {
+    cancellation.dispose();
+  }
+}
+
+// src/screenshots/upload.ts
+async function uploadScreenshots(input, deps) {
+  const clock = deps.clock ?? systemClock;
+  const signal = deps.signal ?? new AbortController().signal;
+  const random = deps.random ?? Math.random;
+  validateScreenshotUpload(input);
+  const prefix = `${input.date}-${input.snap}-${input.issue}`;
+  const entries = [
+    {
+      path: `${prefix}-screen.png`,
+      sha: gitSha(await deps.github.createBlob(input.screen), "blob")
+    },
+    {
+      path: `${prefix}-window.png`,
+      sha: gitSha(await deps.github.createBlob(input.window), "blob")
+    }
+  ];
+  let commit = "";
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const parent = gitSha(await deps.github.getRef(), "ref");
+    const base = gitSha(await deps.github.getCommitTree(parent), "tree");
+    const tree = gitSha(await deps.github.createTree(base, entries), "tree");
+    commit = gitSha(
+      await deps.github.createCommit(
+        tree,
+        parent,
+        `data: screenshots for ${input.sourceRepository}/${input.snap}#${input.issue} at ${input.sourceSha}`,
+        input.author
+      ),
+      "commit"
+    );
+    try {
+      await deps.github.updateRef(commit);
+      const current = gitSha(await deps.github.getRef(), "ref readback");
+      if (current !== commit && !await deps.github.isAncestor(commit, current))
+        throw new Error("Screenshot ref update could not be confirmed");
+      break;
+    } catch (error) {
+      const current = gitSha(await deps.github.getRef(), "ref readback");
+      if (current === commit || await deps.github.isAncestor(commit, current)) break;
+      if (current === parent || !confirmedRefConflict(error)) throw error;
+      if (attempt === 2)
+        throw new Error("Screenshot ref conflict retry limit exhausted", { cause: error });
+      const retryAfter = retryAfterMilliseconds(error, clock.now());
+      await clock.sleep(retryDelay(attempt, retryAfter, random), signal);
+    }
+  }
+  const baseUrl = `https://raw.githubusercontent.com/${input.repository}/${commit}`;
+  return { screen: `${baseUrl}/${entries[0].path}`, window: `${baseUrl}/${entries[1].path}` };
+}
+async function publishScreenshots(input, deps) {
+  const urls = await uploadScreenshots(input, deps);
+  const body = `The following screenshots were taken during automated testing:
+
+![window](${urls.window})
+
+![screen](${urls.screen})
+
+<!-- snapcrafters-ci:screenshot:${input.runId}:${input.sourceSha} -->`;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await deps.comment(body);
+      return urls;
+    } catch (error) {
+      if (attempt >= 2)
+        throw new Error("Screenshot comment retry limit exhausted", { cause: error });
+      const status = error.status;
+      if (status !== void 0 && !(/* @__PURE__ */ new Set([429, 502, 503, 504])).has(status)) throw error;
+      const clock = deps.clock ?? systemClock;
+      await clock.sleep(
+        retryDelay(
+          attempt,
+          retryAfterMilliseconds(error, clock.now()),
+          deps.random ?? Math.random
+        ),
+        deps.signal ?? new AbortController().signal
+      );
+    }
+  }
 }
 
 // src/screenshots/action.ts
@@ -33284,6 +33673,7 @@ async function runScreenshotsAction(env) {
   repository(screenshotsRepo);
   const cancellation = actionSignal();
   try {
+    await runGhvmctlSetupAction();
     const manifests = await collectManifests(
       manifestGitHub(issueToken, context.repository, context.runId, cancellation.signal),
       context.workspace
@@ -33304,6 +33694,8 @@ async function runScreenshotsAction(env) {
         snap: project.name,
         issue,
         date: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10).replaceAll("-", ""),
+        runId: context.runId,
+        sourceSha: context.sha,
         ...images,
         author: {
           name: optional(env, "bot-name", "Snapcrafters Bot"),
@@ -33318,7 +33710,7 @@ async function runScreenshotsAction(env) {
           Number(issue),
           cancellation.signal
         ),
-        sleep: async (ms) => void await new Promise((resolve3) => setTimeout(resolve3, ms))
+        signal: cancellation.signal
       }
     );
     core.setOutput("screen", urls.screen);
@@ -33330,7 +33722,6 @@ async function runScreenshotsAction(env) {
 
 // get-screenshots/main.ts
 async function main() {
-  if (process.env.SNAPCRAFTERS_CI_SMOKE === "1") return;
   await runScreenshotsAction(process.env);
 }
 if (process.env.NODE_ENV !== "test") {

@@ -7247,7 +7247,7 @@ var require_client = __commonJS({
       );
       resume(client);
     }
-    var constants = require_constants3();
+    var constants2 = require_constants3();
     var createRedirectInterceptor = require_redirectInterceptor();
     var EMPTY_BUF = Buffer.alloc(0);
     async function lazyllhttp() {
@@ -7314,7 +7314,7 @@ var require_client = __commonJS({
       constructor(client, socket, { exports: exports3 }) {
         assert(Number.isFinite(client[kMaxHeadersSize]) && client[kMaxHeadersSize] > 0);
         this.llhttp = exports3;
-        this.ptr = this.llhttp.llhttp_alloc(constants.TYPE.RESPONSE);
+        this.ptr = this.llhttp.llhttp_alloc(constants2.TYPE.RESPONSE);
         this.client = client;
         this.socket = socket;
         this.timeout = null;
@@ -7406,19 +7406,19 @@ var require_client = __commonJS({
             currentBufferRef = null;
           }
           const offset = llhttp.llhttp_get_error_pos(this.ptr) - currentBufferPtr;
-          if (ret === constants.ERROR.PAUSED_UPGRADE) {
+          if (ret === constants2.ERROR.PAUSED_UPGRADE) {
             this.onUpgrade(data.slice(offset));
-          } else if (ret === constants.ERROR.PAUSED) {
+          } else if (ret === constants2.ERROR.PAUSED) {
             this.paused = true;
             socket.unshift(data.slice(offset));
-          } else if (ret !== constants.ERROR.OK) {
+          } else if (ret !== constants2.ERROR.OK) {
             const ptr = llhttp.llhttp_get_error_reason(this.ptr);
             let message = "";
             if (ptr) {
               const len = new Uint8Array(llhttp.memory.buffer, ptr).indexOf(0);
               message = "Response does not match the HTTP/1.1 protocol (" + Buffer.from(llhttp.memory.buffer, ptr, len).toString() + ")";
             }
-            throw new HTTPParserError(message, constants.ERROR[ret], data.slice(offset));
+            throw new HTTPParserError(message, constants2.ERROR[ret], data.slice(offset));
           }
         } catch (err) {
           util.destroy(socket, err);
@@ -7588,7 +7588,7 @@ var require_client = __commonJS({
           socket[kBlocking] = false;
           resume(client);
         }
-        return pause ? constants.ERROR.PAUSED : 0;
+        return pause ? constants2.ERROR.PAUSED : 0;
       }
       onBody(buf) {
         const { client, socket, statusCode, maxResponseSize } = this;
@@ -7610,7 +7610,7 @@ var require_client = __commonJS({
         }
         this.bytesRead += buf.length;
         if (request.onData(buf) === false) {
-          return constants.ERROR.PAUSED;
+          return constants2.ERROR.PAUSED;
         }
       }
       onMessageComplete() {
@@ -7645,13 +7645,13 @@ var require_client = __commonJS({
         if (socket[kWriting]) {
           assert.strictEqual(client[kRunning], 0);
           util.destroy(socket, new InformationalError("reset"));
-          return constants.ERROR.PAUSED;
+          return constants2.ERROR.PAUSED;
         } else if (!shouldKeepAlive) {
           util.destroy(socket, new InformationalError("reset"));
-          return constants.ERROR.PAUSED;
+          return constants2.ERROR.PAUSED;
         } else if (socket[kReset] && client[kRunning] === 0) {
           util.destroy(socket, new InformationalError("reset"));
-          return constants.ERROR.PAUSED;
+          return constants2.ERROR.PAUSED;
         } else if (client[kPipelining] === 1) {
           setImmediate(resume, client);
         } else {
@@ -11645,12 +11645,12 @@ var require_headers = __commonJS({
       append(name, value) {
         this[kHeadersSortedMap] = null;
         const lowercaseName = name.toLowerCase();
-        const exists2 = this[kHeadersMap].get(lowercaseName);
-        if (exists2) {
+        const exists = this[kHeadersMap].get(lowercaseName);
+        if (exists) {
           const delimiter = lowercaseName === "cookie" ? "; " : ", ";
           this[kHeadersMap].set(lowercaseName, {
-            name: exists2.name,
-            value: `${exists2.value}${delimiter}${value}`
+            name: exists.name,
+            value: `${exists.value}${delimiter}${value}`
           });
         } else {
           this[kHeadersMap].set(lowercaseName, { name, value });
@@ -18145,7 +18145,7 @@ var require_summary = __commonJS({
     exports2.summary = exports2.markdownSummary = exports2.SUMMARY_DOCS_URL = exports2.SUMMARY_ENV_VAR = void 0;
     var os_1 = require("os");
     var fs_1 = require("fs");
-    var { access: access2, appendFile, writeFile: writeFile2 } = fs_1.promises;
+    var { access, appendFile, writeFile: writeFile2 } = fs_1.promises;
     exports2.SUMMARY_ENV_VAR = "GITHUB_STEP_SUMMARY";
     exports2.SUMMARY_DOCS_URL = "https://docs.github.com/actions/using-workflows/workflow-commands-for-github-actions#adding-a-job-summary";
     var Summary = class {
@@ -18168,7 +18168,7 @@ var require_summary = __commonJS({
             throw new Error(`Unable to find environment variable for $${exports2.SUMMARY_ENV_VAR}. Check if your runtime environment supports job summaries.`);
           }
           try {
-            yield access2(pathFromEnv, fs_1.constants.R_OK | fs_1.constants.W_OK);
+            yield access(pathFromEnv, fs_1.constants.R_OK | fs_1.constants.W_OK);
           } catch (_a) {
             throw new Error(`Unable to access summary file: '${pathFromEnv}'. Check if the file has correct read/write permissions.`);
           }
@@ -18516,7 +18516,7 @@ var require_io_util = __commonJS({
     exports2.IS_WINDOWS = process.platform === "win32";
     exports2.UV_FS_O_EXLOCK = 268435456;
     exports2.READONLY = fs.constants.O_RDONLY;
-    function exists2(fsPath) {
+    function exists(fsPath) {
       return __awaiter(this, void 0, void 0, function* () {
         try {
           yield exports2.stat(fsPath);
@@ -18529,7 +18529,7 @@ var require_io_util = __commonJS({
         return true;
       });
     }
-    exports2.exists = exists2;
+    exports2.exists = exists;
     function isDirectory(fsPath, useStat = false) {
       return __awaiter(this, void 0, void 0, function* () {
         const stats = useStat ? yield exports2.stat(fsPath) : yield exports2.lstat(fsPath);
@@ -27115,12 +27115,14 @@ var core = __toESM(require_core(), 1);
 
 // src/actions/context.ts
 var import_promises = require("node:fs/promises");
-var import_node_path = require("node:path");
 
 // src/runtime/errors.ts
 var InputError = class extends Error {
   name = "InputError";
 };
+
+// src/actions/context-validation.ts
+var import_node_path = require("node:path");
 
 // src/actions/inputs.ts
 function required(env, name, maxBytes = 64 * 1024) {
@@ -27132,7 +27134,7 @@ function required(env, name, maxBytes = 64 * 1024) {
   return value;
 }
 function optional(env, name, fallback = "") {
-  return env[`INPUT_${name.toUpperCase().replaceAll("-", "_")}`] ?? fallback;
+  return env[`INPUT_${name.toUpperCase().replaceAll("-", "_")}`] || fallback;
 }
 function positiveDecimal(value, name) {
   if (!/^[1-9][0-9]*$/.test(value)) throw new InputError(`${name} must be a positive decimal`);
@@ -27144,31 +27146,68 @@ function repository(value) {
   return { owner: match[1], name: match[2] };
 }
 
-// src/actions/context.ts
-async function actionContext(env) {
+// src/actions/context-validation.ts
+function validateContextEnvironment(env, nodeVersion) {
   const eventPath = env.GITHUB_EVENT_PATH;
-  if (!env.GITHUB_WORKSPACE || !env.GITHUB_REPOSITORY || !env.GITHUB_RUN_ID || !env.GITHUB_SHA || !eventPath) {
+  if (!env.GITHUB_WORKSPACE || !env.GITHUB_REPOSITORY || !env.GITHUB_RUN_ID || !env.GITHUB_SHA || !eventPath)
     throw new InputError("Incomplete GitHub Actions context");
-  }
   if (!(0, import_node_path.isAbsolute)(env.GITHUB_WORKSPACE) || !(0, import_node_path.isAbsolute)(eventPath))
     throw new InputError("GitHub workspace and event paths must be absolute");
+  if (env.GITHUB_ACTIONS !== "true" || env.GITHUB_SERVER_URL !== "https://github.com" || env.RUNNER_ENVIRONMENT !== "github-hosted" || env.RUNNER_OS !== "Linux" || !(/* @__PURE__ */ new Set(["ubuntu22", "ubuntu24"])).has(env.ImageOS ?? "") || nodeVersion.split(".")[0] !== "24")
+    throw new InputError("Unsupported GitHub Actions runner capability");
   repository(env.GITHUB_REPOSITORY);
   positiveDecimal(env.GITHUB_RUN_ID, "GITHUB_RUN_ID");
   if (!/^[0-9a-f]{40}$/.test(env.GITHUB_SHA)) throw new InputError("Invalid GITHUB_SHA");
-  if (env.GITHUB_EVENT_NAME?.includes("\n")) throw new InputError("Invalid GITHUB_EVENT_NAME");
-  const bytes = await (0, import_promises.readFile)(eventPath);
-  if (bytes.length > 2 * 1024 * 1024) throw new InputError("Event payload exceeds size limit");
-  const event = JSON.parse(bytes.toString("utf8"));
-  if (!event || typeof event !== "object" || Array.isArray(event))
-    throw new InputError("Event payload must be an object");
+  if (!/^[A-Za-z0-9_]+$/.test(env.GITHUB_EVENT_NAME ?? ""))
+    throw new InputError("Invalid GITHUB_EVENT_NAME");
   return {
     workspace: env.GITHUB_WORKSPACE,
     repository: env.GITHUB_REPOSITORY,
     runId: env.GITHUB_RUN_ID,
     sha: env.GITHUB_SHA,
     eventName: env.GITHUB_EVENT_NAME ?? "",
+    eventPath
+  };
+}
+function parseEventPayload(bytes) {
+  const event = JSON.parse(bytes.toString("utf8"));
+  if (!event || typeof event !== "object" || Array.isArray(event))
+    throw new InputError("Event payload must be an object");
+  return event;
+}
+
+// src/actions/context.ts
+async function actionContext(env, nodeVersion = process.versions.node) {
+  const validated = validateContextEnvironment(env, nodeVersion);
+  const event = parseEventPayload(await readBoundedEvent(validated.eventPath));
+  return {
+    workspace: validated.workspace,
+    repository: validated.repository,
+    runId: validated.runId,
+    sha: validated.sha,
+    eventName: validated.eventName,
     event
   };
+}
+async function readBoundedEvent(path) {
+  const limit = 2 * 1024 * 1024;
+  const handle = await (0, import_promises.open)(path, "r");
+  try {
+    const metadata = await handle.stat();
+    if (!metadata.isFile()) throw new InputError("Event payload must be a regular file");
+    if (metadata.size > limit) throw new InputError("Event payload exceeds size limit");
+    const buffer = Buffer.alloc(Math.min(metadata.size + 1, limit + 1));
+    let offset = 0;
+    while (offset < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
+      if (bytesRead === 0) break;
+      offset += bytesRead;
+    }
+    if (offset > limit) throw new InputError("Event payload exceeds size limit");
+    return buffer.subarray(0, offset);
+  } finally {
+    await handle.close();
+  }
 }
 
 // src/actions/signal.ts
@@ -27187,9 +27226,9 @@ function actionSignal() {
 }
 
 // src/project/parse.ts
+var import_node_fs = require("node:fs");
 var import_promises3 = require("node:fs/promises");
 var import_node_path3 = require("node:path");
-var import_yaml = __toESM(require_dist(), 1);
 
 // src/runtime/files.ts
 var import_promises2 = require("node:fs/promises");
@@ -27215,6 +27254,45 @@ async function removeOwned(directory, owner) {
   await (0, import_promises2.rm)(directory, { recursive: true });
 }
 
+// src/project/schema.ts
+var import_yaml = __toESM(require_dist(), 1);
+function parseProjectDocument(source) {
+  const parsed = (0, import_yaml.parseDocument)(source.toString("utf8"), { uniqueKeys: true });
+  if (parsed.errors.length)
+    throw new InputError(`Invalid snapcraft YAML: ${parsed.errors[0].message}`);
+  const document = parsed.toJS();
+  if (!document || typeof document !== "object" || Array.isArray(document))
+    throw new InputError("snapcraft.yaml must be a mapping");
+  const mapping = document;
+  if (typeof mapping.name !== "string" || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(mapping.name))
+    throw new InputError("Invalid snap name");
+  return {
+    document: mapping,
+    name: mapping.name,
+    ...typeof mapping.version === "string" || typeof mapping.version === "number" ? { version: String(mapping.version) } : {},
+    ...typeof mapping["adopt-info"] === "string" ? { adoptInfo: mapping["adopt-info"] } : {},
+    classic: mapping.confinement === "classic",
+    ...typeof mapping.base === "string" ? { base: mapping.base } : {},
+    components: parseComponents(mapping.components)
+  };
+}
+function parseComponents(value) {
+  if (value === void 0 || value === null) return [];
+  if (typeof value !== "object" || Array.isArray(value))
+    throw new InputError("components must be a mapping");
+  return Object.entries(value).map(([name, raw]) => {
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(name) || !raw || typeof raw !== "object")
+      throw new InputError(`Invalid component ${name}`);
+    const version = raw.version;
+    if (version !== void 0 && version !== null && typeof version !== "string" && typeof version !== "number")
+      throw new InputError(`Invalid component version for ${name}`);
+    return {
+      name,
+      ...version === void 0 || version === null ? {} : { version: String(version) }
+    };
+  });
+}
+
 // src/project/parse.ts
 var candidates = [
   ".snapcraft.yaml",
@@ -27222,11 +27300,14 @@ var candidates = [
   "snap/snapcraft.yaml",
   "snapcraft.yaml"
 ];
-async function exists(path) {
+async function regularFile(path, label) {
   try {
-    await (0, import_promises3.access)(path);
+    const metadata = await (0, import_promises3.lstat)(path);
+    if (metadata.isSymbolicLink()) throw new InputError(`${label} must not be a symlink`);
+    if (!metadata.isFile()) throw new InputError(`${label} must be a regular file`);
     return true;
-  } catch {
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
     return false;
   }
 }
@@ -27235,20 +27316,12 @@ async function parseProject(workspace, inputRoot = "") {
   const root = await resolveProjectRoot(workspace, publicRoot);
   const matches = [];
   for (const candidate of candidates)
-    if (await exists((0, import_node_path3.resolve)(root, candidate))) matches.push(candidate);
+    if (await regularFile((0, import_node_path3.resolve)(root, candidate), "snapcraft.yaml")) matches.push(candidate);
   const selected = matches.at(-1);
   if (!selected) throw new InputError("No snapcraft.yaml found");
   const yamlPath = (0, import_node_path3.resolve)(root, selected);
-  const bytes = await (0, import_promises3.readFile)(yamlPath);
-  if (bytes.length > 2 * 1024 * 1024) throw new InputError("snapcraft.yaml exceeds 2 MiB limit");
-  const parsed = (0, import_yaml.parseDocument)(bytes.toString("utf8"), { uniqueKeys: true });
-  if (parsed.errors.length)
-    throw new InputError(`Invalid snapcraft YAML: ${parsed.errors[0].message}`);
-  const document = parsed.toJS();
-  if (typeof document.name !== "string" || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(document.name)) {
-    throw new InputError("Invalid snap name");
-  }
-  const components = parseComponents(document.components);
+  const bytes = await readBoundedRegular(yamlPath, 2 * 1024 * 1024, "snapcraft.yaml");
+  const parsed = parseProjectDocument(bytes);
   const plugsFile = await declaration(workspace, [
     "plug-declaration.json",
     ".github/plug-declaration.json"
@@ -27262,39 +27335,40 @@ async function parseProject(workspace, inputRoot = "") {
     yamlPath,
     publicRoot,
     publicYamlPath: `${publicRoot.replace(/\/$/, "")}/${selected}`,
-    name: document.name,
-    ...typeof document.version === "string" || typeof document.version === "number" ? { version: String(document.version) } : {},
-    ...typeof document["adopt-info"] === "string" ? { adoptInfo: document["adopt-info"] } : {},
-    classic: document.confinement === "classic",
-    ...typeof document.base === "string" ? { base: document.base } : {},
-    components,
+    ...parsed,
     ...plugsFile ? { plugsFile } : {},
-    ...slotsFile ? { slotsFile } : {},
-    document
+    ...slotsFile ? { slotsFile } : {}
   };
-}
-function parseComponents(value) {
-  if (value === void 0 || value === null) return [];
-  if (typeof value !== "object" || Array.isArray(value))
-    throw new InputError("components must be a mapping");
-  return Object.entries(value).map(([name, raw]) => {
-    if (!/^[a-z0-9][a-z0-9-]*$/.test(name) || !raw || typeof raw !== "object") {
-      throw new InputError(`Invalid component ${name}`);
-    }
-    const version = raw.version;
-    if (version !== void 0 && version !== null && typeof version !== "string" && typeof version !== "number") {
-      throw new InputError(`Invalid component version for ${name}`);
-    }
-    return {
-      name,
-      ...version === void 0 || version === null ? {} : { version: String(version) }
-    };
-  });
 }
 async function declaration(workspace, paths) {
   let found;
-  for (const path of paths) if (await exists((0, import_node_path3.resolve)(workspace, path))) found = path;
+  for (const path of paths)
+    if (await regularFile((0, import_node_path3.resolve)(workspace, path), "declaration file")) {
+      const metadata = await (0, import_promises3.lstat)((0, import_node_path3.resolve)(workspace, path));
+      if (metadata.size > 1024 * 1024)
+        throw new InputError("Declaration file exceeds 1 MiB limit");
+      found = path;
+    }
   return found;
+}
+async function readBoundedRegular(path, limit, label) {
+  const handle = await (0, import_promises3.open)(path, import_node_fs.constants.O_RDONLY | import_node_fs.constants.O_NOFOLLOW);
+  try {
+    const metadata = await handle.stat();
+    if (!metadata.isFile()) throw new InputError(`${label} must be a regular file`);
+    if (metadata.size > limit) throw new InputError(`${label} exceeds 2 MiB limit`);
+    const buffer = Buffer.alloc(Math.min(metadata.size + 1, limit + 1));
+    let offset = 0;
+    while (offset < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
+      if (!bytesRead) break;
+      offset += bytesRead;
+    }
+    if (offset > limit) throw new InputError(`${label} exceeds 2 MiB limit`);
+    return buffer.subarray(0, offset);
+  } finally {
+    await handle.close();
+  }
 }
 
 // src/update/run.ts
@@ -27320,6 +27394,10 @@ async function runProcess(spec) {
   }
   const outputLimit = spec.maxOutputBytes ?? 1024 * 1024;
   const logLimit = spec.maxLogBytes ?? 10 * 1024 * 1024;
+  const redactionMargin = Math.max(
+    0,
+    ...(spec.redact ?? []).map((item) => Buffer.byteLength(item))
+  );
   let stdout = Buffer.alloc(0);
   let stderr = Buffer.alloc(0);
   let combined = Buffer.alloc(0);
@@ -27344,9 +27422,9 @@ async function runProcess(spec) {
     throw error;
   }
   const append = (kind, chunk) => {
-    if (kind === "stdout") stdout = boundedAppend(stdout, chunk, outputLimit);
-    else stderr = boundedAppend(stderr, chunk, outputLimit);
-    combined = boundedAppend(combined, chunk, logLimit);
+    if (kind === "stdout") stdout = boundedAppend(stdout, chunk, outputLimit + redactionMargin);
+    else stderr = boundedAppend(stderr, chunk, outputLimit + redactionMargin);
+    combined = boundedAppend(combined, chunk, logLimit + redactionMargin);
   };
   child.stdout.on("data", (chunk) => append("stdout", chunk));
   child.stderr.on("data", (chunk) => append("stderr", chunk));
@@ -27379,18 +27457,21 @@ async function runProcess(spec) {
     });
     if (terminationStarted) await killComplete;
     else finishKill?.();
-    const cleanStdout = redact(stdout.toString(), spec.redact ?? []);
-    const cleanStderr = redact(stderr.toString(), spec.redact ?? []);
-    const cleanLog = Buffer.from(redact(combined.toString(), spec.redact ?? [])).subarray(
-      0,
-      logLimit
-    );
+    const cleanStdout = redactAndBound(stdout, spec.redact ?? [], outputLimit);
+    const cleanStderr = redactAndBound(stderr, spec.redact ?? [], outputLimit);
+    const cleanLog = Buffer.from(redactAndBound(combined, spec.redact ?? [], logLimit));
     if (spec.streamOutput) {
       process.stdout.write(cleanStdout);
       process.stderr.write(cleanStderr);
     }
     if (log) await log.writeFile(cleanLog);
-    return { exitCode, stdout: cleanStdout, stderr: cleanStderr, timedOut, aborted };
+    return {
+      exitCode: timedOut ? 124 : aborted ? 130 : exitCode,
+      stdout: cleanStdout,
+      stderr: cleanStderr,
+      timedOut,
+      aborted
+    };
   } finally {
     clearTimeout(timeout);
     if (killTimer && !terminationStarted) clearTimeout(killTimer);
@@ -27405,6 +27486,9 @@ function boundedAppend(current, chunk, limit) {
 function redact(value, secrets) {
   return secrets.filter(Boolean).sort((a, b) => b.length - a.length).reduce((text, secret) => text.replaceAll(secret, "***"), value);
 }
+function redactAndBound(value, secrets, limit) {
+  return Buffer.from(redact(value.toString(), secrets)).subarray(0, limit).toString();
+}
 
 // src/update/run.ts
 async function runUpdate(input) {
@@ -27415,7 +27499,6 @@ async function runUpdate(input) {
   try {
     await (0, import_promises5.writeFile)(script, input.script, { mode: 384 });
     const env = { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? input.cwd };
-    const message = typeof input.message === "string" ? input.message : await input.message();
     await successful(
       "bash",
       ["--noprofile", "--norc", "-e", "-o", "pipefail", script],
@@ -27435,6 +27518,7 @@ async function runUpdate(input) {
     if (untracked.length)
       throw new Error(`Update created untracked paths: ${untracked.join(", ")}`);
     if (records.length === 0) return { changed: false };
+    const message = typeof input.message === "string" ? input.message : await input.message();
     await successful("git", ["add", "-u"], input.cwd, env, signal);
     await successful(
       "git",
@@ -27493,7 +27577,6 @@ async function runUpdateAction(env) {
 
 // sync-version/main.ts
 async function main() {
-  if (process.env.SNAPCRAFTERS_CI_SMOKE === "1") return;
   await runUpdateAction(process.env);
 }
 if (process.env.NODE_ENV !== "test") {

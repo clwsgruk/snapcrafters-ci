@@ -19853,6 +19853,10 @@ async function runProcess(spec) {
   }
   const outputLimit = spec.maxOutputBytes ?? 1024 * 1024;
   const logLimit = spec.maxLogBytes ?? 10 * 1024 * 1024;
+  const redactionMargin = Math.max(
+    0,
+    ...(spec.redact ?? []).map((item) => Buffer.byteLength(item))
+  );
   let stdout = Buffer.alloc(0);
   let stderr = Buffer.alloc(0);
   let combined = Buffer.alloc(0);
@@ -19877,9 +19881,9 @@ async function runProcess(spec) {
     throw error;
   }
   const append = (kind, chunk) => {
-    if (kind === "stdout") stdout = boundedAppend(stdout, chunk, outputLimit);
-    else stderr = boundedAppend(stderr, chunk, outputLimit);
-    combined = boundedAppend(combined, chunk, logLimit);
+    if (kind === "stdout") stdout = boundedAppend(stdout, chunk, outputLimit + redactionMargin);
+    else stderr = boundedAppend(stderr, chunk, outputLimit + redactionMargin);
+    combined = boundedAppend(combined, chunk, logLimit + redactionMargin);
   };
   child.stdout.on("data", (chunk) => append("stdout", chunk));
   child.stderr.on("data", (chunk) => append("stderr", chunk));
@@ -19912,18 +19916,21 @@ async function runProcess(spec) {
     });
     if (terminationStarted) await killComplete;
     else finishKill?.();
-    const cleanStdout = redact(stdout.toString(), spec.redact ?? []);
-    const cleanStderr = redact(stderr.toString(), spec.redact ?? []);
-    const cleanLog = Buffer.from(redact(combined.toString(), spec.redact ?? [])).subarray(
-      0,
-      logLimit
-    );
+    const cleanStdout = redactAndBound(stdout, spec.redact ?? [], outputLimit);
+    const cleanStderr = redactAndBound(stderr, spec.redact ?? [], outputLimit);
+    const cleanLog = Buffer.from(redactAndBound(combined, spec.redact ?? [], logLimit));
     if (spec.streamOutput) {
       process.stdout.write(cleanStdout);
       process.stderr.write(cleanStderr);
     }
     if (log) await log.writeFile(cleanLog);
-    return { exitCode, stdout: cleanStdout, stderr: cleanStderr, timedOut, aborted };
+    return {
+      exitCode: timedOut ? 124 : aborted ? 130 : exitCode,
+      stdout: cleanStdout,
+      stderr: cleanStderr,
+      timedOut,
+      aborted
+    };
   } finally {
     clearTimeout(timeout);
     if (killTimer && !terminationStarted) clearTimeout(killTimer);
@@ -19937,6 +19944,9 @@ function boundedAppend(current, chunk, limit) {
 }
 function redact(value, secrets) {
   return secrets.filter(Boolean).sort((a, b) => b.length - a.length).reduce((text, secret) => text.replaceAll(secret, "***"), value);
+}
+function redactAndBound(value, secrets, limit) {
+  return Buffer.from(redact(value.toString(), secrets)).subarray(0, limit).toString();
 }
 
 // src/screenshots/setup.ts
@@ -19964,7 +19974,6 @@ async function runGhvmctlSetupAction() {
 
 // setup-ghvmctl/main.ts
 async function main() {
-  if (process.env.SNAPCRAFTERS_CI_SMOKE === "1") return;
   await runGhvmctlSetupAction();
 }
 if (process.env.NODE_ENV !== "test") {
