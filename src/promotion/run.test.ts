@@ -16,7 +16,14 @@ const base = {
 };
 
 function body(command = "/promote 11,12 latest/stable done", snap = "demo"): string {
-  return `A new version (1) of \`${snap}\` was just pushed to the \`latest/candidate\` channel.\n\n\`\`\`\n${command}\n\`\`\``;
+  const revisions = command.match(/^\/promote ([0-9,]+)/)?.[1]?.split(",") ?? ["11", "12"];
+  const rows = revisions
+    .map(
+      (revision, index) =>
+        `<tr><td>${index === 0 ? "amd64" : "arm64"}</td><td>${revision}</td></tr>`,
+    )
+    .join("");
+  return `A new version (1) of \`${snap}\` was just pushed to the \`latest/candidate\` channel. The following revisions are available.\n\n<table><thead><tr><th>CPU Architecture</th><th>Revision</th></tr></thead><tbody>${rows}</tbody></table>\n\n\`\`\`\n${command}\n\`\`\``;
 }
 
 function issue(overrides: Partial<PromotionIssue> = {}): PromotionIssue {
@@ -132,6 +139,25 @@ describe("promotion authorization and binding", () => {
       ),
     ).rejects.toThrow(/unrelated.*12/i);
     expect(writes).toEqual([]);
+  });
+
+  test("rejects a command whose revisions do not exactly match the testing table", async () => {
+    let writes = 0;
+    await expect(
+      promote(
+        base,
+        dependencies({
+          issue: async () =>
+            issue({
+              body: body().replace("<td>12</td>", "<td>13</td>"),
+            }),
+          release: async () => {
+            writes++;
+          },
+        }),
+      ),
+    ).rejects.toThrow(/table|revision/i);
+    expect(writes).toBe(0);
   });
 
   test("redelivery adopts already released revisions without Store writes", async () => {

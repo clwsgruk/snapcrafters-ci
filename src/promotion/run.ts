@@ -1,4 +1,5 @@
 import { AuthorizationError, InputError, PartialPublicationError } from "../runtime/errors.js";
+import { architecture, channel } from "../actions/inputs.js";
 
 export interface PromotionInput {
   eventName: string;
@@ -59,7 +60,7 @@ export async function promote(
     !issue.labels.includes("testing")
   )
     throw new InputError("Promotion requires an open testing issue in the source repository");
-  validateIssueSnap(issue.body, input.snap);
+  validateIssueHeader(issue.body, input.snap, parsed.channel);
   const allowed = parseAllowedRevisions(issue.body, parsed.channel);
   const unrelated = parsed.revisions.filter((revision) => !allowed.has(revision));
   if (unrelated.length)
@@ -126,11 +127,24 @@ function withDelivery(body: string, deliveryId: string): string {
   return `${body}\n\n<!-- snapcrafters-ci:promotion:${deliveryId} -->`;
 }
 
-function validateIssueSnap(body: string, snap: string): void {
+function validateIssueHeader(body: string, snap: string, destination: string): void {
   if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(snap)) throw new InputError("Invalid promotion snap");
   const escaped = snap.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  if (!new RegExp("^A new version \\(.+\\) of `" + escaped + "` was just pushed", "m").test(body))
+  const matches = [
+    ...body.matchAll(
+      new RegExp(
+        "^A new version \\([^\\r\\n]+\\) of `" +
+          escaped +
+          "` was just pushed to the `([^`]+)` channel\\. The following revisions are available\\.$",
+        "gm",
+      ),
+    ),
+  ];
+  if (matches.length !== 1)
     throw new InputError("Testing issue is not bound to the requested snap");
+  const source = channel(matches[0]![1]!);
+  if (source === destination)
+    throw new InputError("Testing and promotion channels must be distinct");
 }
 
 export function parsePromotionCommand(value: string): {
@@ -160,5 +174,22 @@ export function parseAllowedRevisions(body: string, expectedChannel?: string): S
   if (records.length !== 1)
     throw new InputError("Issue must contain a single unambiguous testing revision record");
   const record = records[0]!;
-  return new Set(!expectedChannel || record.channel === expectedChannel ? record.revisions : []);
+  if (expectedChannel && record.channel !== expectedChannel) return new Set();
+  const bodies = [...body.matchAll(/<tbody>([\s\S]*?)<\/tbody>/g)];
+  if (bodies.length !== 1) throw new InputError("Issue must contain one revision table");
+  const tableBody = bodies[0]![1]!;
+  const rows = [...tableBody.matchAll(/<tr><td>([^<]+)<\/td><td>([1-9][0-9]*)<\/td><\/tr>/g)];
+  if (!rows.length || rows.map((row) => row[0]).join("") !== tableBody)
+    throw new InputError("Malformed testing revision table");
+  const tableRevisions = rows.map((row) => {
+    architecture(row[1]!);
+    return row[2]!;
+  });
+  if (
+    new Set(tableRevisions).size !== tableRevisions.length ||
+    tableRevisions.length !== record.revisions.length ||
+    tableRevisions.some((revision, index) => revision !== record.revisions[index])
+  )
+    throw new InputError("Promotion command does not match the testing revision table");
+  return new Set(tableRevisions);
 }
