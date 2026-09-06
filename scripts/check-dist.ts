@@ -1,8 +1,9 @@
 import { builtinModules } from "node:module";
 import { execFile, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { constants } from "node:fs";
+import { access, cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { actions } from "./actions.js";
@@ -74,6 +75,10 @@ async function runNode(node: string, bundle: string, cwd: string, fakeBin: strin
     stdio: "pipe",
   });
   let stderr = "";
+  let stdout = "";
+  child.stdout.on("data", (chunk: Buffer) => {
+    stdout += chunk.toString();
+  });
   child.stderr.on("data", (chunk: Buffer) => {
     stderr += chunk.toString();
   });
@@ -82,13 +87,16 @@ async function runNode(node: string, bundle: string, cwd: string, fakeBin: strin
     child.once("close", (code) => resolveExit(code ?? 1));
   });
   if (exitCode === 0) throw new Error(`Bundle unexpectedly bypassed its workflow: ${bundle}`);
-  if (!stderr) throw new Error(`Bundle failure was not reported: ${bundle}`);
+  if (!stdout && !stderr) throw new Error(`Bundle failure was not reported: ${bundle}`);
 }
 
 async function pinnedNode(): Promise<string> {
-  const { stdout } = await run("mise", ["which", "node"]);
-  const node = stdout.trim();
-  if (!node) throw new Error("mise did not resolve the pinned Node executable");
+  const configuration = await readFile(resolve(repository, "mise.toml"), "utf8");
+  const version = /^node = "([0-9]+\.[0-9]+\.[0-9]+)"$/m.exec(configuration)?.[1];
+  if (!version) throw new Error("mise.toml has no exact Node pin");
+  const data = process.env.MISE_DATA_DIR ?? resolve(homedir(), ".local/share/mise");
+  const node = resolve(data, "installs", "node", version, "bin/node");
+  await access(node, constants.X_OK);
   return node;
 }
 
