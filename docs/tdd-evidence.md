@@ -87,3 +87,13 @@ mutable sibling references, and public metadata drift.
   nested staged Git, regular bounded artifacts/components, exact digest/version/architecture
   before/after reconciliation, no blind upload retry, immediate publication journaling, and
   stage-aware failures.
+
+## Phase 6 — Testing issues and screenshot publication
+
+- `mise run test:unit -- testing-issue screenshots` — RED: 3 failures proved screenshot
+  repository/date inputs reached blob creation unchecked, comment retry orchestration was absent,
+  and the issue body had drifted from the bundled legacy template/placeholders.
+- `mise run test:unit -- testing-issue screenshots` — GREEN: 9 files, 39 tests; manifest-bound
+  issue rendering and override rejection pass, while two blobs remain one immutable non-force
+  commit, confirmed conflicts/readback recover safely, public path fields validate before writes,
+  and comment retries cannot repeat the upload.
