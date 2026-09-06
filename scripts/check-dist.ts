@@ -11,6 +11,7 @@ const run = promisify(execFile);
 const repository = process.cwd();
 const temporary = await mkdtemp(join(tmpdir(), "snapcrafters-dist-check-"));
 try {
+  const node = await pinnedNode();
   const first = await copySourceTree(join(temporary, "source-a"));
   const second = await copySourceTree(join(temporary, "source-b"));
   const consumer = join(temporary, "consumer");
@@ -19,7 +20,7 @@ try {
     ...builtinModules,
     ...builtinModules.map((item) => `node:${item}`),
   ]);
-  const { stdout: version } = await run("node", ["-p", "process.versions.node"]);
+  const { stdout: version } = await run(node, ["-p", "process.versions.node"]);
   if (!version.trim().startsWith("24."))
     throw new Error(`Expected Node 24, received ${version.trim()}`);
   const fakeBin = join(temporary, "bin");
@@ -47,6 +48,8 @@ try {
         throw new Error(`Non-deterministic or stale bundle: ${action}/dist/${file}`);
     }
     const bundle = await readFile(resolve(committed, "index.cjs"), "utf8");
+    if (bundle.includes("SNAPCRAFTERS_CI_SMOKE"))
+      throw new Error(`${action} contains a production smoke bypass`);
     const external = [...bundle.matchAll(/require\(["']([^"']+)["']\)/g)]
       .map((match) => match[1]!)
       .filter((name) => !allowedRequires.has(name));
@@ -54,15 +57,15 @@ try {
       throw new Error(`${action} has external runtime requires: ${external.join(",")}`);
     const actionConsumer = resolve(consumer, action);
     await cp(resolve(action), actionConsumer, { recursive: true });
-    await runNode(resolve(actionConsumer, "dist/index.cjs"), consumer, fakeBin);
+    await runNode(node, resolve(actionConsumer, "dist/index.cjs"), consumer, fakeBin);
   }
   console.log(`Verified ${actions.length} deterministic self-contained Node 24 action bundles`);
 } finally {
   await rm(temporary, { recursive: true, force: true });
 }
 
-async function runNode(bundle: string, cwd: string, fakeBin: string): Promise<void> {
-  const child = spawn("node", [bundle], {
+async function runNode(node: string, bundle: string, cwd: string, fakeBin: string): Promise<void> {
+  const child = spawn(node, [bundle], {
     cwd,
     env: {
       PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
@@ -80,6 +83,13 @@ async function runNode(bundle: string, cwd: string, fakeBin: string): Promise<vo
   });
   if (exitCode === 0) throw new Error(`Bundle unexpectedly bypassed its workflow: ${bundle}`);
   if (!stderr) throw new Error(`Bundle failure was not reported: ${bundle}`);
+}
+
+async function pinnedNode(): Promise<string> {
+  const { stdout } = await run("mise", ["which", "node"]);
+  const node = stdout.trim();
+  if (!node) throw new Error("mise did not resolve the pinned Node executable");
+  return node;
 }
 
 async function copySourceTree(destination: string): Promise<string> {

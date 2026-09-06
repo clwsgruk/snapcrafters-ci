@@ -7,13 +7,16 @@ test("production adapters have no smoke bypass", async () => {
   for (const action of actions) {
     const source = await readFile(resolve(action, "main.ts"), "utf8");
     expect(source, action).not.toContain("SNAPCRAFTERS_CI_SMOKE");
+    const bundle = await readFile(resolve(action, "dist/index.cjs"), "utf8");
+    expect(bundle, `${action} bundle`).not.toContain("SNAPCRAFTERS_CI_SMOKE");
   }
 });
 
 test("distribution verification uses pinned Node and independent source trees", async () => {
   const source = await readFile("scripts/check-dist.ts", "utf8");
   expect(source).not.toContain("process.execPath");
-  expect(source).toContain('spawn("node"');
+  expect(source).toContain("pinnedNode");
+  expect(source).toContain("spawn(node");
   expect(source).toContain("copySourceTree");
 });
 
