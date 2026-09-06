@@ -129,3 +129,7 @@ mutable sibling references, and public metadata drift.
   YAML sequence was accepted as a manifest mapping. After the fix: 27 files, 91 tests; the measured
   input/manifest/architecture parsers reached 96.66% branch, 96.82% statement, 98.11% line, and
   100% function coverage.
+- `mise run test:smoke` — GREEN: 1 file, 1 consumer-simulator test parsed all 12 real composite
+  wrappers, admitted only the five approved SHA-pinned external actions, mapped wrapper input
+  environments, and executed every wrapper-owned bundle step from a disposable external checkout;
+  release-to-candidate exercised both its publish and tag bundle invocations.
