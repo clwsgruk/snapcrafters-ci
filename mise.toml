@@ -33,6 +33,9 @@ run = "./node_modules/.bin/vp test run test/integration"
 [tasks."test:smoke"]
 run = "./node_modules/.bin/vp test run test/smoke"
 
+[tasks."test:coverage"]
+run = "./node_modules/.bin/vp test run --coverage"
+
 [tasks.build]
 run = "bun scripts/build.ts"
 
@@ -50,4 +53,4 @@ run = "actionlint"
 run = "shellcheck get-screenshots/wait-for-window"
 
 [tasks.ci]
-depends = ["check", "test", "actionlint", "shellcheck", "check-dist"]
+depends = ["check", "test:coverage", "actionlint", "shellcheck", "check-dist"]

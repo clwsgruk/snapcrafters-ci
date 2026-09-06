@@ -124,3 +124,8 @@ mutable sibling references, and public metadata drift.
 - `mise run check-dist` — PASS: two isolated builds matched each other and committed files by SHA-256;
   no non-builtin runtime requires remained; all 12 bundles ran with Node 24 from a disposable
   consumer tree without development dependencies.
+- `vp test run --coverage` through pinned mise — initial report was 55.50% aggregate branch
+  coverage and was rejected as the wrong gate. A pure-parser gate then found one RED case where a
+  YAML sequence was accepted as a manifest mapping. After the fix: 27 files, 91 tests; the measured
+  input/manifest/architecture parsers reached 96.66% branch, 96.82% statement, 98.11% line, and
+  100% function coverage.

@@ -23,6 +23,13 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json-summary"],
+      include: ["src/actions/inputs.ts", "src/manifests/codec.ts", "src/project/architectures.ts"],
+      thresholds: {
+        branches: 90,
+        functions: 90,
+        lines: 90,
+        statements: 90,
+      },
     },
   },
 });

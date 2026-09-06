@@ -4,8 +4,10 @@ import {
   architectureList,
   boolean,
   channel,
+  optional,
   positiveDecimal,
   repository,
+  required,
 } from "./inputs.js";
 
 describe("public input validation", () => {
@@ -32,5 +34,14 @@ describe("public input validation", () => {
     expect(repository("snapcrafters/ci")).toEqual({ owner: "snapcrafters", name: "ci" });
     for (const value of ["snapcrafters", "-owner/repo", "owner/../repo", "owner/repo\nnext"])
       expect(() => repository(value)).toThrow();
+  });
+
+  test("bounds required raw inputs while preserving trusted multiline scripts", () => {
+    expect(required({ INPUT_TEST_SCRIPT: "one\ntwo" }, "test-script", 20)).toBe("one\ntwo");
+    expect(optional({ INPUT_ROOT: "nested" }, "root", "fallback")).toBe("nested");
+    expect(optional({}, "root", "fallback")).toBe("fallback");
+    expect(() => required({}, "missing")).toThrow(/required/i);
+    expect(() => required({ INPUT_VALUE: "12345" }, "value", 4)).toThrow(/size/i);
+    expect(() => required({ INPUT_VALUE: "a\0b" }, "value")).toThrow(/NUL/i);
   });
 });

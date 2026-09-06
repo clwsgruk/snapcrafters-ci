@@ -15,7 +15,8 @@ export function decodeManifest(source: string, filename: string): Manifest {
   const match = manifestName.exec(filename);
   if (!match) throw new InputError(`Invalid manifest filename: ${filename}`);
   const value = parse(source, { uniqueKeys: true }) as Record<string, unknown>;
-  if (!value || typeof value !== "object") throw new InputError("Manifest must be a mapping");
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new InputError("Manifest must be a mapping");
   if (typeof value.name !== "string" || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(value.name)) {
     throw new InputError("Invalid manifest snap name");
   }

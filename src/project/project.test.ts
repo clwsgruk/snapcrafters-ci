@@ -64,4 +64,46 @@ describe("architecture normalization", () => {
       /label/i,
     );
   });
+
+  test.each([
+    [{ base: "core26", platforms: { amd64: null } }, /base/i],
+    [{ base: 22, architectures: ["amd64"] }, /base/i],
+    [{ base: "core22", architectures: [] }, /non-empty/i],
+    [{ base: "core22", architectures: "amd64" }, /non-empty/i],
+    [{ base: "core22", architectures: [null] }, /ambiguous/i],
+    [{ base: "core22", architectures: [{ "build-on": [] }] }, /empty/i],
+    [{ base: "core22", architectures: [{ "build-on": "sparc" }] }, /unsupported/i],
+    [
+      {
+        base: "core22",
+        architectures: [{ "build-on": "amd64", "build-for": "amd64", "run-on": "amd64" }],
+      },
+      /both/i,
+    ],
+    [{ base: "core24", platforms: [] }, /mapping/i],
+    [{ base: "core24", platforms: {} }, /non-empty/i],
+    [{ base: "core24", platforms: { amd64: "amd64" } }, /ambiguous/i],
+    [
+      {
+        base: "core24",
+        platforms: { amd64: { "build-on": [], "build-for": "amd64" } },
+      },
+      /empty/i,
+    ],
+    [
+      {
+        base: "core24",
+        platforms: { amd64: { "build-on": "amd64", "build-for": [] } },
+      },
+      /empty|one build-for/i,
+    ],
+  ])("rejects unsupported architecture schema %#", (document, error) => {
+    expect(() => getBuildTargets(document)).toThrow(error);
+  });
+
+  test("deduplicates repeated target architectures", () => {
+    expect(getBuildTargets({ base: "core22", architectures: ["amd64", "amd64"] })).toEqual([
+      { buildOn: ["amd64"], buildFor: "amd64" },
+    ]);
+  });
 });
