@@ -316,7 +316,15 @@ create a pull request.
   96.28% parser branches, all static checks, and both isolated Node 24 rebuilds.
 - ghvmctl-alias RED: the integration fake was changed to the immutable ghvmctl 0.4.1 behavior—two
   timestamped PNGs plus relative stable-name symlinks—and capture failed with `Screenshot symlinks
-  are forbidden`. GREEN: capture accepts only exact same-directory timestamp aliases owned by the
+are forbidden`. GREEN: capture accepts only exact same-directory timestamp aliases owned by the
   current UID, opens the resolved file with `O_NOFOLLOW`, and verifies owner/device/inode, size,
   and PNG signature. A traversal alias is rejected. The full gate passed 155 tests in 35 files,
   96.28% parser branches, static checks, and isolated bundle rebuilds.
+- Release-resume RED: two action-level tests initially exposed a missing test seam via the hosted
+  context boundary; after introducing only an injected context/release seam, the corrected RED
+  showed both exact and mismatched state invoking release orchestration once. GREEN: an exact
+  architecture/channel/source-SHA state recreates or verifies its bounded manifest and exports the
+  original decimal revision without build/upload; stale state fails before release orchestration.
+  A separate contract RED proved the publish bundle still received `INPUT_REPO_TOKEN`; GREEN keeps
+  that secret only on the pinned checkout step. The full gate passed 157 tests in 36 files,
+  96.28% parser branches, static checks, and isolated Node 24 rebuilds.

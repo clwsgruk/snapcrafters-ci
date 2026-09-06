@@ -89,6 +89,7 @@ for (const [action, config] of Object.entries(actions)) {
   if (boundary < 0) throw new Error(`Missing runs boundary in ${file}`);
   const metadata = parse(source) as { inputs?: Record<string, unknown> };
   const env = Object.keys(metadata.inputs ?? {})
+    .filter((name) => !(action === "release-to-candidate" && name === "repo-token"))
     .map(
       (name) =>
         `        INPUT_${name.toUpperCase().replaceAll("-", "_")}: \${{ inputs.${name} }}\n`,

@@ -7247,7 +7247,7 @@ var require_client = __commonJS({
       );
       resume(client);
     }
-    var constants3 = require_constants3();
+    var constants4 = require_constants3();
     var createRedirectInterceptor = require_redirectInterceptor();
     var EMPTY_BUF = Buffer.alloc(0);
     async function lazyllhttp() {
@@ -7314,7 +7314,7 @@ var require_client = __commonJS({
       constructor(client, socket, { exports: exports3 }) {
         assert(Number.isFinite(client[kMaxHeadersSize]) && client[kMaxHeadersSize] > 0);
         this.llhttp = exports3;
-        this.ptr = this.llhttp.llhttp_alloc(constants3.TYPE.RESPONSE);
+        this.ptr = this.llhttp.llhttp_alloc(constants4.TYPE.RESPONSE);
         this.client = client;
         this.socket = socket;
         this.timeout = null;
@@ -7406,19 +7406,19 @@ var require_client = __commonJS({
             currentBufferRef = null;
           }
           const offset = llhttp.llhttp_get_error_pos(this.ptr) - currentBufferPtr;
-          if (ret === constants3.ERROR.PAUSED_UPGRADE) {
+          if (ret === constants4.ERROR.PAUSED_UPGRADE) {
             this.onUpgrade(data.slice(offset));
-          } else if (ret === constants3.ERROR.PAUSED) {
+          } else if (ret === constants4.ERROR.PAUSED) {
             this.paused = true;
             socket.unshift(data.slice(offset));
-          } else if (ret !== constants3.ERROR.OK) {
+          } else if (ret !== constants4.ERROR.OK) {
             const ptr = llhttp.llhttp_get_error_reason(this.ptr);
             let message = "";
             if (ptr) {
               const len = new Uint8Array(llhttp.memory.buffer, ptr).indexOf(0);
               message = "Response does not match the HTTP/1.1 protocol (" + Buffer.from(llhttp.memory.buffer, ptr, len).toString() + ")";
             }
-            throw new HTTPParserError(message, constants3.ERROR[ret], data.slice(offset));
+            throw new HTTPParserError(message, constants4.ERROR[ret], data.slice(offset));
           }
         } catch (err) {
           util.destroy(socket, err);
@@ -7588,7 +7588,7 @@ var require_client = __commonJS({
           socket[kBlocking] = false;
           resume(client);
         }
-        return pause ? constants3.ERROR.PAUSED : 0;
+        return pause ? constants4.ERROR.PAUSED : 0;
       }
       onBody(buf) {
         const { client, socket, statusCode, maxResponseSize } = this;
@@ -7610,7 +7610,7 @@ var require_client = __commonJS({
         }
         this.bytesRead += buf.length;
         if (request.onData(buf) === false) {
-          return constants3.ERROR.PAUSED;
+          return constants4.ERROR.PAUSED;
         }
       }
       onMessageComplete() {
@@ -7645,13 +7645,13 @@ var require_client = __commonJS({
         if (socket[kWriting]) {
           assert.strictEqual(client[kRunning], 0);
           util.destroy(socket, new InformationalError("reset"));
-          return constants3.ERROR.PAUSED;
+          return constants4.ERROR.PAUSED;
         } else if (!shouldKeepAlive) {
           util.destroy(socket, new InformationalError("reset"));
-          return constants3.ERROR.PAUSED;
+          return constants4.ERROR.PAUSED;
         } else if (socket[kReset] && client[kRunning] === 0) {
           util.destroy(socket, new InformationalError("reset"));
-          return constants3.ERROR.PAUSED;
+          return constants4.ERROR.PAUSED;
         } else if (client[kPipelining] === 1) {
           setImmediate(resume, client);
         } else {
@@ -27113,6 +27113,7 @@ var core2 = __toESM(require_core(), 1);
 
 // src/release/action.ts
 var core = __toESM(require_core(), 1);
+var import_node_fs5 = require("node:fs");
 var import_promises8 = require("node:fs/promises");
 var import_node_path6 = require("node:path");
 
@@ -27260,6 +27261,16 @@ function actionSignal() {
       process.removeListener("SIGTERM", abort);
     }
   };
+}
+
+// src/manifests/codec.ts
+var import_yaml = __toESM(require_dist(), 1);
+function encodeManifest(manifest) {
+  return `name: ${manifest.name}
+architecture: ${manifest.architecture}
+revision: ${manifest.revision}
+${manifest.version ? `version: ${JSON.stringify(manifest.version)}
+` : ""}`;
 }
 
 // src/runtime/process.ts
@@ -27425,16 +27436,6 @@ var import_promises5 = require("node:fs/promises");
 var import_node_os = require("node:os");
 var import_node_path4 = require("node:path");
 var import_yaml4 = __toESM(require_dist(), 1);
-
-// src/manifests/codec.ts
-var import_yaml = __toESM(require_dist(), 1);
-function encodeManifest(manifest) {
-  return `name: ${manifest.name}
-architecture: ${manifest.architecture}
-revision: ${manifest.revision}
-${manifest.version ? `version: ${JSON.stringify(manifest.version)}
-` : ""}`;
-}
 
 // src/project/architectures.ts
 var supported = /* @__PURE__ */ new Set([
@@ -28269,8 +28270,8 @@ async function readReleaseState(path) {
 }
 
 // src/release/action.ts
-async function runReleaseAction(env) {
-  const context = await actionContext(env);
+async function runReleaseAction(env, dependencies = {}) {
+  const context = await (dependencies.context ?? actionContext)(env);
   const target = architecture(required(env, "architecture"));
   const statePath = (0, import_node_path6.join)(context.workspace, `.snapcrafters-release-${target}.json`);
   const cancellation = actionSignal();
@@ -28301,11 +28302,23 @@ async function runReleaseAction(env) {
       await (0, import_promises8.unlink)(statePath);
       return;
     }
+    const resumed = await optionalReleaseState(statePath);
+    if (resumed) {
+      if (resumed.architecture !== target)
+        throw new InputError("Release state architecture mismatch");
+      if (resumed.channel !== channel(optional(env, "channel", "latest/candidate")))
+        throw new InputError("Release state channel mismatch");
+      if (resumed.sourceSha !== context.sha)
+        throw new InputError("Release state source SHA mismatch");
+      await ensureManifest(context.workspace, resumed);
+      core.setOutput("revision", resumed.revision);
+      return;
+    }
     const launchpadToken = required(env, "launchpad-token", 4096);
     const storeToken = required(env, "store-token", 16384);
     core.setSecret(launchpadToken);
     core.setSecret(storeToken);
-    await runRelease(
+    await (dependencies.release ?? runRelease)(
       {
         workspace: context.workspace,
         projectRoot: optional(env, "snapcraft-project-root"),
@@ -28331,6 +28344,39 @@ async function runReleaseAction(env) {
     );
   } finally {
     cancellation.dispose();
+  }
+}
+async function optionalReleaseState(path) {
+  try {
+    return await readReleaseState(path);
+  } catch (error) {
+    if (error.code === "ENOENT") return void 0;
+    throw error;
+  }
+}
+async function ensureManifest(workspace, published) {
+  const path = (0, import_node_path6.join)(workspace, `manifest-${published.architecture}.yaml`);
+  const expected = encodeManifest({
+    name: published.snap,
+    architecture: published.architecture,
+    revision: published.revision,
+    version: published.version
+  });
+  try {
+    await (0, import_promises8.writeFile)(path, expected, { flag: "wx", mode: 384 });
+    return;
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error;
+  }
+  const handle = await (0, import_promises8.open)(path, import_node_fs5.constants.O_RDONLY | import_node_fs5.constants.O_NOFOLLOW);
+  try {
+    const metadata = await handle.stat();
+    if (!metadata.isFile() || metadata.size > 64 * 1024)
+      throw new InputError("Existing release manifest is not a bounded regular file");
+    if (await handle.readFile("utf8") !== expected)
+      throw new InputError("Existing release manifest does not match publication state");
+  } finally {
+    await handle.close();
   }
 }
 

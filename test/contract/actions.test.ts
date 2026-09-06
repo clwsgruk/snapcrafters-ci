@@ -60,6 +60,10 @@ describe("public action contracts", () => {
       expect(source, action).not.toContain("@main");
       const inputs = (metadata.inputs ?? {}) as Record<string, unknown>;
       for (const input of Object.keys(inputs)) {
+        if (action === "release-to-candidate" && input === "repo-token") {
+          expect(source).toContain("token: ${{ inputs.repo-token }}");
+          continue;
+        }
         expect(source, `${action}:${input}`).toContain(
           `INPUT_${input.toUpperCase().replaceAll("-", "_")}:`,
         );
@@ -89,6 +93,12 @@ describe("public action contracts", () => {
           expect(ids.has(step.id), `${action}:duplicate step id ${step.id}`).toBe(false);
           ids.add(step.id);
         }
+      }
+      if (action === "release-to-candidate") {
+        const publish = (runs.steps as Array<Record<string, unknown>>).find(
+          (step) => step.id === "publish",
+        );
+        expect(publish?.env).not.toHaveProperty("INPUT_REPO_TOKEN");
       }
     }
   });

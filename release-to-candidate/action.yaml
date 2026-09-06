@@ -70,7 +70,6 @@ runs:
         INPUT_CHANNEL: ${{ inputs.channel }}
         INPUT_LAUNCHPAD_TOKEN: ${{ inputs.launchpad-token }}
         INPUT_MULTI_SNAP: ${{ inputs.multi-snap }}
-        INPUT_REPO_TOKEN: ${{ inputs.repo-token }}
         INPUT_SNAPCRAFT_PROJECT_ROOT: ${{ inputs.snapcraft-project-root }}
         INPUT_SNAPCRAFT_CHANNEL: ${{ inputs.snapcraft-channel }}
         INPUT_STORE_TOKEN: ${{ inputs.store-token }}

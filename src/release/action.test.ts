@@ -1,0 +1,77 @@
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { expect, test, vi } from "vite-plus/test";
+import { runReleaseAction } from "./action.js";
+import type { Published } from "./types.js";
+
+async function context(state: Published): Promise<{ env: NodeJS.ProcessEnv; statePath: string }> {
+  const workspace = await mkdtemp(join(tmpdir(), "release-action-"));
+  const eventPath = join(workspace, "event.json");
+  const output = join(workspace, "output");
+  await writeFile(eventPath, "{}");
+  await writeFile(output, "");
+  const statePath = join(workspace, ".snapcrafters-release-amd64.json");
+  await writeFile(statePath, JSON.stringify(state), { mode: 0o600 });
+  return {
+    statePath,
+    env: {
+      GITHUB_ACTIONS: "true",
+      GITHUB_SERVER_URL: "https://github.com",
+      GITHUB_WORKSPACE: workspace,
+      GITHUB_REPOSITORY: "apps/demo",
+      GITHUB_RUN_ID: "7",
+      GITHUB_SHA: "a".repeat(40),
+      GITHUB_EVENT_PATH: eventPath,
+      GITHUB_EVENT_NAME: "push",
+      GITHUB_OUTPUT: output,
+      RUNNER_ENVIRONMENT: "github-hosted",
+      RUNNER_OS: "Linux",
+      ImageOS: "ubuntu24",
+      INPUT_ARCHITECTURE: "amd64",
+      INPUT_CHANNEL: "latest/candidate",
+      INPUT_LAUNCHPAD_TOKEN: "launchpad-token",
+      INPUT_STORE_TOKEN: "store-token",
+    },
+  };
+}
+
+const state = (): Published => ({
+  snap: "demo",
+  version: "1.0",
+  revision: "9007199254740993",
+  channel: "latest/candidate",
+  architecture: "amd64",
+  digest: "b".repeat(96),
+  sourceSha: "a".repeat(40),
+});
+
+test("resumes an exact publication state before build or Store orchestration", async () => {
+  const fixture = await context(state());
+  const release = vi.fn();
+  await runReleaseAction(fixture.env, { release, context: fakeContext(fixture.env) });
+  expect(release).not.toHaveBeenCalled();
+  expect(await readFile(join(fixture.env.GITHUB_WORKSPACE!, "manifest-amd64.yaml"), "utf8")).toBe(
+    'name: demo\narchitecture: amd64\nrevision: 9007199254740993\nversion: "1.0"\n',
+  );
+});
+
+test("rejects mismatched publication state before build or Store orchestration", async () => {
+  const fixture = await context({ ...state(), channel: "latest/stable" });
+  const release = vi.fn();
+  await expect(
+    runReleaseAction(fixture.env, { release, context: fakeContext(fixture.env) }),
+  ).rejects.toThrow(/channel mismatch/i);
+  expect(release).not.toHaveBeenCalled();
+});
+
+function fakeContext(env: NodeJS.ProcessEnv) {
+  return async () => ({
+    workspace: env.GITHUB_WORKSPACE!,
+    repository: env.GITHUB_REPOSITORY!,
+    runId: env.GITHUB_RUN_ID!,
+    sha: env.GITHUB_SHA!,
+    eventName: env.GITHUB_EVENT_NAME!,
+    event: {},
+  });
+}
