@@ -8,18 +8,32 @@ branding:
 runs:
   using: composite
   steps:
+    - shell: bash
+      env:
+        CI_PHASE: validate
+      run: node "$GITHUB_ACTION_PATH/dist/index.cjs"
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+      with:
+        node-version: "24"
     - name: Enable KVM on the Github Actions runner
       shell: bash
-      run: |
-        echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+      run:
+        'echo ''KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"'' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+
         sudo udevadm control --reload-rules
+
         sudo udevadm trigger --name-match=kvm
 
-    - name: Setup LXD
-      uses: canonical/setup-lxd@v0.1.1
-
+        '
+    - uses: canonical/setup-lxd@4e959f8e0d9c5feb27d44c5e4d9a330a782edee0
     - name: Setup ghvmctl
       shell: bash
-      run: |
-        sudo snap install ghvmctl
+      run: "sudo snap install ghvmctl --revision=16
+
         sudo snap connect ghvmctl:lxd lxd:lxd
+
+        "
+    - shell: bash
+      env:
+        CI_PHASE: run
+      run: node "$GITHUB_ACTION_PATH/dist/index.cjs"

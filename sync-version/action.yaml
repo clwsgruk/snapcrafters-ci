@@ -31,48 +31,24 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Checkout the source
-      uses: actions/checkout@v6
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+      with:
+        node-version: "24"
+    - shell: bash
+      env:
+        CI_PHASE: validate
+      run: node "$GITHUB_ACTION_PATH/dist/index.cjs"
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
       with:
         token: ${{ inputs.token }}
         ref: ${{ inputs.branch }}
-
-    - name: Find and parse snapcraft.yaml
-      id: snapcraft-yaml
-      uses: snapcrafters/ci/parse-snapcraft-yaml@main
-      with:
-        snapcraft-project-root: ${{ inputs.snapcraft-project-root }}
-
-    - name: Run update script
-      shell: bash
-      run: |
-        # shellcheck disable=SC2288,SC2086,SC1083
-        ${{ inputs.update-script }}
-
-    - name: Check for modified files
-      shell: bash
-      id: git-check
-      run: |
-        MODIFIED=$([ -z "$(git status --porcelain)" ] && echo "false" || echo "true")
-        echo "modified=$MODIFIED" >> "$GITHUB_OUTPUT"
-
-    - name: Commit changes
-      if: steps.git-check.outputs.modified == 'true'
-      shell: bash
+    - shell: bash
       env:
-        snap_name: ${{ steps.snapcraft-yaml.outputs.snap-name }}
-        old_version: ${{ steps.snapcraft-yaml.outputs.version }}
-        yaml_path: ${{ steps.snapcraft-yaml.outputs.yaml-path }}
-      run: |
-        new_version="$(yq -r '.version' "$yaml_path")"
-        if [[ ! "$old_version" == "$new_version" ]]; then
-            version=$new_version
-        fi
-        git config --global user.name "${{ inputs.bot-name }}"
-        git config --global user.email "${{ inputs.bot-email }}"
-        if [[ -n "${version:-}" ]]; then
-            git commit -am "chore: bump ${snap_name} to version ${version}"
-        else
-            git commit -am "chore: bump ${snap_name} dependencies"
-        fi
-        git push
+        CI_PHASE: run
+        INPUT_BOT_EMAIL: ${{ inputs.bot-email }}
+        INPUT_BOT_NAME: ${{ inputs.bot-name }}
+        INPUT_BRANCH: ${{ inputs.branch }}
+        INPUT_SNAPCRAFT_PROJECT_ROOT: ${{ inputs.snapcraft-project-root }}
+        INPUT_TOKEN: ${{ inputs.token }}
+        INPUT_UPDATE_SCRIPT: ${{ inputs.update-script }}
+      run: node "$GITHUB_ACTION_PATH/dist/index.cjs"

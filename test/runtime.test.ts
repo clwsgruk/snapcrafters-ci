@@ -17,3 +17,12 @@ test("only github.com-hosted Ubuntu 22/24 with Node 24 passes the publishing bou
     expect(() => validateRunner({ ...good, ...patch }, "v24.20.0")).toThrow();
   expect(() => validateRunner(good, "v22.0.0")).toThrow();
 });
+
+test("setup-ghvmctl validates before any privileged command", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { parse } = await import("yaml");
+  const action = parse(readFileSync("setup-ghvmctl/action.yaml", "utf8"));
+  expect(action.runs.steps[0].env.CI_PHASE).toBe("validate");
+  expect(action.runs.steps[0].run).toBe('node "$GITHUB_ACTION_PATH/dist/index.cjs"');
+  expect(action.runs.steps.at(-1).env.CI_PHASE).toBe("run");
+});

@@ -18,3 +18,12 @@ with its state in /tmp and unrelated global tool configuration excluded.
   validation and the first two public adapters; wrappers own their internal phase.
 
 - GREEN: 5 tests passed; build succeeded for both migrated actions.
+
+- `mise run test -- test/execution.test.ts` — RED: absent execution module; GREEN: one Bash
+  process preserved script/streams/status and excluded credentials. Second RED: absent sync
+  module; GREEN: real Git/bare remote rejects untracked paths without commit and pushes the
+  post-script version message.
+- `mise run test -- test/runtime.test.ts` — RED: setup-ghvmctl first step had no validation
+  phase. Moved validation before sudo/LXD, pinned ghvmctl revision 16, final phase explicitly run.
+
+- GREEN: 8 tests passed; all five current adapters built.
