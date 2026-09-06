@@ -27,3 +27,12 @@ with its state in /tmp and unrelated global tool configuration excluded.
   phase. Moved validation before sudo/LXD, pinned ghvmctl revision 16, final phase explicitly run.
 
 - GREEN: 8 tests passed; all five current adapters built.
+
+- `mise run test -- test/github.test.ts` — RED: absent API module; GREEN: explicit token,
+  authentication failure, and disconnect-after-comment-write recovered without duplicate.
+- `mise run test -- test/manifests.test.ts` — RED: absent manifest module. Added bounded
+  in-memory ZIP extraction and exact bigint-backed revision parsing. Added collection checks
+  for complete expected-set rejection before filesystem writes (these are additional checks,
+  not claimed as historical RED).
+
+- GREEN: 11 tests passed and six action bundles built.
