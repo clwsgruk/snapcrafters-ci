@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 import { PartialPublicationError } from "../runtime/errors.js";
+import { parseAllowedRevisions, parsePromotionCommand, validateIssueHeader } from "./parse.js";
 import { type PromotionIssue, promote } from "./run.js";
 
 const base = {
@@ -58,6 +59,20 @@ function dependencies(overrides: Record<string, unknown> = {}) {
 }
 
 describe("promotion authorization and binding", () => {
+  test("strictly validates legacy command, issue header, and body bounds", () => {
+    expect(parsePromotionCommand("/promote 11 latest/stable")).toEqual({
+      revisions: ["11"],
+      channel: "latest/stable",
+      done: false,
+    });
+    expect(() => parsePromotionCommand("/promote 11,11 latest/stable")).toThrow(/duplicate/i);
+    expect(() => parsePromotionCommand(" /promote 11 latest/stable")).toThrow(/malformed/i);
+    expect(() => validateIssueHeader(body(), "demo", "latest/candidate")).toThrow(/distinct/i);
+    expect(() => validateIssueHeader(body(), "Bad_Name", "latest/stable")).toThrow(/snap/i);
+    expect(() => parseAllowedRevisions("x".repeat(1024 * 1024 + 1))).toThrow(/size/i);
+    expect(parseAllowedRevisions(body(), "other/stable")).toEqual(new Set());
+    expect(() => parseAllowedRevisions(body().replace("amd64", "sparc"))).toThrow(/architecture/i);
+  });
   test("rejects ambiguous issue bodies containing multiple promotion records", async () => {
     let writes = 0;
     await expect(

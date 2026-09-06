@@ -31,5 +31,25 @@ describe("legacy manifest codec", () => {
     expect(() => validateArchiveEntry("C:\\manifest-amd64.yaml", 1, 2)).toThrow(/absolute/i);
     expect(() => validateArchiveEntry("manifest-amd64.txt", 1, 2)).toThrow(/unexpected/i);
     expect(() => validateArchiveEntry("manifest-amd64.yaml", 2, 2)).not.toThrow();
+    expect(
+      decodeManifest(
+        "name: a\narchitecture: arm64\nrevision: 2\nversion: '1.0'\n",
+        "manifest-arm64.yml",
+      ),
+    ).toMatchObject({ version: "1.0" });
+    for (const version of ["", "one\ntwo", "x".repeat(129)])
+      expect(() =>
+        decodeManifest(
+          `name: a\narchitecture: amd64\nrevision: 1\nversion: ${JSON.stringify(version)}\n`,
+          "manifest-amd64.yaml",
+        ),
+      ).toThrow(/version/i);
+    expect(() =>
+      decodeManifest(
+        "name: a\narchitecture: amd64\nrevision: 1\nversion: []\n",
+        "manifest-amd64.yaml",
+      ),
+    ).toThrow(/version/i);
+    expect(() => validateArchiveEntry("nested\\manifest-amd64.yaml", 1, 2)).toThrow(/nested/i);
   });
 });

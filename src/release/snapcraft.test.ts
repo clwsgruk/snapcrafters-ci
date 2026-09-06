@@ -6,6 +6,7 @@ import {
   parseRevisions,
   parseSnapMetadata,
 } from "./snapcraft.js";
+import { parseRevisionRows } from "./store-output.js";
 
 test("parses the immutable Snapcraft revisions table fixture", async () => {
   const fixture = JSON.parse(
@@ -34,6 +35,30 @@ test("parses and strictly binds built snap metadata", () => {
   expect(() =>
     parseSnapMetadata("name: demo\nversion: '1.2'\narchitectures: [amd64, arm64]\n"),
   ).toThrow(/one architecture/i);
+  for (const source of [
+    "[]",
+    "name: Bad_Name\nversion: '1'\narchitectures: [amd64]",
+    "name: demo\nversion: ''\narchitectures: [amd64]",
+    "name: demo\nversion: '1'\narchitectures: [sparc]",
+    `name: demo\nversion: '1'\narchitectures: [amd64]\n#${"x".repeat(1024 * 1024)}`,
+  ])
+    expect(() => parseSnapMetadata(source)).toThrow();
+});
+
+test("rejects malformed and ambiguous Store revision rows", () => {
+  const header = "Rev.    Uploaded              Arches    Version    Channels\n";
+  for (const row of [
+    "1 bad",
+    "0       2026-09-06T10:00:00Z  amd64     1.0        latest/stable*",
+    "1       not-a-date            amd64     1.0        latest/stable*",
+    "1       2026-09-06T10:00:00Z  sparc     1.0        latest/stable*",
+  ])
+    expect(() => parseRevisionRows(header + row)).toThrow();
+  expect(parseRevisionRows(`${header}\n`)).toEqual([]);
+  const duplicate = `${header}1       2026-09-06T10:00:00Z  amd64     1.0        latest/stable*\n1       2026-09-06T10:00:00Z  arm64     1.0        latest/stable*`;
+  expect(() => isRevisionReleased(duplicate, "1", "latest/stable")).toThrow(/ambiguous/i);
+  expect(() => isRevisionReleased(header, "0", "latest/stable")).toThrow(/revision/i);
+  expect(() => isRevisionReleased(header, "1", "bad")).toThrow(/channel/i);
 });
 
 test("does not treat a pre-existing off-channel revision as a new upload", async () => {

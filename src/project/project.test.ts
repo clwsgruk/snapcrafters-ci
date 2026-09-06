@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, test } from "vite-plus/test";
 import { getBuildTargets } from "./architectures.js";
 import { parseProject } from "./parse.js";
+import { parseProjectDocument } from "./schema.js";
 
 describe("project parsing", () => {
   test("preserves last-match precedence and public relative formatting", async () => {
@@ -25,6 +26,32 @@ describe("project parsing", () => {
       components: [{ name: "docs" }],
     });
     expect(project.yamlPath).toBe(join(workspace, "nested", "snap", "snapcraft.yaml"));
+  });
+
+  test("strictly parses project mapping and component variants", () => {
+    expect(
+      parseProjectDocument(
+        Buffer.from(
+          "name: demo\nversion: 2\nadopt-info: part\nbase: core24\ncomponents:\n  docs:\n    version: 3\n",
+        ),
+      ),
+    ).toMatchObject({
+      name: "demo",
+      version: "2",
+      adoptInfo: "part",
+      base: "core24",
+      components: [{ name: "docs", version: "3" }],
+    });
+    for (const source of [
+      "[]",
+      "name: Bad_Name",
+      "name: demo\ncomponents: []",
+      "name: demo\ncomponents:\n  Bad_Name: {}",
+      "name: demo\ncomponents:\n  docs: null",
+      "name: demo\ncomponents:\n  docs:\n    version: []",
+      "name: demo\nname: duplicate",
+    ])
+      expect(() => parseProjectDocument(Buffer.from(source))).toThrow();
   });
 
   test("rejects oversized recipes and symlinked recipe or declaration files", async () => {

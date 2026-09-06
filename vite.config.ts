@@ -23,7 +23,17 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json-summary"],
-      include: ["src/actions/inputs.ts", "src/manifests/codec.ts", "src/project/architectures.ts"],
+      include: [
+        "src/actions/context-validation.ts",
+        "src/actions/inputs.ts",
+        "src/manifests/codec.ts",
+        "src/project/architectures.ts",
+        "src/project/schema.ts",
+        "src/promotion/parse.ts",
+        "src/release/store-output.ts",
+        "src/runtime/retry.ts",
+        "src/screenshots/validation.ts",
+      ],
       thresholds: {
         branches: 90,
         functions: 90,

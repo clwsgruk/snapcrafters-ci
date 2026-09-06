@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vite-plus/test";
 import { actionContext } from "./context.js";
+import { parseEventPayload, validateContextEnvironment } from "./context-validation.js";
 
 test("validates an absolute bounded GitHub Actions context", async () => {
   const workspace = await mkdtemp(join(tmpdir(), "context-"));
@@ -63,6 +64,27 @@ test("rejects oversized event files from metadata before allocating their conten
   await expect(actionContext(validEnvironment(workspace, event), "24.20.0")).rejects.toThrow(
     /size limit/i,
   );
+});
+
+test("pure context validation rejects every malformed identity and payload shape", () => {
+  const root = "/tmp/workspace";
+  const event = "/tmp/event.json";
+  for (const override of [
+    { GITHUB_WORKSPACE: "" },
+    { GITHUB_REPOSITORY: "owner" },
+    { GITHUB_RUN_ID: "0" },
+    { GITHUB_SHA: "A".repeat(40) },
+    { GITHUB_EVENT_NAME: "pull-request" },
+  ])
+    expect(() =>
+      validateContextEnvironment(validEnvironment(root, event, override), "24.20.0"),
+    ).toThrow();
+  expect(validateContextEnvironment(validEnvironment(root, event), "24.20.0").eventName).toBe(
+    "push",
+  );
+  expect(parseEventPayload(Buffer.from('{"action":"ok"}'))).toEqual({ action: "ok" });
+  for (const source of ["null", "[]", '"text"'])
+    expect(() => parseEventPayload(Buffer.from(source))).toThrow(/object/i);
 });
 
 function validEnvironment(

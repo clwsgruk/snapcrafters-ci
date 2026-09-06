@@ -1,8 +1,9 @@
 import { lstat, open } from "node:fs/promises";
-import { isAbsolute, join } from "node:path";
+import { join } from "node:path";
 import type { Manifest } from "../manifests/codec.js";
 import { ownedTemp, removeOwned } from "../runtime/files.js";
 import { runProcess } from "../runtime/process.js";
+import { validateCaptureRequest } from "./validation.js";
 
 export async function captureScreenshots(input: {
   cwd: string;
@@ -16,15 +17,7 @@ export async function captureScreenshots(input: {
   home?: string;
   owner?: string;
 }): Promise<{ screen: Buffer; window: Buffer }> {
-  if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(input.snap)) throw new Error("Invalid snap name");
-  if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(input.app))
-    throw new Error("Invalid snap application name");
-  const amd64 = input.manifests.find(
-    (manifest) => manifest.architecture === "amd64" && manifest.name === input.snap,
-  );
-  if (input.manifests.some((manifest) => manifest.architecture === "amd64") && !amd64)
-    throw new Error("Manifest snap does not match project");
-  if (!isAbsolute(input.actionPath)) throw new Error("Action path must be absolute");
+  const amd64 = validateCaptureRequest(input);
   const helper = join(input.actionPath, "wait-for-window");
   const helperMetadata = await lstat(helper, { bigint: false });
   if (

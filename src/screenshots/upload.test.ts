@@ -1,6 +1,13 @@
 import type { Clock } from "../runtime/clock.js";
 import { expect, test } from "vite-plus/test";
 import { publishScreenshots, type ScreenshotGitHub, uploadScreenshots } from "./upload.js";
+import {
+  confirmedRefConflict,
+  gitSha,
+  validateCaptureRequest,
+  validatePng,
+  validateScreenshotUpload,
+} from "./validation.js";
 
 const sha = (digit: string) => digit.repeat(40);
 const png = (body: string) =>
@@ -50,6 +57,48 @@ test("rejects invalid metadata and non-PNG images before GitHub writes", async (
     /date/i,
   );
   expect(writes).toBe(0);
+});
+
+test("pure screenshot validators cover capture, identity, image, and conflict schemas", () => {
+  const valid = input();
+  expect(() => validateScreenshotUpload(valid)).not.toThrow();
+  for (const override of [
+    { snap: "Bad_Name" },
+    { issue: "0" },
+    { repository: "owner" },
+    { sourceRepository: "-owner/repo" },
+    { runId: "0" },
+    { sourceSha: "bad" },
+    { author: { name: "", email: "bot@example.invalid" } },
+    { author: { name: "bot", email: "invalid" } },
+    { screen: Buffer.alloc(10 * 1024 * 1024 + 1) },
+  ])
+    expect(() => validateScreenshotUpload({ ...valid, ...override })).toThrow();
+  expect(() => validatePng(Buffer.from("not png"))).toThrow(/PNG/i);
+  expect(gitSha(sha("a"), "test")).toBe(sha("a"));
+  expect(() => gitSha("bad", "test")).toThrow(/SHA/i);
+  expect(confirmedRefConflict(Object.assign(new Error("conflict"), { status: 409 }))).toBe(true);
+  expect(confirmedRefConflict(Object.assign(new Error("other"), { status: 409 }))).toBe(false);
+  expect(
+    validateCaptureRequest({
+      snap: "demo",
+      app: "demo",
+      actionPath: "/tmp/action",
+      manifests: [],
+    }),
+  ).toBeUndefined();
+  for (const request of [
+    { snap: "Bad_Name", app: "demo", actionPath: "/tmp/action", manifests: [] },
+    { snap: "demo", app: "Bad_Name", actionPath: "/tmp/action", manifests: [] },
+    { snap: "demo", app: "demo", actionPath: "relative", manifests: [] },
+    {
+      snap: "demo",
+      app: "demo",
+      actionPath: "/tmp/action",
+      manifests: [{ name: "other", architecture: "amd64" as const, revision: "1" }],
+    },
+  ])
+    expect(() => validateCaptureRequest(request)).toThrow();
 });
 
 test("uploads two blobs in one commit and confirms a successful ref update", async () => {

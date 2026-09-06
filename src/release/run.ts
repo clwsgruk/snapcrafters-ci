@@ -12,7 +12,10 @@ import { InputError, PartialPublicationError } from "../runtime/errors.js";
 import { ownedTemp, removeOwned } from "../runtime/files.js";
 import { retryDelay, systemClock, type Clock } from "../runtime/clock.js";
 import type { ProcessResult, ProcessSpec } from "../runtime/process.js";
+import { parseUploadRevision } from "./store-output.js";
 import type { Published, ReleaseResult, SnapIdentity, StoreRevision } from "./types.js";
+
+export { parseUploadRevision } from "./store-output.js";
 
 const MAX_SNAP_BYTES = 8 * 1024 * 1024 * 1024;
 const MAX_COMPONENT_BYTES = 2 * 1024 * 1024 * 1024;
@@ -49,20 +52,6 @@ export interface ReleaseDependencies {
   ): Promise<StoreRevision[]>;
   recordPublication(published: Published): Promise<void>;
   writeManifest(path: string, contents: string): Promise<void>;
-}
-
-export function parseUploadRevision(output: string, expectedSnap: string): string {
-  const matches = [
-    ...output.matchAll(
-      /^Revision ([1-9][0-9]*) created for '([a-z0-9][a-z0-9-]{0,39})'(?: and released to .+)?$/gm,
-    ),
-  ];
-  if (matches.length === 0)
-    throw new InputError("Snapcraft output did not contain its upload result");
-  if (matches.length !== 1) throw new InputError("Ambiguous Snapcraft revision output");
-  if (matches[0]![2] !== expectedSnap)
-    throw new InputError(`Snapcraft output named unexpected snap ${matches[0]![2]}`);
-  return matches[0]![1]!;
 }
 
 export async function runRelease(

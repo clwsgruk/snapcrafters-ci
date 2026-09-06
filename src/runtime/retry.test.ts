@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
 import type { Clock } from "./clock.js";
-import { retryRequest, withDeadline } from "./retry.js";
+import { retryAfterMilliseconds, retryRequest, withDeadline } from "./retry.js";
 
 describe("bounded request retries", () => {
   test("honours bounded Retry-After with injected clock and randomness", async () => {
@@ -56,5 +56,54 @@ describe("bounded request retries", () => {
         });
       }),
     ).rejects.toThrow(/deadline.*abort/i);
+  });
+
+  test("parses numeric and HTTP-date Retry-After while rejecting malformed values", () => {
+    const withHeader = (value: unknown) => ({ response: { headers: { "retry-after": value } } });
+    expect(retryAfterMilliseconds(withHeader("2"), 1_000)).toBe(2_000);
+    expect(retryAfterMilliseconds(withHeader("Thu, 01 Jan 1970 00:00:02 GMT"), 1_000)).toBe(1_000);
+    expect(retryAfterMilliseconds(withHeader("Thu, 01 Jan 1970 00:00:00 GMT"), 1_000)).toBe(0);
+    expect(retryAfterMilliseconds(withHeader("invalid"), 1_000)).toBeUndefined();
+    expect(retryAfterMilliseconds(withHeader(2), 1_000)).toBeUndefined();
+    expect(retryAfterMilliseconds({}, 1_000)).toBeUndefined();
+  });
+
+  test("covers bounded retry exhaustion and parent deadline propagation", async () => {
+    for (const status of [502, 503, 504]) {
+      let attempts = 0;
+      await expect(
+        retryRequest(
+          async () => {
+            attempts++;
+            throw Object.assign(new Error("temporary"), { status });
+          },
+          {
+            signal: new AbortController().signal,
+            attempts: 2,
+            clock: { now: () => 0, sleep: async () => undefined },
+            random: () => 0,
+          },
+        ),
+      ).rejects.toThrow(/temporary/i);
+      expect(attempts).toBe(2);
+    }
+    await expect(withDeadline(new AbortController().signal, 100, async () => "ok")).resolves.toBe(
+      "ok",
+    );
+    const preaborted = new AbortController();
+    preaborted.abort(new Error("parent stopped"));
+    await expect(withDeadline(preaborted.signal, 100, async () => "bad")).rejects.toThrow(
+      /parent stopped/i,
+    );
+    const parent = new AbortController();
+    await expect(
+      withDeadline(parent.signal, 1_000, async (signal) => {
+        parent.abort(new Error("cancelled"));
+        if (signal.aborted) throw signal.reason;
+        await new Promise<void>((resolve, reject) =>
+          signal.addEventListener("abort", () => reject(signal.reason), { once: true }),
+        );
+      }),
+    ).rejects.toThrow(/cancelled/i);
   });
 });
