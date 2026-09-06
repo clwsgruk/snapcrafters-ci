@@ -14,6 +14,8 @@ const input = () => ({
   screen: png("screen"),
   window: png("window"),
   author: { name: "bot", email: "bot@example.invalid" },
+  runId: "7",
+  sourceSha: "a".repeat(40),
 });
 
 function client(overrides: Partial<ScreenshotGitHub> = {}): ScreenshotGitHub {
@@ -168,4 +170,24 @@ test("retries only the issue comment after one immutable upload", async () => {
   });
   expect(urls.window).toContain(`/${sha("6")}/`);
   expect({ blobs, comments, delays: delays.length }).toEqual({ blobs: 2, comments: 2, delays: 1 });
+});
+
+test("does not retry an authorization failure while reporting screenshots", async () => {
+  let ref = sha("1");
+  let comments = 0;
+  await expect(
+    publishScreenshots(input(), {
+      github: client({
+        getRef: async () => ref,
+        updateRef: async (value) => {
+          ref = value;
+        },
+      }),
+      comment: async () => {
+        comments++;
+        throw Object.assign(new Error("forbidden"), { status: 403 });
+      },
+    }),
+  ).rejects.toThrow(/forbidden/i);
+  expect(comments).toBe(1);
 });

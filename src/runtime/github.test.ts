@@ -2,6 +2,14 @@ import { expect, test, vi } from "vite-plus/test";
 
 const observed = vi.hoisted(() => [] as string[]);
 const requestSignals = vi.hoisted(() => [] as AbortSignal[]);
+const remote = vi.hoisted(() => ({
+  issues: [] as Array<{ number: number; body: string }>,
+  comments: [] as Array<{ body: string }>,
+  disconnectIssue: false,
+  disconnectComment: false,
+  issueWrites: 0,
+  commentWrites: 0,
+}));
 
 vi.mock("@actions/github", () => ({
   getOctokit: (token: string) => {
@@ -19,12 +27,20 @@ vi.mock("@actions/github", () => ({
           },
         },
         issues: {
-          createComment: async (options: { request: { signal: AbortSignal } }) => {
+          listComments: async () => ({ data: remote.comments }),
+          listForRepo: async () => ({ data: remote.issues }),
+          createComment: async (options: { body: string; request: { signal: AbortSignal } }) => {
             call("comment");
             requestSignals.push(options.request.signal);
+            remote.commentWrites++;
+            remote.comments.push({ body: options.body });
+            if (remote.disconnectComment) throw new Error("disconnect after comment");
           },
-          create: async () => {
+          create: async (options: { body: string }) => {
             call("issue");
+            remote.issueWrites++;
+            remote.issues.push({ number: 1, body: options.body });
+            if (remote.disconnectIssue) throw new Error("disconnect after issue");
             return { data: { number: 1 } };
           },
           get: async () => {
@@ -94,4 +110,30 @@ test("creates a fresh live deadline signal for each delayed write", async () => 
   expect(requestSignals).toHaveLength(2);
   expect(requestSignals[0]).not.toBe(requestSignals[1]);
   expect(requestSignals.every((signal) => !signal.aborted)).toBe(true);
+});
+
+test("recovers issue and comment disconnects by deterministic marker readback", async () => {
+  Object.assign(remote, {
+    issues: [],
+    comments: [],
+    disconnectIssue: true,
+    disconnectComment: true,
+    issueWrites: 0,
+    commentWrites: 0,
+  });
+  const signal = new AbortController().signal;
+  const issueBody = `body\n<!-- snapcrafters-ci:issue:7:${"a".repeat(40)} -->`;
+  const create = issueCreator("issue-token", "owner/repo", signal);
+  await expect(create("title", issueBody, ["testing"])).resolves.toBe(1);
+  await expect(create("title", issueBody, ["testing"])).resolves.toBe(1);
+  const commentBody = `result\n<!-- snapcrafters-ci:test:7:${"a".repeat(40)} -->`;
+  const comment = issueCommenter("issue-token", "owner/repo", 1, signal);
+  await expect(comment(commentBody)).resolves.toBeUndefined();
+  await expect(comment(commentBody)).resolves.toBeUndefined();
+  expect({ issues: remote.issueWrites, comments: remote.commentWrites }).toEqual({
+    issues: 1,
+    comments: 1,
+  });
+  remote.disconnectIssue = false;
+  remote.disconnectComment = false;
 });

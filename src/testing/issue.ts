@@ -11,6 +11,7 @@ export interface TestingIssueInput {
   architectures: Architecture[];
   manifests: Manifest[];
   instructions: string;
+  deliveryMarker: string;
 }
 
 const bodyTemplate = `A new version ({{ version }}) of \`{{ snap }}\` was just pushed to the \`{{ channel }}\` channel [in the snap store](https://snapcraft.io/{{ snap }}). The following revisions are available.
@@ -52,6 +53,8 @@ export async function createTestingIssue(
     createIssue(title: string, body: string, labels: string[]): Promise<number>;
   },
 ): Promise<number> {
+  if (!/^<!-- snapcrafters-ci:issue:[1-9][0-9]*:[0-9a-f]{40} -->$/.test(input.deliveryMarker))
+    throw new InputError("Invalid testing issue delivery marker");
   if (input.ciRepo !== "snapcrafters/ci") {
     throw new InputError(
       "ci-repo overrides are deprecated; test forks by pinning the fork action at an immutable SHA",
@@ -97,7 +100,7 @@ export async function createTestingIssue(
     instructions: renderLegacyPlaceholders(input.instructions, input),
     revisions: input.architectures.map((arch) => revisions.get(arch)).join(","),
   };
-  const body = bodyTemplate.replaceAll(/\{\{ ([A-Za-z]+) \}\}/g, (_, key: string) => values[key]!);
+  const body = `${bodyTemplate.replaceAll(/\{\{ ([A-Za-z]+) \}\}/g, (_, key: string) => values[key]!)}\n\n${input.deliveryMarker}`;
   const title = `Call for testing \`${input.snap}\` on channel \`${input.channel}\``;
   return deps.createIssue(title, body, ["testing"]);
 }

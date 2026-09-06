@@ -185,6 +185,11 @@ mutable sibling references, and public metadata drift.
   is bound to one open non-PR `testing` issue for the exact repository and snap, edited comments
   and unauthorized actors fail before the eyes reaction, all revisions validate before Store
   writes, Snapcraft uses the configured channel, and successful closure is read back.
+- Reviewer-directed idempotency regressions (added after the first implementation rather than a
+  historical RED) are GREEN in `mise run test:unit -- github testing-issue screenshots promotion`:
+  15 files, 94 tests. Deterministic run/source/comment markers recover issue/comment disconnects,
+  authorization errors are not retried, and promotion redelivery reads Store state and performs
+  zero release writes for revisions already on the destination channel.
 
 - `mise run test:unit -- promotion` — RED: 2 failures proved that issue revision records were not
   channel-bound and a post-release reporting failure erased the known released set.

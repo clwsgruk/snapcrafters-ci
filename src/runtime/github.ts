@@ -107,15 +107,40 @@ export function issueCommenter(
   const [owner, repo] = repository.split("/") as [string, string];
   const client = getOctokit(token);
   return async (body: string): Promise<void> => {
-    await writeRequest(signal, 30_000, (requestSignal) =>
-      client.rest.issues.createComment({
-        owner,
-        repo,
-        issue_number: issueNumber,
-        body,
-        request: { signal: requestSignal },
-      }),
-    );
+    const marker = deliveryMarker(body);
+    const exists = async (): Promise<boolean> => {
+      if (!marker) return false;
+      for (let page = 1; page <= 10; page++) {
+        const response = await readRequest(signal, 30_000, (requestSignal) =>
+          client.rest.issues.listComments({
+            owner,
+            repo,
+            issue_number: issueNumber,
+            per_page: 100,
+            page,
+            request: { signal: requestSignal },
+          }),
+        );
+        if (response.data.some((comment) => comment.body?.includes(marker))) return true;
+        if (response.data.length < 100) return false;
+      }
+      throw new Error("Issue comment pagination limit exceeded");
+    };
+    if (await exists()) return;
+    try {
+      await writeRequest(signal, 30_000, (requestSignal) =>
+        client.rest.issues.createComment({
+          owner,
+          repo,
+          issue_number: issueNumber,
+          body,
+          request: { signal: requestSignal },
+        }),
+      );
+    } catch (error) {
+      if (await exists()) return;
+      throw error;
+    }
   };
 }
 
@@ -127,18 +152,54 @@ export function issueCreator(
   const [owner, repo] = repository.split("/") as [string, string];
   const client = getOctokit(token);
   return async (title: string, body: string, labels: string[]): Promise<number> => {
-    const response = await writeRequest(signal, 30_000, (requestSignal) =>
-      client.rest.issues.create({
-        owner,
-        repo,
-        title,
-        body,
-        labels,
-        request: { signal: requestSignal },
-      }),
-    );
-    return response.data.number;
+    const marker = deliveryMarker(body);
+    const find = async (): Promise<number | undefined> => {
+      if (!marker) return undefined;
+      for (let page = 1; page <= 10; page++) {
+        const response = await readRequest(signal, 30_000, (requestSignal) =>
+          client.rest.issues.listForRepo({
+            owner,
+            repo,
+            state: "all",
+            per_page: 100,
+            page,
+            request: { signal: requestSignal },
+          }),
+        );
+        const found = response.data.find(
+          (issue) => !issue.pull_request && issue.body?.includes(marker),
+        );
+        if (found) return found.number;
+        if (response.data.length < 100) return undefined;
+      }
+      throw new Error("Issue pagination limit exceeded");
+    };
+    const existing = await find();
+    if (existing) return existing;
+    try {
+      const response = await writeRequest(signal, 30_000, (requestSignal) =>
+        client.rest.issues.create({
+          owner,
+          repo,
+          title,
+          body,
+          labels,
+          request: { signal: requestSignal },
+        }),
+      );
+      return response.data.number;
+    } catch (error) {
+      const recovered = await find();
+      if (recovered) return recovered;
+      throw error;
+    }
   };
+}
+
+function deliveryMarker(body: string): string | undefined {
+  const matches = body.match(/<!-- snapcrafters-ci:[a-z-]+:[A-Za-z0-9:._/-]+ -->/g) ?? [];
+  if (matches.length > 1) throw new Error("Ambiguous delivery marker");
+  return matches[0];
 }
 
 export function screenshotGitHub(
@@ -301,15 +362,7 @@ export function promotionGitHub(
       };
     },
     async comment(body: string): Promise<void> {
-      await writeRequest(signal, 60_000, (requestSignal) =>
-        client.rest.issues.createComment({
-          owner,
-          repo,
-          issue_number: issueNumber,
-          body,
-          request: { signal: requestSignal },
-        }),
-      );
+      await issueCommenter(token, repository, issueNumber, signal)(body);
     },
     async close(): Promise<void> {
       await writeRequest(signal, 60_000, (requestSignal) =>

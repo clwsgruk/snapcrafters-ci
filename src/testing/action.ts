@@ -45,6 +45,7 @@ export async function runTestingIssueAction(env: NodeJS.ProcessEnv): Promise<voi
         architectures,
         manifests,
         instructions: optional(env, "testing-instructions"),
+        deliveryMarker: `<!-- snapcrafters-ci:issue:${context.runId}:${context.sha} -->`,
       },
       {
         lookup: async (snap, architecture, releaseChannel) => {
@@ -113,6 +114,7 @@ export async function runTestsAction(env: NodeJS.ProcessEnv): Promise<void> {
         script: required(env, "test-script", 1024 * 1024),
         runUrl: `https://github.com/${context.repository}/actions/runs/${context.runId}`,
         signal: cancellation.signal,
+        deliveryMarker: `<!-- snapcrafters-ci:test:${context.runId}:${context.sha} -->`,
       },
       { comment: issueCommenter(token, context.repository, issue, cancellation.signal) },
     );

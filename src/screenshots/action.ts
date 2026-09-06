@@ -44,6 +44,8 @@ export async function runScreenshotsAction(env: NodeJS.ProcessEnv): Promise<void
         snap: project.name,
         issue,
         date: new Date().toISOString().slice(0, 10).replaceAll("-", ""),
+        runId: context.runId,
+        sourceSha: context.sha,
         ...images,
         author: {
           name: optional(env, "bot-name", "Snapcrafters Bot"),

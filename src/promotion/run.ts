@@ -10,6 +10,7 @@ export interface PromotionInput {
   configuredChannel: string;
   snap: string;
   edited: boolean;
+  deliveryId: string;
 }
 
 export interface PromotionIssue {
@@ -32,6 +33,7 @@ export async function promote(
     permission(actor: string): Promise<string>;
     react(): Promise<void>;
     issue(): Promise<PromotionIssue>;
+    isReleased(revision: string, channel: string): Promise<boolean>;
     release(revision: string, channel: string): Promise<void>;
     comment(body: string): Promise<void>;
     close(): Promise<void>;
@@ -40,6 +42,8 @@ export async function promote(
   if (input.eventName !== "issue_comment" || input.action !== "created")
     throw new InputError("Promotion requires a newly created issue comment");
   if (input.edited) throw new InputError("Edited promotion comments are not accepted");
+  if (!/^[1-9][0-9]*:[1-9][0-9]*$/.test(input.deliveryId))
+    throw new InputError("Invalid promotion delivery identity");
   const parsed = parsePromotionCommand(input.comment);
   if (parsed.channel !== input.configuredChannel)
     throw new InputError("Requested channel does not match configured channel");
@@ -64,12 +68,19 @@ export async function promote(
   const released: string[] = [];
   for (const revision of parsed.revisions) {
     try {
-      await deps.release(revision, parsed.channel);
+      if (!(await deps.isReleased(revision, parsed.channel))) {
+        await deps.release(revision, parsed.channel);
+        if (!(await deps.isReleased(revision, parsed.channel)))
+          throw new Error(`Store release readback did not confirm revision ${revision}`);
+      }
       released.push(revision);
     } catch (releaseError) {
       try {
         await deps.comment(
-          `Released revisions: ${released.join(",") || "none"}. Revision ${revision} failed; no later revisions were attempted.`,
+          withDelivery(
+            `Released revisions: ${released.join(",") || "none"}. Revision ${revision} failed; no later revisions were attempted.`,
+            input.deliveryId,
+          ),
         );
       } catch (reportError) {
         throw new PartialPublicationError(
@@ -83,7 +94,10 @@ export async function promote(
   }
   try {
     await deps.comment(
-      `The following revisions were released to \`${parsed.channel}\`: \`${released.join(",")}\`.`,
+      withDelivery(
+        `The following revisions were released to \`${parsed.channel}\`: \`${released.join(",")}\`.`,
+        input.deliveryId,
+      ),
     );
   } catch (error) {
     throw new PartialPublicationError(
@@ -106,6 +120,10 @@ export async function promote(
     }
   }
   return { released, closed: parsed.done };
+}
+
+function withDelivery(body: string, deliveryId: string): string {
+  return `${body}\n\n<!-- snapcrafters-ci:promotion:${deliveryId} -->`;
 }
 
 function validateIssueSnap(body: string, snap: string): void {

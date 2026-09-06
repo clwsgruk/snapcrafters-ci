@@ -13,6 +13,7 @@ test("renders bundled template with manifest-bound revisions", async () => {
       architectures: ["amd64"],
       manifests: [{ name: "demo", architecture: "amd64", revision: "4" }],
       instructions: "snap refresh {{ env.snap_name }} --channel {{ env.channel }}",
+      deliveryMarker: `<!-- snapcrafters-ci:issue:1:${"a".repeat(40)} -->`,
     },
     {
       lookup: async () => undefined,
@@ -44,6 +45,7 @@ test("rejects template overrides and missing expected architectures before write
         architectures: ["amd64"],
         manifests: [],
         instructions: "test",
+        deliveryMarker: `<!-- snapcrafters-ci:issue:1:${"a".repeat(40)} -->`,
       },
       deps,
     ),
@@ -59,6 +61,7 @@ test("rejects template overrides and missing expected architectures before write
         architectures: ["amd64"],
         manifests: [{ name: "other", architecture: "amd64", revision: "1" }],
         instructions: "test",
+        deliveryMarker: `<!-- snapcrafters-ci:issue:1:${"a".repeat(40)} -->`,
       },
       deps,
     ),
@@ -78,6 +81,7 @@ test("uses the actual manifest version for an adopt-info project", async () => {
       architectures: ["amd64"],
       manifests: [{ name: "demo", architecture: "amd64", revision: "4", version: "9.4" } as never],
       instructions: "test",
+      deliveryMarker: `<!-- snapcrafters-ci:issue:1:${"a".repeat(40)} -->`,
     },
     {
       lookup: async () => undefined,

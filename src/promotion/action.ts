@@ -75,6 +75,7 @@ export async function runPromotionAction(env: NodeJS.ProcessEnv): Promise<void> 
         configuredChannel: channel(optional(env, "channel", "latest/stable")),
         snap: project.name,
         edited: createdAt !== updatedAt,
+        deliveryId: `${issue}:${commentId}`,
       },
       {
         ...github,
@@ -89,6 +90,25 @@ export async function runPromotionAction(env: NodeJS.ProcessEnv): Promise<void> 
             redact: [storeToken],
           });
           if (result.exitCode !== 0) throw new Error(`Store release failed (${result.exitCode})`);
+        },
+        isReleased: async (revision, destination) => {
+          const result = await runProcess({
+            file: "snapcraft",
+            args: ["revisions", project.name],
+            cwd: context.workspace,
+            env: { PATH: process.env.PATH ?? "", SNAPCRAFT_STORE_CREDENTIALS: storeToken },
+            timeoutMs: 2 * 60_000,
+            signal: cancellation.signal,
+            redact: [storeToken],
+          });
+          if (result.exitCode !== 0) throw new Error(`Store readback failed (${result.exitCode})`);
+          return result.stdout.split("\n").some((line) => {
+            const fields = line.trim().split(/\s{2,}/);
+            return (
+              fields[0] === revision &&
+              fields[4]?.split(",").some((item) => item.replace(/\*$/, "") === destination)
+            );
+          });
         },
       },
     );

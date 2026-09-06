@@ -12,6 +12,7 @@ const base = {
   configuredChannel: "latest/stable",
   snap: "demo",
   edited: false,
+  deliveryId: "4:9",
 };
 
 function body(command = "/promote 11,12 latest/stable done", snap = "demo"): string {
@@ -30,14 +31,22 @@ function issue(overrides: Partial<PromotionIssue> = {}): PromotionIssue {
 }
 
 function dependencies(overrides: Record<string, unknown> = {}) {
+  const released = new Set<string>();
+  const customRelease = overrides.release as
+    | ((revision: string, channel: string) => Promise<void>)
+    | undefined;
   return {
     permission: async () => "write",
     react: async () => undefined,
     issue: async () => issue(),
-    release: async () => undefined,
+    isReleased: async (revision: string) => released.has(revision),
+    release: async (revision: string, channel: string) => {
+      await customRelease?.(revision, channel);
+      released.add(revision);
+    },
     comment: async () => undefined,
     close: async () => undefined,
-    ...overrides,
+    ...Object.fromEntries(Object.entries(overrides).filter(([name]) => name !== "release")),
   };
 }
 
@@ -123,6 +132,21 @@ describe("promotion authorization and binding", () => {
       ),
     ).rejects.toThrow(/unrelated.*12/i);
     expect(writes).toEqual([]);
+  });
+
+  test("redelivery adopts already released revisions without Store writes", async () => {
+    let writes = 0;
+    const result = await promote(
+      { ...base, comment: "/promote 11,12 latest/stable" },
+      dependencies({
+        isReleased: async () => true,
+        release: async () => {
+          writes++;
+        },
+      }),
+    );
+    expect(writes).toBe(0);
+    expect(result.released).toEqual(["11", "12"]);
   });
 
   test("reports exact sequential partial success and does not close", async () => {

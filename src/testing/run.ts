@@ -11,6 +11,7 @@ export interface TestRunInput {
   runUrl: string;
   signal?: AbortSignal;
   tempRoot?: string;
+  deliveryMarker?: string;
 }
 
 export interface TestRunResult {
@@ -48,7 +49,15 @@ export async function runTests(
     });
     const log = await readFile(logPath, "utf8");
     const summary = await readOptionalSummary(summaryPath);
-    const commentBody = formatTestComment(result.exitCode, log, summary, input.runUrl);
+    if (
+      input.deliveryMarker &&
+      !/^<!-- snapcrafters-ci:test:[1-9][0-9]*:[0-9a-f]{40} -->$/.test(input.deliveryMarker)
+    )
+      throw new Error("Invalid test report delivery marker");
+    const formatted = formatTestComment(result.exitCode, log, summary, input.runUrl);
+    const commentBody = input.deliveryMarker
+      ? `${formatted}\n\n${input.deliveryMarker}`
+      : formatted;
     let commentError: Error | undefined;
     try {
       await deps.comment(commentBody);

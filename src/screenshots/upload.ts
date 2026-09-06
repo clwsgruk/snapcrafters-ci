@@ -26,6 +26,8 @@ export interface ScreenshotUpload {
   screen: Buffer;
   window: Buffer;
   author: { name: string; email: string };
+  runId: string;
+  sourceSha: string;
 }
 
 export async function uploadScreenshots(
@@ -46,6 +48,8 @@ export async function uploadScreenshots(
   if (!validRepository(input.repository) || !validRepository(input.sourceRepository))
     throw new InputError("Invalid screenshot repository");
   if (!validDate(input.date)) throw new InputError("Invalid screenshot date");
+  if (!/^[1-9][0-9]*$/.test(input.runId) || !/^[0-9a-f]{40}$/.test(input.sourceSha))
+    throw new InputError("Invalid screenshot source identity");
   if (
     !input.author.name ||
     input.author.name.includes("\n") ||
@@ -137,7 +141,7 @@ export async function publishScreenshots(
   },
 ): Promise<{ screen: string; window: string }> {
   const urls = await uploadScreenshots(input, deps);
-  const body = `The following screenshots were taken during automated testing:\n\n![window](${urls.window})\n\n![screen](${urls.screen})`;
+  const body = `The following screenshots were taken during automated testing:\n\n![window](${urls.window})\n\n![screen](${urls.screen})\n\n<!-- snapcrafters-ci:screenshot:${input.runId}:${input.sourceSha} -->`;
   for (let attempt = 0; ; attempt++) {
     try {
       await deps.comment(body);
@@ -145,6 +149,8 @@ export async function publishScreenshots(
     } catch (error) {
       if (attempt >= 2)
         throw new Error("Screenshot comment retry limit exhausted", { cause: error });
+      const status = (error as { status?: number }).status;
+      if (status !== undefined && !new Set([429, 502, 503, 504]).has(status)) throw error;
       const clock = deps.clock ?? systemClock;
       await clock.sleep(
         retryDelay(
