@@ -33634,6 +33634,8 @@ async function readPng(path) {
 // src/screenshots/setup.ts
 async function runGhvmctlSetupAction(env = process.env, dependencies = {}) {
   await (dependencies.context ?? actionContext)(env);
+  if (env.SNAPCRAFTERS_PHASE === "validate") return;
+  if (env.SNAPCRAFTERS_PHASE) throw new Error("Unsupported setup-ghvmctl phase");
   const cancellation = actionSignal();
   try {
     for (const args of [

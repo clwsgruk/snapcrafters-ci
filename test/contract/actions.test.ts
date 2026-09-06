@@ -107,6 +107,13 @@ describe("public action contracts", () => {
         expect(
           steps.findIndex((step) => typeof step.run === "string" && step.run.includes("sudo")),
         ).toBeGreaterThan(0);
+        expect(
+          steps.findIndex(
+            (step) => typeof step.run === "string" && step.run.includes("dist/index.cjs"),
+          ),
+        ).toBeLessThan(
+          steps.findIndex((step) => typeof step.run === "string" && step.run.includes("sudo")),
+        );
       }
     }
   });

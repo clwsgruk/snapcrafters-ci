@@ -355,3 +355,17 @@ are forbidden`. GREEN: capture accepts only exact same-directory timestamp alias
   builds them sequentially and removes each dependency tree after its bundle hashes are captured.
   `mise run ci` then passed all 173 tests/38 files, full-source and pure-parser coverage gates,
   actionlint, 17 ShellCheck snippets, clean type-aware checks, and deterministic Node 24 bundles.
+- Setup privilege-boundary RED: the contract test found the first exact bundle invocation at step
+  four, after the first `sudo`, and the invalid-context consumer observed three `sudo` calls plus
+  LXD setup before the bundle rejected its incomplete Actions context. GREEN adds a side-effect-free
+  bundle validation phase immediately after pinned Node 24 setup and before udev/LXD; unsupported
+  phases fail closed. The hostile consumer now observes only pinned Node setup and no privileged or
+  host setup command. The focused command
+  `./node_modules/.bin/vp test run test/contract/actions.test.ts test/smoke/wrappers.test.ts
+src/screenshots/setup.test.ts` passed 7 tests in 3 files.
+- The first resulting `mise run ci` correctly failed one smoke assertion because setup now invokes
+  its bundle twice (preflight and execution) while the harness still required one. After making the
+  two invocations explicit, the full gate passed 174 tests in 38 files, 87.98% statements, 79.93%
+  branches, 87.73% functions, and 90.27% lines across all shipped source; all pure parser/validator
+  90% gates, type-aware checks, actionlint, 17 ShellCheck snippets, and two isolated deterministic
+  Node 24 bundle rebuilds also passed.

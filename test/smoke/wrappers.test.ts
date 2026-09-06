@@ -115,8 +115,9 @@ test("setup wrapper rejects unsupported context before host-capability steps", a
       {
         PATH: `${bin}:${dirname(node)}`,
         GITHUB_ACTIONS: "true",
+        GITHUB_SERVER_URL: "https://github.com",
         GITHUB_ACTION_PATH: actionPath,
-        RUNNER_ENVIRONMENT: "self-hosted",
+        RUNNER_ENVIRONMENT: "github-hosted",
         RUNNER_OS: "Linux",
         ImageOS: "ubuntu24",
       },
@@ -127,7 +128,9 @@ test("setup wrapper rejects unsupported context before host-capability steps", a
     }
   }
   expect(failed).toBe(true);
-  await expect(readFile(observed, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+  expect(await readFile(observed, "utf8")).toBe(
+    "uses:actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38\n",
+  );
 });
 
 async function runWrapper(action: string, apiOrigin: string): Promise<string> {
@@ -219,7 +222,9 @@ async function runWrapper(action: string, apiOrigin: string): Promise<string> {
     if (step.id) stepOutputs[step.id] = parseActionOutput(await readFile(output, "utf8"));
   }
   expect(runSteps, `${action} executable wrapper steps`).toBeGreaterThanOrEqual(bundleSteps);
-  expect(bundleSteps, action).toBe(action === "release-to-candidate" ? 2 : 1);
+  expect(bundleSteps, action).toBe(
+    action === "release-to-candidate" || action === "setup-ghvmctl" ? 2 : 1,
+  );
   const observation = `${await readFile(log, "utf8").catch(() => "")}\n${await readFile(output, "utf8")}`;
   await rm(root, { recursive: true, force: true });
   return observation;

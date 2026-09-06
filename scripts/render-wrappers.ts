@@ -9,7 +9,7 @@ const setupLxd = "4e959f8e0d9c5feb27d44c5e4d9a330a782edee0";
 
 const actions: Record<
   string,
-  { id?: string; before?: string; after?: string; extraEnv?: string }
+  { id?: string; before?: string; afterNode?: string; after?: string; extraEnv?: string }
 > = {
   "call-for-testing": { id: "issue", before: checkoutStep() },
   "fetch-manifests": {},
@@ -51,7 +51,13 @@ ${["architecture", "bot-email", "bot-name", "multi-snap"]
   "review-snap": {},
   "run-tests": { before: checkoutStep() },
   "setup-ghvmctl": {
-    before: `${contextBoundaryStep()}    - name: Enable KVM on the GitHub Actions runner
+    before: contextBoundaryStep(),
+    afterNode: `    - name: Validate action context
+      shell: bash
+      env:
+        SNAPCRAFTERS_PHASE: validate
+      run: node "\${{ github.action_path }}/dist/index.cjs"
+    - name: Enable KVM on the GitHub Actions runner
       shell: bash
       run: |
         echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -116,7 +122,7 @@ ${config.before ?? ""}    - name: Setup Node 24
       uses: actions/setup-node@${setupNode} # v6
       with:
         node-version: "24.20.0"
-    - name: Run ${action}
+${config.afterNode ?? ""}    - name: Run ${action}
 ${id}      shell: bash
 ${envBlock}      run: node "\${{ github.action_path }}/dist/index.cjs"
 ${config.after ?? ""}`;

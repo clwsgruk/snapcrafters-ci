@@ -53,6 +53,16 @@ test("setup rejects process failure and invalid context without continuing", asy
   expect((await readFile(fixture.log, "utf8")).trim().split("\n")).toHaveLength(1);
 });
 
+test("validation phase performs no setup and unknown phases fail closed", async () => {
+  const fixture = await setup();
+  vi.stubEnv("SNAPCRAFTERS_PHASE", "validate");
+  await configuredSetup();
+  await expect(readFile(fixture.log, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+  vi.stubEnv("SNAPCRAFTERS_PHASE", "unknown");
+  await expect(configuredSetup()).rejects.toThrow(/unsupported.*phase/i);
+  await expect(readFile(fixture.log, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+});
+
 function configuredSetup() {
   return runGhvmctlSetupAction(process.env, {
     context: (env) => actionContext(env, "24.20.0"),

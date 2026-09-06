@@ -7,6 +7,8 @@ export async function runGhvmctlSetupAction(
   dependencies: { context?: typeof actionContext; run?: typeof runProcess } = {},
 ): Promise<void> {
   await (dependencies.context ?? actionContext)(env);
+  if (env.SNAPCRAFTERS_PHASE === "validate") return;
+  if (env.SNAPCRAFTERS_PHASE) throw new Error("Unsupported setup-ghvmctl phase");
   const cancellation = actionSignal();
   try {
     for (const args of [
