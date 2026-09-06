@@ -367,5 +367,5 @@ src/screenshots/setup.test.ts` passed 7 tests in 3 files.
   its bundle twice (preflight and execution) while the harness still required one. After making the
   two invocations explicit, the full gate passed 174 tests in 38 files, 87.98% statements, 79.93%
   branches, 87.73% functions, and 90.27% lines across all shipped source; all pure parser/validator
-  90% gates, type-aware checks, actionlint, 17 ShellCheck snippets, and two isolated deterministic
+  90% gates, type-aware checks, actionlint, 18 ShellCheck snippets, and two isolated deterministic
   Node 24 bundle rebuilds also passed.
