@@ -53,95 +53,44 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Checkout the code
-      uses: actions/checkout@v6
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+      with:
+        node-version: "24"
+    - shell: bash
+      env:
+        CI_PHASE: validate
+      run: node "$GITHUB_ACTION_PATH/dist/index.cjs"
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+    - name: Enable KVM on the Github Actions runner
+      shell: bash
+      run:
+        'echo ''KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"'' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
 
+        sudo udevadm control --reload-rules
+
+        sudo udevadm trigger --name-match=kvm
+
+        '
+    - uses: canonical/setup-lxd@4e959f8e0d9c5feb27d44c5e4d9a330a782edee0
     - name: Setup ghvmctl
-      uses: snapcrafters/ci/setup-ghvmctl@main
-
-    - name: Fetch build manifests
-      uses: snapcrafters/ci/fetch-manifests@main
-      with:
-        token: ${{ inputs.github-token }}
-
-    - name: Find and parse snapcraft.yaml
-      id: snapcraft-yaml
-      uses: snapcrafters/ci/parse-snapcraft-yaml@main
-      with:
-        snapcraft-project-root: ${{ inputs.snapcraft-project-root }}
-
-    - name: Prepare VM
       shell: bash
+      run: "sudo snap install ghvmctl --revision=16
+
+        sudo snap connect ghvmctl:lxd lxd:lxd
+
+        "
+    - shell: bash
       env:
-        snap_name: ${{ steps.snapcraft-yaml.outputs.snap-name }}
-        snap_app: ${{ inputs.snap-application-name }}
-      run: |
-        ghvmctl prepare
-
-        # If we got a manifest file then parse the revision from it
-        if ls manifest-amd64.yaml &>/dev/null; then
-          rev="$(yq -r '.revision' manifest-amd64.yaml)"
-          echo "Installing snap revision '${rev}' from build manifest"
-          ghvmctl snap-install "${snap_name}" --revision "${rev}"
-        else
-          echo "Installing snap from '${{ inputs.channel}}'"
-          ghvmctl snap-install "${snap_name}" --channel "${{ inputs.channel }}"
-        fi
-
-        # If the snap-application-name is empty, default to the name of the snap
-        if [[ -z "$snap_app" ]]; then
-          snap_app="$snap_name"
-        fi
-
-        ghvmctl snap-run "${snap_name}.${snap_app}"
-        "${{ github.action_path }}/wait-for-window" 60 2
-
-    - name: Gather screenshots
-      shell: bash
-      run: |
-        ghvmctl screenshot-full
-        ghvmctl screenshot-window
-
-    - name: Output application logs
-      shell: bash
-      env:
-        snap_name: ${{ steps.snapcraft-yaml.outputs.snap-name }}
-        snap_app: ${{ inputs.snap-application-name }}
-      run: |
-        # If the snap-application-name is empty, default to the name of the snap
-        if [[ -z "$snap_app" ]]; then
-          snap_app="$snap_name"
-        fi
-
-        ghvmctl exec "cat /home/ubuntu/${snap_name}.${snap_app}.log"
-
-    - name: Upload screenshots to screenshots repo
-      uses: actions/github-script@v8
+        CI_PHASE: run
+        INPUT_BOT_EMAIL: ${{ inputs.bot-email }}
+        INPUT_BOT_NAME: ${{ inputs.bot-name }}
+        INPUT_ISSUE_NUMBER: ${{ inputs.issue-number }}
+        INPUT_CI_REPO: ${{ inputs.ci-repo }}
+        INPUT_CHANNEL: ${{ inputs.channel }}
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
+        INPUT_SNAP_APPLICATION_NAME: ${{ inputs.snap-application-name }}
+        INPUT_SNAPCRAFT_PROJECT_ROOT: ${{ inputs.snapcraft-project-root }}
+        INPUT_SCREENSHOTS_REPO: ${{ inputs.screenshots-repo }}
+        INPUT_SCREENSHOTS_TOKEN: ${{ inputs.screenshots-token }}
+      run: node "$GITHUB_ACTION_PATH/dist/index.cjs"
       id: screenshots
-      env:
-        BOT_EMAIL: ${{ inputs.bot-email }}
-        BOT_NAME: ${{ inputs.bot-name }}
-        ISSUE_NUMBER: ${{ inputs.issue-number }}
-        SCREENSHOTS_REPO: ${{ inputs.screenshots-repo }}
-        SNAP_NAME: ${{ steps.snapcraft-yaml.outputs.snap-name }}
-      with:
-        github-token: ${{ inputs.screenshots-token }}
-        script: |
-          const uploadScreenshots = require("${{ github.action_path }}/upload-screenshots");
-          await uploadScreenshots({ github, core, context });
-
-    - name: Comment on call for testing issue with screenshots
-      uses: actions/github-script@v8
-      with:
-        script: |
-          github.rest.issues.createComment({
-            issue_number: ${{ inputs.issue-number }},
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: `The following screenshots were taken during automated testing:
-
-            ![window](${{ steps.screenshots.outputs.window }})
-
-            ![screen](${{ steps.screenshots.outputs.screen }})
-            `
-          })

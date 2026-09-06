@@ -8781,7 +8781,8 @@ async function bounded(response, max = 8 * 1024 * 1024) {
   }
   return Buffer.concat(chunks);
 }
-async function request(method, path, token, body, base = api) {
+async function request(method, path, token, body, base = api, deadline = Date.now() + 2e4) {
+  if (Date.now() >= deadline) throw Error("GitHub operation deadline exceeded");
   if (!token) throw Error("Explicit GitHub token required");
   if (!path.startsWith("/") || path.startsWith("//")) throw Error("Invalid API path");
   const text = body === void 0 ? void 0 : JSON.stringify(body);
@@ -8796,7 +8797,7 @@ async function request(method, path, token, body, base = api) {
       "Content-Type": "application/json"
     },
     body: text,
-    signal: AbortSignal.timeout(2e4),
+    signal: AbortSignal.timeout(Math.max(1, Math.min(2e4, deadline - Date.now()))),
     redirect: "error"
   });
   const bytes = await bounded(response);
@@ -9022,13 +9023,13 @@ function safeEnv(env = process.env) {
     Object.entries(env).filter(([k, v]) => keys.test(k) && v !== void 0)
   );
 }
-function command(file, args, cwd = process.cwd(), env = safeEnv()) {
+function command(file, args, cwd = process.cwd(), env = safeEnv(), timeout = 6e5) {
   try {
     return (0, import_node_child_process.execFileSync)(file, args, {
       cwd,
       env,
       encoding: "utf8",
-      timeout: 6e5,
+      timeout,
       maxBuffer: 8 * 1024 * 1024,
       stdio: ["ignore", "pipe", "pipe"]
     });

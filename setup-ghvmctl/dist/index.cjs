@@ -9,13 +9,13 @@ function safeEnv(env = process.env) {
     Object.entries(env).filter(([k, v]) => keys.test(k) && v !== void 0)
   );
 }
-function command(file, args, cwd = process.cwd(), env = safeEnv()) {
+function command(file, args, cwd = process.cwd(), env = safeEnv(), timeout = 6e5) {
   try {
     return (0, import_node_child_process.execFileSync)(file, args, {
       cwd,
       env,
       encoding: "utf8",
-      timeout: 6e5,
+      timeout,
       maxBuffer: 8 * 1024 * 1024,
       stdio: ["ignore", "pipe", "pipe"]
     });

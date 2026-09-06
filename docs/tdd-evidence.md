@@ -54,3 +54,15 @@ with its state in /tmp and unrelated global tool configuration excluded.
   checks and prevalidation of the complete requested revision set before sequential releases.
 
 - GREEN: 17 tests passed; eleven adapters built.
+
+- `mise run test -- test/screenshots.test.ts` — RED: absent PNG reader. Corrected the initial
+  synthetic timestamp to ghvmctl's inspected `%Y-%m-%d_%H%M%S` spelling before implementation;
+  GREEN: constrained alias and no-follow owned regular-file reads.
+- Same command — RED: `uploadScreenshots is not a function` for six cases; GREEN: two blobs,
+  atomic tree/commit, immutable URLs, successful/lost-response readback, conflict-only retries,
+  retry exhaustion, 403 and unrelated 422 rejection.
+- Same command — RED: `capture is not a function`; added owned HOME/VM cleanup using actual
+  ghvmctl verbs and `lxc delete --force`, with a deny-by-default fake PATH.
+
+- GREEN: 25 tests passed; all twelve adapters built. Size: production 1,650, tooling 89,
+  tests 788, fixtures 875 nonblank lines.

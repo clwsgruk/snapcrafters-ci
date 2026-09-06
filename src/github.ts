@@ -22,7 +22,9 @@ export async function request<T = Record<string, unknown>>(
   token: string,
   body?: unknown,
   base = api,
+  deadline = Date.now() + 20000,
 ): Promise<T> {
+  if (Date.now() >= deadline) throw Error("GitHub operation deadline exceeded");
   if (!token) throw Error("Explicit GitHub token required");
   if (!path.startsWith("/") || path.startsWith("//")) throw Error("Invalid API path");
   const text = body === undefined ? undefined : JSON.stringify(body);
@@ -37,7 +39,7 @@ export async function request<T = Record<string, unknown>>(
       "Content-Type": "application/json",
     },
     body: text,
-    signal: AbortSignal.timeout(20000),
+    signal: AbortSignal.timeout(Math.max(1, Math.min(20000, deadline - Date.now()))),
     redirect: "error",
   });
   const bytes = await bounded(response);

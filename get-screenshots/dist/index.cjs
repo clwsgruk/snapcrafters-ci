@@ -1491,7 +1491,7 @@ var require_stringify = __commonJS({
         props.push(doc.directives.tagString(tag));
       return props.join(" ");
     }
-    function stringify2(item, ctx, onComment, onChompKeep) {
+    function stringify(item, ctx, onComment, onChompKeep) {
       if (identity.isPair(item))
         return item.toString(ctx, onComment, onChompKeep);
       if (identity.isAlias(item)) {
@@ -1520,7 +1520,7 @@ var require_stringify = __commonJS({
 ${ctx.indent}${str}`;
     }
     exports2.createStringifyContext = createStringifyContext;
-    exports2.stringify = stringify2;
+    exports2.stringify = stringify;
   }
 });
 
@@ -1530,7 +1530,7 @@ var require_stringifyPair = __commonJS({
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
-    var stringify2 = require_stringify();
+    var stringify = require_stringify();
     var stringifyComment = require_stringifyComment();
     function stringifyPair({ key, value }, ctx, onComment, onChompKeep) {
       const { allNullValues, doc, indent, indentStep, options: { commentString, indentSeq, simpleKeys } } = ctx;
@@ -1552,7 +1552,7 @@ var require_stringifyPair = __commonJS({
       });
       let keyCommentDone = false;
       let chompKeep = false;
-      let str = stringify2.stringify(key, ctx, () => keyCommentDone = true, () => chompKeep = true);
+      let str = stringify.stringify(key, ctx, () => keyCommentDone = true, () => chompKeep = true);
       if (!explicitKey && !ctx.inFlow && str.length > 1024) {
         if (simpleKeys)
           throw new Error("With simple keys, single line scalar must not span more than 1024 characters");
@@ -1604,7 +1604,7 @@ ${indent}:`;
         ctx.indent = ctx.indent.substring(2);
       }
       let valueCommentDone = false;
-      const valueStr = stringify2.stringify(value, ctx, () => valueCommentDone = true, () => chompKeep = true);
+      const valueStr = stringify.stringify(value, ctx, () => valueCommentDone = true, () => chompKeep = true);
       let ws = " ";
       if (keyComment || vsb || vcb) {
         ws = vsb ? "\n" : "";
@@ -1742,7 +1742,7 @@ var require_addPairToJSMap = __commonJS({
     "use strict";
     var log = require_log();
     var merge = require_merge();
-    var stringify2 = require_stringify();
+    var stringify = require_stringify();
     var identity = require_identity();
     var toJS = require_toJS();
     function addPairToJSMap(ctx, map, { key, value }) {
@@ -1778,7 +1778,7 @@ var require_addPairToJSMap = __commonJS({
       if (typeof jsKey !== "object")
         return String(jsKey);
       if (identity.isNode(key) && ctx?.doc) {
-        const strCtx = stringify2.createStringifyContext(ctx.doc, {});
+        const strCtx = stringify.createStringifyContext(ctx.doc, {});
         strCtx.anchors = /* @__PURE__ */ new Set();
         for (const node of ctx.anchors.keys())
           strCtx.anchors.add(node.anchor);
@@ -1845,12 +1845,12 @@ var require_stringifyCollection = __commonJS({
   "node_modules/yaml/dist/stringify/stringifyCollection.js"(exports2) {
     "use strict";
     var identity = require_identity();
-    var stringify2 = require_stringify();
+    var stringify = require_stringify();
     var stringifyComment = require_stringifyComment();
     function stringifyCollection(collection, ctx, options2) {
       const flow = ctx.inFlow ?? collection.flow;
-      const stringify3 = flow ? stringifyFlowCollection : stringifyBlockCollection;
-      return stringify3(collection, ctx, options2);
+      const stringify2 = flow ? stringifyFlowCollection : stringifyBlockCollection;
+      return stringify2(collection, ctx, options2);
     }
     function stringifyBlockCollection({ comment, items }, ctx, { blockItemPrefix, flowChars, itemIndent, onChompKeep, onComment }) {
       const { indent, options: { commentString } } = ctx;
@@ -1875,7 +1875,7 @@ var require_stringifyCollection = __commonJS({
           }
         }
         chompKeep = false;
-        let str2 = stringify2.stringify(item, itemCtx, () => comment2 = null, () => chompKeep = true);
+        let str2 = stringify.stringify(item, itemCtx, () => comment2 = null, () => chompKeep = true);
         if (comment2)
           str2 += stringifyComment.lineComment(str2, itemIndent, commentString(comment2));
         if (chompKeep && comment2)
@@ -1942,7 +1942,7 @@ ${indent}${line}` : "\n";
         }
         if (comment)
           reqNewline = true;
-        let str = stringify2.stringify(item, itemCtx, () => comment = null);
+        let str = stringify.stringify(item, itemCtx, () => comment = null);
         if (i < items.length - 1)
           str += ",";
         if (comment)
@@ -3296,7 +3296,7 @@ var require_stringifyDocument = __commonJS({
   "node_modules/yaml/dist/stringify/stringifyDocument.js"(exports2) {
     "use strict";
     var identity = require_identity();
-    var stringify2 = require_stringify();
+    var stringify = require_stringify();
     var stringifyComment = require_stringifyComment();
     function stringifyDocument(doc, options2) {
       const lines = [];
@@ -3311,7 +3311,7 @@ var require_stringifyDocument = __commonJS({
       }
       if (hasDirectives)
         lines.push("---");
-      const ctx = stringify2.createStringifyContext(doc, options2);
+      const ctx = stringify.createStringifyContext(doc, options2);
       const { commentString } = ctx.options;
       if (doc.commentBefore) {
         if (lines.length !== 1)
@@ -3333,7 +3333,7 @@ var require_stringifyDocument = __commonJS({
           contentComment = doc.contents.comment;
         }
         const onChompKeep = contentComment ? void 0 : () => chompKeep = true;
-        let body = stringify2.stringify(doc.contents, ctx, () => contentComment = null, onChompKeep);
+        let body = stringify.stringify(doc.contents, ctx, () => contentComment = null, onChompKeep);
         if (contentComment)
           body += stringifyComment.lineComment(body, "", commentString(contentComment));
         if ((body[0] === "|" || body[0] === ">") && lines[lines.length - 1] === "---") {
@@ -3341,7 +3341,7 @@ var require_stringifyDocument = __commonJS({
         } else
           lines.push(body);
       } else {
-        lines.push(stringify2.stringify(doc.contents, ctx));
+        lines.push(stringify.stringify(doc.contents, ctx));
       }
       if (doc.directives?.docEnd) {
         if (doc.comment) {
@@ -5468,7 +5468,7 @@ var require_cst_scalar = __commonJS({
 var require_cst_stringify = __commonJS({
   "node_modules/yaml/dist/parse/cst-stringify.js"(exports2) {
     "use strict";
-    var stringify2 = (cst) => "type" in cst ? stringifyToken(cst) : stringifyItem(cst);
+    var stringify = (cst) => "type" in cst ? stringifyToken(cst) : stringifyItem(cst);
     function stringifyToken(token) {
       switch (token.type) {
         case "block-scalar": {
@@ -5521,7 +5521,7 @@ var require_cst_stringify = __commonJS({
         res += stringifyToken(value);
       return res;
     }
-    exports2.stringify = stringify2;
+    exports2.stringify = stringify;
   }
 });
 
@@ -7234,7 +7234,7 @@ var require_public_api = __commonJS({
       }
       return doc.toJS(Object.assign({ reviver: _reviver }, options2));
     }
-    function stringify2(value, replacer, options2) {
+    function stringify(value, replacer, options2) {
       let _replacer = null;
       if (typeof replacer === "function" || Array.isArray(replacer)) {
         _replacer = replacer;
@@ -7259,7 +7259,7 @@ var require_public_api = __commonJS({
     exports2.parse = parse2;
     exports2.parseAllDocuments = parseAllDocuments;
     exports2.parseDocument = parseDocument;
-    exports2.stringify = stringify2;
+    exports2.stringify = stringify;
   }
 });
 
@@ -7934,16 +7934,16 @@ var require_buffer_crc32 = __commonJS({
       }
       return crc ^ -1;
     }
-    function crc32() {
+    function crc322() {
       return bufferizeInt(_crc32.apply(null, arguments));
     }
-    crc32.signed = function() {
+    crc322.signed = function() {
       return _crc32.apply(null, arguments);
     };
-    crc32.unsigned = function() {
+    crc322.unsigned = function() {
       return _crc32.apply(null, arguments) >>> 0;
     };
-    module2.exports = crc32;
+    module2.exports = crc322;
   }
 });
 
@@ -7953,7 +7953,7 @@ var require_yauzl = __commonJS({
     var fs = require("fs");
     var zlib = require("zlib");
     var fd_slicer = require_fd_slicer();
-    var crc32 = require_buffer_crc32();
+    var crc322 = require_buffer_crc32();
     var util = require("util");
     var EventEmitter = require("events").EventEmitter;
     var Transform = require("stream").Transform;
@@ -8471,7 +8471,7 @@ var require_yauzl = __commonJS({
             continue;
           }
           var oldNameCrc32 = extraField.data.readUInt32LE(1);
-          if (crc32.unsigned(fileNameBuffer) !== oldNameCrc32) {
+          if (crc322.unsigned(fileNameBuffer) !== oldNameCrc32) {
             continue;
           }
           fileName = decodeBuffer(extraField.data.subarray(5), true);
@@ -8688,12 +8688,10 @@ var require_yauzl = __commonJS({
   }
 });
 
-// src/release.ts
-var import_node_fs3 = require("node:fs");
-var import_node_os = require("node:os");
-var import_node_path2 = require("node:path");
+// src/screenshots.ts
 var import_node_crypto3 = require("node:crypto");
-var import_yaml2 = __toESM(require_dist(), 1);
+var import_node_os = require("node:os");
+var import_node_fs4 = require("node:fs");
 
 // src/execution.ts
 var import_node_child_process = require("node:child_process");
@@ -8778,43 +8776,6 @@ function architecture(value) {
     throw Error(`Unsupported architecture: ${scalar(value)}`);
   return value;
 }
-function archList(value) {
-  const list = Array.isArray(value) ? value : [value];
-  if (!list.length) throw Error("Empty architecture declaration");
-  return list.map(architecture);
-}
-function architectures(data) {
-  if (data.base !== void 0 && !["core18", "core20", "core22", "core24"].includes(scalar(data.base)))
-    throw Error("Unsupported base");
-  if (!data.architectures && !data.platforms)
-    throw Error("Explicitly declare architectures or platforms");
-  if (data.architectures && data.platforms) throw Error("Ambiguous architectures and platforms");
-  let result;
-  if (data.base === "core24") {
-    result = Object.entries(mapping(data.platforms)).flatMap(([label, value]) => {
-      if (value === null) return [architecture(label)];
-      const fields = mapping(value);
-      if (Object.keys(fields).some((k) => !["build-on", "build-for"].includes(k)))
-        throw Error("Unknown platform field");
-      archList(fields["build-on"] ?? label);
-      const targets = archList(fields["build-for"] ?? label);
-      if (targets.length !== 1) throw Error("Ambiguous platform targets");
-      return targets;
-    });
-  } else {
-    if (!Array.isArray(data.architectures)) throw Error("Expected architectures list");
-    result = data.architectures.flatMap((value) => {
-      if (typeof value === "string") return [architecture(value)];
-      const fields = mapping(value);
-      if (Object.keys(fields).some((k) => !["build-on", "run-on"].includes(k)))
-        throw Error("Unknown architecture field");
-      if (fields["run-on"] !== void 0) archList(fields["run-on"]);
-      return archList(fields["build-on"]);
-    });
-  }
-  if (!result.length) throw Error("Empty architecture matrix");
-  return [...new Set(result)];
-}
 function scalar(value) {
   if (value == null) return "null";
   if (!["string", "number", "bigint", "boolean"].includes(typeof value))
@@ -8822,11 +8783,35 @@ function scalar(value) {
   return String(value);
 }
 
-// src/manifests.ts
-var import_yauzl = __toESM(require_yauzl(), 1);
+// src/runtime.ts
+var import_node_fs2 = require("node:fs");
+var import_node_crypto = require("node:crypto");
+function validateRunner(env = process.env, node = process.version) {
+  if (env.GITHUB_SERVER_URL !== "https://github.com" || env.RUNNER_ENVIRONMENT !== "github-hosted" || env.RUNNER_OS !== "Linux" || !["ubuntu22", "ubuntu24"].includes(env.ImageOS || "") || !node.startsWith("v24."))
+    throw Error("Requires github.com-hosted Ubuntu 22.04/24.04 and Node 24");
+}
+var input = (name) => process.env[`INPUT_${name.toUpperCase().replaceAll("-", "_")}`] || "";
+function outputs(values) {
+  for (const [key, value] of Object.entries(values)) {
+    const delimiter = (0, import_node_crypto.randomUUID)();
+    (0, import_node_fs2.appendFileSync)(process.env.GITHUB_OUTPUT, `${key}<<${delimiter}
+${value}
+${delimiter}
+`);
+  }
+}
+async function main(action) {
+  try {
+    validateRunner();
+    if (process.env.CI_PHASE !== "validate") await action();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : "Action failed");
+    process.exitCode = 1;
+  }
+}
 
 // src/github.ts
-var import_node_crypto = require("node:crypto");
+var import_node_crypto2 = require("node:crypto");
 var api = "https://api.github.com";
 var ApiError = class extends Error {
   constructor(status) {
@@ -8868,15 +8853,183 @@ async function request(method, path, token, body, base = api, deadline = Date.no
   if (!response.ok) throw new ApiError(response.status);
   return bytes.length ? JSON.parse(bytes.toString("utf8")) : {};
 }
-var marker = (value) => (0, import_node_crypto.createHash)("sha256").update(JSON.stringify(value)).digest("hex");
+async function pages(path, token, field, base = api) {
+  const result = [];
+  for (let page = 1; page <= 10; page++) {
+    const data = await request(
+      "GET",
+      `${path}${path.includes("?") ? "&" : "?"}per_page=100&page=${page}`,
+      token,
+      void 0,
+      base
+    );
+    const rows = field ? data[field] : data;
+    if (!Array.isArray(rows)) throw Error("Invalid paginated response");
+    result.push(...rows);
+    if (rows.length < 100) return result;
+  }
+  throw Error("Pagination limit exceeded");
+}
+var marker = (value) => (0, import_node_crypto2.createHash)("sha256").update(JSON.stringify(value)).digest("hex");
+async function marked(path, body, id, token, base = api) {
+  const stamp = `<!-- snapcrafters-ci:${id} -->`;
+  const find = async () => (await pages(path, token, void 0, base)).find((item) => item.body?.includes(stamp));
+  const existing = await find();
+  if (existing) return existing;
+  try {
+    return await request(
+      "POST",
+      path,
+      token,
+      { ...body, body: `${body.body || ""}
+${stamp}` },
+      base
+    );
+  } catch (error) {
+    const recovered = await find();
+    if (recovered) return recovered;
+    throw error;
+  }
+}
 
 // src/manifests.ts
+var import_yauzl = __toESM(require_yauzl(), 1);
+var import_node_zlib = require("node:zlib");
+var import_node_fs3 = require("node:fs");
+var import_node_path2 = require("node:path");
 function revision(value) {
   if (typeof value !== "string" && typeof value !== "bigint")
     throw Error("Revision must be an exact positive decimal string");
   const text = String(value);
   if (!/^[1-9][0-9]{0,39}$/.test(text)) throw Error("Invalid revision");
   return text;
+}
+function manifest(source, label, snap) {
+  const data = yaml(source), name = scalar(data.name), arch = architecture(data.architecture);
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name) || name.length > 40 || label !== `manifest-${arch}` || snap && snap !== name)
+    throw Error("Manifest identity mismatch");
+  return { name, architecture: arch, revision: revision(data.revision) };
+}
+async function unpack(bytes, label, snap) {
+  if (bytes.length > 1024 * 1024) throw Error("Archive size limit");
+  return new Promise(
+    (resolve3, reject) => (0, import_yauzl.fromBuffer)(bytes, { lazyEntries: true, validateEntrySizes: true }, (error, zip) => {
+      if (error || !zip) {
+        reject(error);
+        return;
+      }
+      const fail = (reason) => {
+        zip.close();
+        reject(reason);
+      };
+      let result;
+      zip.on("error", fail);
+      zip.on("entry", (entry) => {
+        if (result || entry.fileName !== `${label}.yaml` || !/^manifest-[a-z0-9]+\.yaml$/.test(entry.fileName) || (entry.externalFileAttributes >>> 16 & 61440) === 40960 || entry.uncompressedSize > 65536) {
+          fail(Error("Unsafe or duplicate manifest entry"));
+          return;
+        }
+        zip.openReadStream(entry, (error2, stream) => {
+          if (error2 || !stream) {
+            fail(error2);
+            return;
+          }
+          const chunks = [];
+          let size = 0;
+          stream.on("error", fail);
+          stream.on("data", (chunk) => {
+            size += chunk.length;
+            if (size > 65536) {
+              stream.destroy();
+              fail(Error("Decompression limit"));
+            } else chunks.push(chunk);
+          });
+          stream.on("end", () => {
+            try {
+              const data = Buffer.concat(chunks);
+              if ((0, import_node_zlib.crc32)(data) !== entry.crc32) throw Error("ZIP checksum mismatch");
+              result = manifest(data.toString("utf8"), label, snap);
+              zip.readEntry();
+            } catch (error3) {
+              fail(error3);
+            }
+          });
+        });
+      });
+      zip.on("end", () => {
+        zip.close();
+        if (!result) reject(Error("Empty archive"));
+        else resolve3(result);
+      });
+      zip.readEntry();
+    })
+  );
+}
+async function fetchManifests(token, repository2, run, directory = process.cwd(), expected, base = api) {
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repository2) || !/^[1-9]\d*$/.test(run))
+    throw Error("Invalid repository/run");
+  const artifacts = await pages(
+    `/repos/${repository2}/actions/runs/${run}/artifacts`,
+    token,
+    "artifacts",
+    base
+  );
+  const manifests = [], names = /* @__PURE__ */ new Set();
+  for (const artifact of artifacts.filter((a) => a.name.startsWith("manifest-"))) {
+    if (artifact.expired || names.has(artifact.name) || !Number.isSafeInteger(artifact.id))
+      throw Error("Expired or duplicate artifact");
+    names.add(artifact.name);
+    const response = await fetch(
+      `${base}/repos/${repository2}/actions/artifacts/${artifact.id}/zip`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        redirect: "manual",
+        signal: AbortSignal.timeout(2e4)
+      }
+    );
+    let download = response;
+    if (response.status === 302) {
+      const location = new URL(response.headers.get("location") || "");
+      if (location.protocol !== "https:") throw Error("Unsafe artifact redirect");
+      download = await fetch(location, { redirect: "error", signal: AbortSignal.timeout(2e4) });
+    }
+    if (!download.ok) throw Error(`Artifact download failed (${download.status})`);
+    manifests.push(
+      await unpack(await bounded(download, 1024 * 1024), artifact.name, expected?.snap)
+    );
+  }
+  if (new Set(manifests.map((m) => m.name)).size > 1) throw Error("Multiple snaps in manifest set");
+  if (expected && manifests.length && JSON.stringify(manifests.map((m) => m.architecture).sort()) !== JSON.stringify([...expected.architectures].sort()))
+    throw Error("Manifest architecture set mismatch");
+  for (const m of manifests) {
+    const file = (0, import_node_path2.resolve)(directory, `manifest-${m.architecture}.yaml`);
+    try {
+      const stat = (0, import_node_fs3.lstatSync)(file);
+      if (!stat.isFile() || stat.isSymbolicLink() || JSON.stringify(
+        manifest((0, import_node_fs3.readFileSync)(file, "utf8"), `manifest-${m.architecture}`, m.name)
+      ) !== JSON.stringify(m))
+        throw Error("Existing manifest differs");
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+  }
+  for (const m of manifests)
+    (0, import_node_fs3.writeFileSync)(
+      (0, import_node_path2.resolve)(directory, `manifest-${m.architecture}.yaml`),
+      `name: ${m.name}
+architecture: ${m.architecture}
+revision: '${m.revision}'
+`,
+      { mode: 384 }
+    );
+  return manifests;
+}
+function localManifests(directory, snap) {
+  return (0, import_node_fs3.readdirSync)(directory).filter((p) => /^manifest-.*\.yaml$/.test(p)).map((p) => {
+    const file = (0, import_node_path2.resolve)(directory, p);
+    if (!(0, import_node_fs3.lstatSync)(file).isFile()) throw Error("Unsafe manifest file");
+    return manifest((0, import_node_fs3.readFileSync)(file, "utf8"), p.slice(0, -5), snap);
+  });
 }
 
 // src/validation.ts
@@ -8897,319 +9050,197 @@ function repository(value) {
     throw Error("Invalid repository");
   return value;
 }
-function revisions(text) {
-  const [header, ...lines] = text.trim().split(/\r?\n/);
-  if (!/^Rev\.\s+Uploaded\s+Arches\s+Version(\s+Channels)?$/.test(header))
-    throw Error("Unrecognized Snapcraft revisions header");
-  const width = header.endsWith("Channels") ? 5 : 4;
-  return lines.filter(Boolean).map((line) => {
-    const fields = line.trim().split(/\s+/);
-    if (fields.length !== width || !/^\d{4}-\d\d-\d\d(?:T[\d:.]+Z?)?$/.test(fields[1]))
-      throw Error("Unrecognized Snapcraft revision row");
-    return {
-      revision: revision(fields[0]),
-      architectures: fields[2].split(",").map(architecture),
-      version: fields[3],
-      channels: (fields[4] || "").split(",").filter((c) => c.endsWith("*")).map((c) => `${channel(c.slice(0, -1))}*`)
-    };
-  });
-}
 
-// src/runtime.ts
-var import_node_fs2 = require("node:fs");
-var import_node_crypto2 = require("node:crypto");
-function validateRunner(env = process.env, node = process.version) {
-  if (env.GITHUB_SERVER_URL !== "https://github.com" || env.RUNNER_ENVIRONMENT !== "github-hosted" || env.RUNNER_OS !== "Linux" || !["ubuntu22", "ubuntu24"].includes(env.ImageOS || "") || !node.startsWith("v24."))
-    throw Error("Requires github.com-hosted Ubuntu 22.04/24.04 and Node 24");
+// src/screenshots.ts
+var import_node_fs5 = require("node:fs");
+var import_node_path3 = require("node:path");
+function validPng(bytes) {
+  if (bytes.length < 33 || bytes.length > 8 * 1024 * 1024 || !bytes.subarray(0, 16).equals(Buffer.from("89504e470d0a1a0a0000000d49484452", "hex")) || !bytes.readUInt32BE(16) || !bytes.readUInt32BE(20) || bytes.readUInt32BE(16) > 16384 || bytes.readUInt32BE(20) > 16384)
+    throw Error("Invalid PNG size/signature");
+  return bytes;
 }
-var input = (name) => process.env[`INPUT_${name.toUpperCase().replaceAll("-", "_")}`] || "";
-function outputs(values) {
-  for (const [key, value] of Object.entries(values)) {
-    const delimiter = (0, import_node_crypto2.randomUUID)();
-    (0, import_node_fs2.appendFileSync)(process.env.GITHUB_OUTPUT, `${key}<<${delimiter}
-${value}
-${delimiter}
-`);
+function png(directory, kind) {
+  const dir = (0, import_node_fs5.lstatSync)(directory);
+  if (!dir.isDirectory() || dir.uid !== process.getuid())
+    throw Error("Screenshot directory is not owned");
+  let file = (0, import_node_path3.join)(directory, `screenshot-${kind}.png`);
+  if ((0, import_node_fs5.lstatSync)(file).isSymbolicLink()) {
+    const alias = (0, import_node_fs5.readlinkSync)(file);
+    if ((0, import_node_path3.basename)(alias) !== alias || !new RegExp(`^screenshot-${kind}-[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{6}\\.png$`).test(alias))
+      throw Error("Unsafe screenshot alias");
+    file = (0, import_node_path3.join)(directory, alias);
   }
-}
-async function main(action) {
+  const before = (0, import_node_fs5.lstatSync)(file), fd = (0, import_node_fs5.openSync)(file, import_node_fs5.constants.O_RDONLY | import_node_fs5.constants.O_NOFOLLOW);
   try {
-    validateRunner();
-    if (process.env.CI_PHASE !== "validate") await action();
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : "Action failed");
-    process.exitCode = 1;
-  }
-}
-
-// src/release.ts
-var statePath = (cwd, arch) => (0, import_node_path2.join)(cwd, `.ci-release-${architecture(arch)}.json`);
-async function digest(file) {
-  const stat = (0, import_node_fs3.lstatSync)(file);
-  if (!stat.isFile() || stat.size < 1 || stat.size > 16 * 1024 ** 3)
-    throw Error("Invalid snap/component file");
-  const hash = (0, import_node_crypto3.createHash)("sha384");
-  for await (const chunk of (0, import_node_fs3.createReadStream)(file)) hash.update(chunk);
-  return hash.digest("hex");
-}
-function readState(file) {
-  const fd = (0, import_node_fs3.openSync)(file, import_node_fs3.constants.O_RDONLY | import_node_fs3.constants.O_NOFOLLOW);
-  try {
-    if ((0, import_node_fs3.lstatSync)(file).size > 4096) throw Error("Release state too large");
-    const value = JSON.parse((0, import_node_fs3.readFileSync)(fd, "utf8"));
-    snapName(value.snap);
-    channel(value.channel);
-    architecture(value.architecture);
-    revision(value.revision);
-    if (!/^[a-f0-9]{96}$/.test(value.digest) || !/^[a-f0-9]{40}$/.test(value.sourceSha) || typeof value.root !== "string" || !/^[A-Za-z0-9.+:~_-]{1,32}$/.test(value.version))
-      throw Error("Invalid release state");
-    return value;
+    const stat = (0, import_node_fs5.fstatSync)(fd);
+    if (!stat.isFile() || stat.uid !== process.getuid() || stat.ino !== before.ino || stat.dev !== before.dev || stat.size > 8 * 1024 * 1024)
+      throw Error("Unsafe screenshot file");
+    const buffer = Buffer.alloc(stat.size + 1);
+    let size = 0, read = 0;
+    while (read = (0, import_node_fs5.readSync)(fd, buffer, size, buffer.length - size, null)) size += read;
+    if (size !== stat.size || (0, import_node_fs5.fstatSync)(fd).size !== stat.size)
+      throw Error("Screenshot changed while reading");
+    return validPng(buffer.subarray(0, size));
   } finally {
-    (0, import_node_fs3.closeSync)(fd);
+    (0, import_node_fs5.closeSync)(fd);
   }
 }
-async function publish(options2) {
-  const p = project(options2.root, options2.cwd), snap = snapName(p.outputs["snap-name"]), arch = architecture(options2.architecture), destination = channel(options2.channel);
-  if (!architectures(p.data).includes(arch))
-    throw Error("Architecture is not selected by the recipe");
-  if (!options2.storeToken || !options2.launchpadToken)
-    throw Error("Store and Launchpad credentials required");
-  const sourceSha = command("git", ["rev-parse", "HEAD"], options2.cwd).trim(), selectedRoot = (0, import_node_path2.relative)(options2.cwd, p.root) || ".";
-  const file = statePath(options2.cwd, arch), env = { ...safeEnv(), SNAPCRAFT_STORE_CREDENTIALS: options2.storeToken };
-  const readback = () => revisions(command("snapcraft", ["revisions", snap, "--arch", arch], options2.cwd, env));
-  const verify = async (state) => {
-    const row = readback().find(
-      (r) => r.revision === state.revision && r.version === state.version && r.architectures.includes(arch) && r.channels.includes(`${destination}*`)
+async function uploadScreenshots(value, base = api) {
+  repository(value.repo);
+  snapName(value.snap);
+  revision(value.issue);
+  validPng(value.screen);
+  validPng(value.window);
+  if (!/^\d{4}-\d\d-\d\d$/.test(value.date) || new Date(value.date).toISOString().slice(0, 10) !== value.date)
+    throw Error("Invalid screenshot date");
+  const deadline = Date.now() + 6e4, prefix = `/repos/${value.repo}`, paths = ["screen", "window"].map(
+    (kind) => `${value.date.replaceAll("-", "")}-${value.snap}-${value.issue}-${kind}.png`
+  );
+  const call = (method, path, body) => request(method, `${prefix}${path}`, value.token, body, base, deadline);
+  const repo = await call("GET", "");
+  const ref = `/git/ref/heads/${encodeURIComponent(repo.default_branch)}`;
+  const head = async () => (await call("GET", ref)).object.sha;
+  const blobs = [];
+  for (const bytes of [value.screen, value.window])
+    blobs.push(
+      (await call("POST", "/git/blobs", {
+        encoding: "base64",
+        content: bytes.toString("base64")
+      })).sha
     );
-    if (!row) throw Error("Exact release state not active in Store");
-    const dir = (0, import_node_fs3.mkdtempSync)((0, import_node_path2.join)((0, import_node_os.tmpdir)(), "snap-download-"));
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const parent = await head(), commit = await call("GET", `/git/commits/${parent}`);
+    const tree = await call("POST", "/git/trees", {
+      base_tree: commit.tree.sha,
+      tree: paths.map((path, i) => ({ path, mode: "100644", type: "blob", sha: blobs[i] }))
+    });
+    const next = await call("POST", "/git/commits", {
+      message: `data: screenshots for ${value.snap}#${value.issue}`,
+      tree: tree.sha,
+      parents: [parent],
+      author: { name: value.name, email: value.email }
+    });
+    let failure;
     try {
-      command("snap", ["download", snap, `--revision=${state.revision}`], dir, safeEnv());
-      if (await digest((0, import_node_path2.join)(dir, `${snap}_${state.revision}.snap`)) !== state.digest)
-        throw Error("Store snap digest differs from release state");
-    } finally {
-      (0, import_node_fs3.rmSync)(dir, { recursive: true, force: true });
+      await call("PATCH", `/git/refs/heads/${encodeURIComponent(repo.default_branch)}`, {
+        sha: next.sha,
+        force: false
+      });
+    } catch (error) {
+      failure = error;
     }
-  };
+    const actual = await head();
+    if (actual === next.sha)
+      return {
+        screen: `https://raw.githubusercontent.com/${value.repo}/${next.sha}/${paths[0]}`,
+        window: `https://raw.githubusercontent.com/${value.repo}/${next.sha}/${paths[1]}`
+      };
+    if (!(failure instanceof ApiError) || ![409, 422].includes(failure.status) || actual === parent)
+      throw Error("Screenshot ref update unconfirmed; no retry without a confirmed conflict");
+  }
+  throw Error("Screenshot conflict retry limit exceeded");
+}
+async function capture(snap, app, target, rev) {
+  snapName(snap);
+  snapName(app);
+  channel(target);
+  if (rev) revision(rev);
+  const home = (0, import_node_fs4.mkdtempSync)((0, import_node_path3.join)((0, import_node_os.tmpdir)(), "ci-vm-")), env = { ...safeEnv(), HOME: home, SNAP_REAL_HOME: home, VM_NAME: `ci-${(0, import_node_crypto3.randomUUID)()}` };
   try {
-    const saved = readState(file);
-    if (saved.snap !== snap || saved.root !== selectedRoot || saved.sourceSha !== sourceSha || saved.channel !== destination || saved.architecture !== arch || p.data.version != null && saved.version !== scalar(p.data.version))
-      throw Error("Release state does not match the selected project/source/channel");
-    await verify(saved);
-    return saved;
+    command("ghvmctl", ["prepare"], home, env);
+    command(
+      "ghvmctl",
+      ["snap-install", snap, ...rev ? ["--revision", rev] : ["--channel", target]],
+      home,
+      env
+    );
+    command("ghvmctl", ["snap-run", `${snap}.${app}`], home, env);
+    let ready = false;
+    for (let attempt = 0; attempt < 20; attempt++) {
+      try {
+        command(
+          "ghvmctl",
+          [
+            "exec",
+            "gnome-screenshot -w -f /home/ubuntu/.ghvmctl-window-ready.png && test -s /home/ubuntu/.ghvmctl-window-ready.png"
+          ],
+          home,
+          env,
+          2e3
+        );
+        ready = true;
+        break;
+      } catch {
+        await new Promise((r) => setTimeout(r, 1e3));
+      }
+    }
+    if (!ready) throw Error("Window readiness deadline exceeded");
+    command("ghvmctl", ["screenshot-full"], home, env);
+    command("ghvmctl", ["screenshot-window"], home, env);
+    return {
+      screen: png((0, import_node_path3.join)(home, "ghvmctl-screenshots"), "screen"),
+      window: png((0, import_node_path3.join)(home, "ghvmctl-screenshots"), "window")
+    };
+  } finally {
+    try {
+      command("lxc", ["delete", "--force", env.VM_NAME], home, env);
+    } finally {
+      (0, import_node_fs4.rmSync)(home, { recursive: true, force: true });
+    }
+  }
+}
+async function screenshotAction() {
+  if (input("ci-repo") !== "snapcrafters/ci")
+    throw Error("ci-repo overrides are deprecated; pin a forked action SHA");
+  const p = project(input("snapcraft-project-root")), snap = snapName(p.outputs["snap-name"]), issue = revision(input("issue-number")), repo = repository(process.env.GITHUB_REPOSITORY), images = repository(input("screenshots-repo")), token = input("github-token");
+  const key = marker([repo, snap, issue, process.env.GITHUB_RUN_ID]), file = (0, import_node_path3.join)(process.cwd(), `.ci-screenshots-${key}.json`);
+  let urls;
+  try {
+    const fd = (0, import_node_fs5.openSync)(file, import_node_fs5.constants.O_RDONLY | import_node_fs5.constants.O_NOFOLLOW);
+    try {
+      if ((0, import_node_fs5.fstatSync)(fd).size > 4096) throw Error("Screenshot state too large");
+      urls = JSON.parse((0, import_node_fs4.readFileSync)(fd, "utf8"));
+    } finally {
+      (0, import_node_fs5.closeSync)(fd);
+    }
+    for (const url of Object.values(urls))
+      if (!url.startsWith(`https://raw.githubusercontent.com/${images}/`) || !/\/[a-f0-9]{40}\//.test(url))
+        throw Error("Screenshot state mismatch");
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
-  }
-  if (Number(process.env.GITHUB_RUN_ATTEMPT || "1") > 1)
-    throw Error("Rerun requires the exact saved release state before build/upload");
-  const baseline = new Set(readback().map((r) => r.revision));
-  const temporary = (0, import_node_fs3.mkdtempSync)((0, import_node_path2.join)((0, import_node_os.tmpdir)(), "snap-release-")), stage = (0, import_node_path2.join)(temporary, "project"), home = (0, import_node_path2.join)(temporary, "home");
-  try {
-    (0, import_node_fs3.cpSync)(p.root, stage, {
-      recursive: true,
-      filter: (path) => !(0, import_node_fs3.lstatSync)(path).isSymbolicLink() && ![".git", "node_modules"].includes((0, import_node_path2.basename)(path)) && !/\.(snap|comp|txt)$|^\.ci-release-/.test((0, import_node_path2.basename)(path))
+    if (Number(process.env.GITHUB_RUN_ATTEMPT || "1") > 1)
+      throw Error("Restore exact screenshot state before retrying a failed comment");
+    await fetchManifests(token, repo, process.env.GITHUB_RUN_ID);
+    const rows = localManifests(process.cwd(), snap), selected = rows.find((r) => r.architecture === "amd64");
+    if (rows.length && !selected) throw Error("Missing amd64 screenshot manifest");
+    const captures = await capture(
+      snap,
+      input("snap-application-name") || snap,
+      channel(input("channel")),
+      selected?.revision
+    );
+    urls = await uploadScreenshots({
+      repo: images,
+      token: input("screenshots-token"),
+      snap,
+      issue,
+      date: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10),
+      ...captures,
+      name: input("bot-name"),
+      email: input("bot-email")
     });
-    (0, import_node_fs3.mkdirSync)((0, import_node_path2.join)(home, ".local/share/snapcraft/provider/launchpad"), {
-      recursive: true,
-      mode: 448
-    });
-    for (const suffix of ["provider/launchpad/credentials", "launchpad-credentials"])
-      (0, import_node_fs3.writeFileSync)((0, import_node_path2.join)(home, ".local/share/snapcraft", suffix), options2.launchpadToken, {
-        mode: 384
-      });
-    const stagedYaml = (0, import_node_path2.resolve)(stage, (0, import_node_path2.relative)(p.root, p.yaml));
-    const args = ["remote-build", "--launchpad-accept-public-upload"];
-    if (p.data.base !== "core24")
-      (0, import_node_fs3.writeFileSync)(stagedYaml, (0, import_yaml2.stringify)({ ...p.data, architectures: [{ "build-on": arch }] }));
-    else args.push(`--build-for=${arch}`);
-    command("git", ["init", "-b", `build-${arch}`], stage);
-    command("git", ["add", "."], stage);
-    command(
-      "git",
-      [
-        "-c",
-        "user.name=Snapcrafters",
-        "-c",
-        "user.email=ci@example.invalid",
-        "-c",
-        "commit.gpgsign=false",
-        "commit",
-        "-m",
-        `Build ${sourceSha}`
-      ],
-      stage
-    );
-    command("snapcraft", args, stage, { ...safeEnv(), HOME: home });
-    const files = (0, import_node_fs3.readdirSync)(stage).filter((f) => f.endsWith(".snap"));
-    if (files.length !== 1) throw Error("Expected exactly one fresh snap");
-    const snapFile = (0, import_node_path2.join)(stage, files[0]), snapDigest = await digest(snapFile), metadata = yaml(command("unsquashfs", ["-cat", snapFile, "meta/snap.yaml"], stage));
-    const version = scalar(metadata.version);
-    if (metadata.name !== snap || !Array.isArray(metadata.architectures) || !metadata.architectures.includes(arch) || !/^[A-Za-z0-9.+:~_-]{1,32}$/.test(version) || p.data.version != null && scalar(p.data.version) !== version)
-      throw Error("Fresh snap metadata mismatch");
-    const components = p.data.components == null ? {} : mapping(p.data.components), componentArgs = [];
-    for (const [name, value] of Object.entries(components)) {
-      snapName(name);
-      const v = mapping(value).version;
-      const path = (0, import_node_path2.join)(stage, `${snap}+${name}${v == null ? "" : `_${scalar(v)}`}.comp`);
-      await digest(path);
-      const meta = yaml(command("unsquashfs", ["-cat", path, "meta/component.yaml"], stage));
-      if (meta.component !== `${snap}+${name}` || v != null && scalar(meta.version) !== scalar(v))
-        throw Error("Fresh component metadata mismatch");
-      componentArgs.push("--component", `${name}=${path}`);
-    }
-    command(
-      "review-tools.snap-review",
-      [
-        ...p.outputs.classic === "true" ? ["--allow-classic"] : [],
-        ...p.plugs ? ["--plugs", p.plugs] : [],
-        ...p.slots ? ["--slots", p.slots] : [],
-        snapFile
-      ],
-      stage
-    );
-    let output = "";
-    try {
-      output = command(
-        "snapcraft",
-        ["upload", snapFile, ...componentArgs, `--release=${destination}`],
-        stage,
-        env
-      );
-    } catch {
-    }
-    const reported = [...output.matchAll(/Revision ['"]?([1-9][0-9]*)['"]? created for/g)].map(
-      (m) => m[1]
-    );
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const candidates = readback().filter(
-        (r) => !baseline.has(r.revision) && r.version === version && r.architectures.includes(arch) && r.channels.includes(`${destination}*`) && (!reported.length || reported.includes(r.revision))
-      );
-      if (candidates.length === 1) {
-        const state = {
-          snap,
-          root: selectedRoot,
-          version,
-          revision: candidates[0].revision,
-          channel: destination,
-          architecture: arch,
-          digest: snapDigest,
-          sourceSha
-        };
-        await verify(state);
-        (0, import_node_fs3.writeFileSync)(`${file}.tmp`, JSON.stringify(state) + "\n", { mode: 384, flag: "wx" });
-        (0, import_node_fs3.renameSync)(`${file}.tmp`, file);
-        return state;
-      }
-      if (attempt < 2) await new Promise((r) => setTimeout(r, 1e3));
-    }
-    throw Error(
-      "Upload attempted once; publication is unconfirmed. Reconcile Store state before any retry"
-    );
-  } finally {
-    (0, import_node_fs3.rmSync)(temporary, { recursive: true, force: true });
+    (0, import_node_fs4.writeFileSync)(file, JSON.stringify(urls), { mode: 384, flag: "wx" });
   }
-}
-async function tagRelease(state, repo, token, multi, name, email, base = api) {
-  repository(repo);
-  const tag = `${multi ? `${state.snap}-` : ""}${state.version}/rev${state.revision}/${state.architecture}`, message = `Revision ${state.revision}, released for ${state.architecture}`;
-  const path = `/repos/${repo}/git`, refPath = `${path}/ref/tags/${encodeURIComponent(tag)}`;
-  const verify = async () => {
-    try {
-      const ref = await request(
-        "GET",
-        refPath,
-        token,
-        void 0,
-        base
-      );
-      if (ref.object.type !== "tag") throw Error("Existing tag is not annotated");
-      const data = await request("GET", `${path}/tags/${ref.object.sha}`, token, void 0, base);
-      if (data.tag !== tag || data.message.trim() !== message || data.object.sha !== state.sourceSha || data.object.type !== "commit")
-        throw Error("Existing tag differs from exact release state");
-      return true;
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 404) return false;
-      throw error;
-    }
-  };
-  try {
-    if (await verify()) return;
-    const object = await request(
-      "POST",
-      `${path}/tags`,
-      token,
-      {
-        tag,
-        message,
-        object: state.sourceSha,
-        type: "commit",
-        tagger: { name, email, date: (/* @__PURE__ */ new Date()).toISOString() }
-      },
-      base
-    );
-    try {
-      await request(
-        "POST",
-        `${path}/refs`,
-        token,
-        { ref: `refs/tags/${tag}`, sha: object.sha },
-        base
-      );
-    } catch (error) {
-      if (!await verify()) throw error;
-    }
-    if (!await verify()) throw Error("Tag not visible after creation");
-  } catch {
-    throw Error(
-      `Published ${state.snap} revision ${state.revision} to ${state.channel}; tag ${tag} is unconfirmed. Resume from saved state`
-    );
-  }
-}
-async function releaseAction() {
-  const cwd = process.cwd(), arch = architecture(input("architecture")), p = project(input("snapcraft-project-root"));
-  const file = statePath(cwd, arch);
-  if (process.env.CI_PHASE === "prepare") {
-    outputs({
-      "state-name": `release-state-${snapName(p.outputs["snap-name"])}-${marker(p.outputs["project-root"]).slice(0, 12)}-${arch}`,
-      "state-path": file
-    });
-    return;
-  }
-  if (process.env.CI_PHASE === "tag") {
-    await tagRelease(
-      readState(file),
-      process.env.GITHUB_REPOSITORY,
-      input("repo-token"),
-      input("multi-snap") === "true",
-      input("bot-name"),
-      input("bot-email")
-    );
-    return;
-  }
-  if (process.env.CI_PHASE === "report") {
-    const s = readState(file);
-    throw Error(
-      `Published ${s.snap} revision ${s.revision} to ${s.channel}; artifact/tag phase failed. Exact state: ${file}`
-    );
-  }
-  const state = await publish({
-    cwd,
-    root: input("snapcraft-project-root"),
-    architecture: arch,
-    channel: input("channel"),
-    storeToken: input("store-token"),
-    launchpadToken: input("launchpad-token")
-  });
-  outputs({ revision: state.revision });
-  (0, import_node_fs3.writeFileSync)(
-    (0, import_node_path2.join)(cwd, `manifest-${arch}.yaml`),
-    `name: ${state.snap}
-architecture: ${arch}
-revision: '${state.revision}'
-`,
-    { mode: 384 }
+  outputs(urls);
+  await marked(
+    `/repos/${repo}/issues/${issue}/comments`,
+    { body: `![Full screen](${urls.screen})
+
+![Application window](${urls.window})` },
+    key,
+    token
   );
 }
 
-// release-to-candidate/main.ts
-void main(releaseAction);
+// get-screenshots/main.ts
+void main(screenshotAction);

@@ -23,13 +23,14 @@ export function command(
   args: string[],
   cwd = process.cwd(),
   env = safeEnv(),
+  timeout = 600_000,
 ): string {
   try {
     return execFileSync(file, args, {
       cwd,
       env,
       encoding: "utf8",
-      timeout: 600_000,
+      timeout,
       maxBuffer: 8 * 1024 * 1024,
       stdio: ["ignore", "pipe", "pipe"],
     });
