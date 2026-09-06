@@ -3,9 +3,12 @@ import { join, resolve } from "node:path";
 import { build } from "esbuild";
 import { actions } from "./actions.js";
 
-const sourceRoot = process.cwd();
+const defaultSourceRoot = process.cwd();
 
-export async function buildAll(outputRoot = sourceRoot): Promise<void> {
+export async function buildAll(
+  outputRoot = defaultSourceRoot,
+  sourceRoot = defaultSourceRoot,
+): Promise<void> {
   for (const action of actions) {
     const destination = resolve(outputRoot, action, "dist");
     await rm(destination, { recursive: true, force: true });
@@ -30,13 +33,13 @@ export async function buildAll(outputRoot = sourceRoot): Promise<void> {
     });
     await writeFile(
       resolve(destination, "licenses.txt"),
-      await bundledLicenses(Object.keys(result.metafile.inputs)),
+      await bundledLicenses(Object.keys(result.metafile.inputs), sourceRoot),
       { mode: 0o644 },
     );
   }
 }
 
-async function bundledLicenses(inputs: readonly string[]): Promise<string> {
+async function bundledLicenses(inputs: readonly string[], sourceRoot: string): Promise<string> {
   const packages = new Set<string>();
   for (const input of inputs) {
     const marker = "node_modules/";
@@ -67,6 +70,9 @@ function normalizeGenerated(source: string): string {
   return `${source.replaceAll(/[^\S\r\n]+$/gm, "").trimEnd()}\n`;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === resolve(sourceRoot, "scripts/build.ts")) {
-  await buildAll(process.argv[2] ? resolve(process.argv[2]) : sourceRoot);
+if (
+  process.argv[1] &&
+  resolve(process.argv[1]) === resolve(defaultSourceRoot, "scripts/build.ts")
+) {
+  await buildAll(process.argv[2] ? resolve(process.argv[2]) : defaultSourceRoot);
 }

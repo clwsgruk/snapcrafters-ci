@@ -1,7 +1,12 @@
-import { expect, test } from "vite-plus/test";
-import { main } from "./main.js";
+import { expect, test, vi } from "vite-plus/test";
 
-test("adapter has a dependency-free smoke path", async () => {
-  process.env.SNAPCRAFTERS_CI_SMOKE = "1";
-  await expect(main()).resolves.toBeUndefined();
+const mocks = vi.hoisted(() => ({ run: vi.fn() }));
+vi.mock("../src/testing/action.js", () => ({ runTestingIssueAction: mocks.run }));
+
+const { main } = await import("./main.js");
+
+test("adapter maps the action environment to its workflow", async () => {
+  await main();
+  expect(mocks.run).toHaveBeenCalledOnce();
+  expect(mocks.run).toHaveBeenCalledWith(process.env);
 });

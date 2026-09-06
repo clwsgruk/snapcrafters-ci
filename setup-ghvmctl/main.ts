@@ -2,7 +2,6 @@ import * as core from "@actions/core";
 import { runGhvmctlSetupAction } from "../src/screenshots/setup.js";
 
 export async function main(): Promise<void> {
-  if (process.env.SNAPCRAFTERS_CI_SMOKE === "1") return;
   await runGhvmctlSetupAction();
 }
 

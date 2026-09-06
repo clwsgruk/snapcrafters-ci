@@ -2,7 +2,6 @@ import * as core from "@actions/core";
 import { runUpdateAction } from "../src/update/action.js";
 
 export async function main(): Promise<void> {
-  if (process.env.SNAPCRAFTERS_CI_SMOKE === "1") return;
   await runUpdateAction(process.env);
 }
 

@@ -122,6 +122,14 @@ mutable sibling references, and public metadata drift.
 
 ## Phase 8 — Deterministic packaging
 
+- `mise run test:contract -- packaging` — RED: both tests failed because every production
+  adapter contained `SNAPCRAFTERS_CI_SMOKE` and distribution verification launched Bun through
+  `process.execPath` while rebuilding twice from one live source tree.
+- `mise run test:contract -- packaging` — GREEN: 3 files, 4 tests; the production bypass is
+  absent and the verifier requires pinned `node` plus complete independent tracked-source copies.
+- `mise run test -- main.test` — GREEN: 12 files, 12 tests; each thin adapter maps to its named
+  workflow exactly once without a production-only escape path.
+
 - `mise run build` using pinned Vite+ `vp pack` — deterministic CJS output, but inspection found
   runtime `require()` calls for `@actions/core`, `@actions/github`, `yaml`, and `yauzl`; this failed
   the self-contained consumer criterion and those bundles were not accepted.

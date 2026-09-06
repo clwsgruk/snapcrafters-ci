@@ -2,7 +2,6 @@ import * as core from "@actions/core";
 import { runReleaseAction } from "../src/release/action.js";
 
 export async function main(): Promise<void> {
-  if (process.env.SNAPCRAFTERS_CI_SMOKE === "1") return;
   await runReleaseAction(process.env);
 }
 
