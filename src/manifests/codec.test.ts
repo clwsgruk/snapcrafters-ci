@@ -7,6 +7,12 @@ describe("legacy manifest codec", () => {
     expect(encodeManifest(decodeManifest(text, "manifest-amd64.yaml"))).toBe(text);
   });
 
+  test("preserves revisions beyond JavaScript's safe integer range", () => {
+    const text = "name: signal-desktop\narchitecture: amd64\nrevision: 9007199254740993\n";
+    expect(decodeManifest(text, "manifest-amd64.yaml").revision).toBe("9007199254740993");
+    expect(encodeManifest(decodeManifest(text, "manifest-amd64.yaml"))).toBe(text);
+  });
+
   test.each(["../manifest-amd64.yaml", "/tmp/manifest-amd64.yaml", "nested/manifest-amd64.yaml"])(
     "rejects unsafe archive destination %s",
     (name) => expect(() => validateArchiveEntry(name, 10, 100)).toThrow(),

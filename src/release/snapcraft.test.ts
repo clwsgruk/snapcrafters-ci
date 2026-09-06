@@ -1,4 +1,6 @@
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { expect, test } from "vite-plus/test";
 import {
   isRevisionReleased,
@@ -60,6 +62,47 @@ test("rejects malformed and ambiguous Store revision rows", () => {
   expect(() => isRevisionReleased(header, "0", "latest/stable")).toThrow(/revision/i);
   expect(() => isRevisionReleased(header, "1", "bad")).toThrow(/channel/i);
 });
+
+test("parses Snapcraft 9's four-column unreleased revision table", () => {
+  const output = `Rev.    Uploaded              Arches    Version
+44      2026-09-06T10:00:00Z  amd64     2.0.2
+`;
+  expect(parseRevisionRows(output)).toEqual([
+    { revision: "44", architectures: ["amd64"], version: "2.0.2", channels: [] },
+  ]);
+});
+
+test("downloads a newly published revision with the snap CLI contract", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "snap-reader-test-"));
+  let listing = 0;
+  const calls: Array<{ file: string; args: readonly string[] }> = [];
+  const reader = snapcraftRevisionReader("token", cwd, async (spec) => {
+    calls.push({ file: spec.file, args: spec.args });
+    if (spec.file === "snapcraft") {
+      listing++;
+      const row =
+        listing === 1
+          ? ""
+          : "44      2026-09-06T10:00:00Z  amd64     2.0.2      latest/candidate*\n";
+      return result(`Rev.    Uploaded              Arches    Version    Channels\n${row}`);
+    }
+    if (spec.file === "snap") {
+      await writeFile(join(spec.cwd, "demo_44.snap"), "published snap");
+      return result("");
+    }
+    throw new Error(`unexpected executable ${spec.file}`);
+  });
+  const signal = new AbortController().signal;
+  expect(await reader("demo", "latest/candidate", "amd64", signal)).toEqual([]);
+  await expect(reader("demo", "latest/candidate", "amd64", signal)).resolves.toMatchObject([
+    { revision: "44", version: "2.0.2", architecture: "amd64", digest: expect.any(String) },
+  ]);
+  expect(calls.at(-1)).toEqual({ file: "snap", args: ["download", "demo", "--revision=44"] });
+});
+
+function result(stdout: string) {
+  return { exitCode: 0, stdout, stderr: "", timedOut: false, aborted: false };
+}
 
 test("does not treat a pre-existing off-channel revision as a new upload", async () => {
   const header = "Rev.    Uploaded              Arches    Version    Channels\n";

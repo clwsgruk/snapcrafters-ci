@@ -246,7 +246,7 @@ async function prepareGit(workspace: string): Promise<void> {
 async function fakeExecutables(bin: string, log: string, action: string): Promise<void> {
   const scripts: Record<string, string> = {
     sudo: `printf 'sudo:%s\\n' "$*" >> '${log}'\nexit 0`,
-    snap: `printf 'snap:%s\\n' "$*" >> '${log}'\nexit 0`,
+    snap: snapScript(log, action),
     dpkg: `printf amd64`,
     lxc: `printf 'lxc:%s\\n' "$*" >> '${log}'`,
     "review-tools.snap-review": `printf 'review:%s\\n' "$*" >> '${log}'`,
@@ -275,13 +275,21 @@ case "${action}:$1" in
  release-to-candidate:revisions)
    printf 'Rev.    Uploaded              Arches    Version    Channels\\n'
    test -f '${state}-uploaded' && printf '44      2026-09-06T10:00:00Z  amd64     1.0        latest/candidate*\\n' || true ;;
- release-to-candidate:download) printf 'fresh snap' > demo_1.0_amd64.snap ;;
  call-for-testing:revisions) printf 'Rev.    Uploaded              Arches    Version    Channels\\n44      2026-09-06T10:00:00Z  amd64     1.0        latest/candidate*\\n' ;;
  promote-to-stable:revisions)
    printf 'Rev.    Uploaded              Arches    Version    Channels\\n'
    test -f '${state}-11' && printf '11      2026-09-06T10:00:00Z  amd64     1.0        latest/stable*\\n' || true
    test -f '${state}-12' && printf '12      2026-09-06T10:00:00Z  amd64     1.0        latest/stable*\\n' || true ;;
  promote-to-stable:release) touch '${state}-'$3 ;;
+esac`;
+}
+
+function snapScript(log: string, action: string): string {
+  return `printf 'snap:%s\\n' "$*" >> '${log}'
+case "${action}:$1" in
+ release-to-candidate:download) printf 'fresh snap' > demo_44.snap ;;
+ setup-ghvmctl:install|setup-ghvmctl:connect) ;;
+ *) test "${action}" != release-to-candidate || { printf 'unsupported snap command' >&2; exit 64; } ;;
 esac`;
 }
 

@@ -305,3 +305,12 @@ create a pull request.
   all 12 bundles rejected the isolated invalid context, with deny-command stubs proving no
   subprocess orchestration occurred. `mise run ci` then passed 151 tests in 35 files, the
   96.21% branch parser gate, all static checks, and two isolated Node 24 bundle rebuilds.
+- Store-contract RED: focused manifest/Snapcraft tests failed three ways: revision
+  `9007199254740993` decoded as `9007199254740992`, the real four-column unreleased table header
+  was rejected, and readback produced no snap because it invoked the fake `snapcraft download`.
+  GREEN: 12 focused tests preserve the decimal via BigInt parsing, accept both documented
+  Snapcraft 9 table shapes, and require `snap download demo --revision=44`. The strict wrapper fake
+  no longer implements `snapcraft download`. Immutable CLI source provenance is recorded under
+  `test/fixtures/cli-contracts`. The first full gate correctly failed formatting and then a stale
+  optional-tuple type; after both corrections, `mise run ci` passed 154 tests in 35 files,
+  96.28% parser branches, all static checks, and both isolated Node 24 rebuilds.

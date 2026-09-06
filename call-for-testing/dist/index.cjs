@@ -32710,7 +32710,7 @@ function decodeManifest(source, filename) {
   if (Buffer.byteLength(source) > 64 * 1024) throw new InputError("Manifest exceeds size limit");
   const match = manifestName.exec(filename);
   if (!match) throw new InputError(`Invalid manifest filename: ${filename}`);
-  const value = (0, import_yaml.parse)(source, { uniqueKeys: true });
+  const value = (0, import_yaml.parse)(source, { uniqueKeys: true, intAsBigInt: true });
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new InputError("Manifest must be a mapping");
   if (typeof value.name !== "string" || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(value.name)) {
@@ -32718,6 +32718,8 @@ function decodeManifest(source, filename) {
   }
   if (value.architecture !== match[1])
     throw new InputError("Manifest architecture does not match filename");
+  if (typeof value.revision !== "string" && typeof value.revision !== "bigint")
+    throw new InputError("Revision must be a positive decimal");
   const revision = String(value.revision);
   if (!/^[1-9][0-9]*$/.test(revision)) throw new InputError("Revision must be a positive decimal");
   const version = value.version;
@@ -33327,13 +33329,16 @@ function parseRevisions(output, channel2, architecture2) {
 function parseRevisionRows(output) {
   const lines = output.trim().split("\n");
   const header = lines.shift()?.trim().split(/\s{2,}/);
-  if (!header || header.join("|") !== "Rev.|Uploaded|Arches|Version|Channels")
+  const columns = header?.join("|");
+  if (columns !== "Rev.|Uploaded|Arches|Version|Channels" && columns !== "Rev.|Uploaded|Arches|Version")
     throw new InputError("Unexpected Snapcraft revisions header");
+  const hasChannels = columns.endsWith("|Channels");
   const result = [];
   for (const line of lines) {
     if (!line.trim()) continue;
     const fields = line.trim().split(/\s{2,}/);
-    if (fields.length !== 5) throw new InputError("Unexpected Snapcraft revisions row");
+    if (fields.length !== (hasChannels ? 5 : 4))
+      throw new InputError("Unexpected Snapcraft revisions row");
     const [revision, uploaded, arches, version, channels] = fields;
     if (!/^[1-9][0-9]*$/.test(revision) || Number.isNaN(Date.parse(uploaded)))
       throw new InputError("Invalid Snapcraft revision row");
@@ -33345,7 +33350,7 @@ function parseRevisionRows(output) {
       revision,
       architectures: rowArchitectures,
       version,
-      channels: channels.split(",").map((item) => item.replace(/\*$/, ""))
+      channels: channels ? channels.split(",").map((item) => item.replace(/\*$/, "")) : []
     });
   }
   return result;

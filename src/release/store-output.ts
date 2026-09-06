@@ -66,19 +66,25 @@ export function parseRevisionRows(output: string): RevisionRow[] {
     .shift()
     ?.trim()
     .split(/\s{2,}/);
-  if (!header || header.join("|") !== "Rev.|Uploaded|Arches|Version|Channels")
+  const columns = header?.join("|");
+  if (
+    columns !== "Rev.|Uploaded|Arches|Version|Channels" &&
+    columns !== "Rev.|Uploaded|Arches|Version"
+  )
     throw new InputError("Unexpected Snapcraft revisions header");
+  const hasChannels = columns.endsWith("|Channels");
   const result: RevisionRow[] = [];
   for (const line of lines) {
     if (!line.trim()) continue;
     const fields = line.trim().split(/\s{2,}/);
-    if (fields.length !== 5) throw new InputError("Unexpected Snapcraft revisions row");
+    if (fields.length !== (hasChannels ? 5 : 4))
+      throw new InputError("Unexpected Snapcraft revisions row");
     const [revision, uploaded, arches, version, channels] = fields as [
       string,
       string,
       string,
       string,
-      string,
+      string?,
     ];
     if (!/^[1-9][0-9]*$/.test(revision) || Number.isNaN(Date.parse(uploaded)))
       throw new InputError("Invalid Snapcraft revision row");
@@ -90,7 +96,7 @@ export function parseRevisionRows(output: string): RevisionRow[] {
       revision,
       architectures: rowArchitectures as Architecture[],
       version,
-      channels: channels.split(",").map((item) => item.replace(/\*$/, "")),
+      channels: channels ? channels.split(",").map((item) => item.replace(/\*$/, "")) : [],
     });
   }
   return result;

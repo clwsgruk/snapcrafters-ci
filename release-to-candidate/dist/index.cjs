@@ -27728,13 +27728,16 @@ function parseSnapMetadata(source) {
 function parseRevisionRows(output) {
   const lines = output.trim().split("\n");
   const header = lines.shift()?.trim().split(/\s{2,}/);
-  if (!header || header.join("|") !== "Rev.|Uploaded|Arches|Version|Channels")
+  const columns = header?.join("|");
+  if (columns !== "Rev.|Uploaded|Arches|Version|Channels" && columns !== "Rev.|Uploaded|Arches|Version")
     throw new InputError("Unexpected Snapcraft revisions header");
+  const hasChannels = columns.endsWith("|Channels");
   const result = [];
   for (const line of lines) {
     if (!line.trim()) continue;
     const fields = line.trim().split(/\s{2,}/);
-    if (fields.length !== 5) throw new InputError("Unexpected Snapcraft revisions row");
+    if (fields.length !== (hasChannels ? 5 : 4))
+      throw new InputError("Unexpected Snapcraft revisions row");
     const [revision, uploaded, arches, version, channels] = fields;
     if (!/^[1-9][0-9]*$/.test(revision) || Number.isNaN(Date.parse(uploaded)))
       throw new InputError("Invalid Snapcraft revision row");
@@ -27746,7 +27749,7 @@ function parseRevisionRows(output) {
       revision,
       architectures: rowArchitectures,
       version,
-      channels: channels.split(",").map((item) => item.replace(/\*$/, ""))
+      channels: channels ? channels.split(",").map((item) => item.replace(/\*$/, "")) : []
     });
   }
   return result;
@@ -28201,16 +28204,16 @@ async function downloadRevisionDigest(snap, revision, env, signal, token, run) {
   const scratch = await ownedTemp((0, import_node_os2.tmpdir)(), "snapcrafters-readback-", owner);
   try {
     const result = await run({
-      file: "snapcraft",
+      file: "snap",
       args: ["download", snap, `--revision=${revision}`],
       cwd: scratch,
-      env,
+      env: { PATH: env.PATH ?? "" },
       timeoutMs: 10 * 6e4,
       signal,
       redact: [token]
     });
     if (result.exitCode !== 0)
-      throw new Error(`Snapcraft revision download failed (${result.exitCode})`);
+      throw new Error(`Snap revision download failed (${result.exitCode})`);
     const candidates2 = (await (0, import_promises6.readdir)(scratch, { withFileTypes: true })).filter(
       (entry) => entry.isFile() && entry.name.endsWith(".snap")
     );

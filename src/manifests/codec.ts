@@ -15,7 +15,7 @@ export function decodeManifest(source: string, filename: string): Manifest {
   if (Buffer.byteLength(source) > 64 * 1024) throw new InputError("Manifest exceeds size limit");
   const match = manifestName.exec(filename);
   if (!match) throw new InputError(`Invalid manifest filename: ${filename}`);
-  const value = parse(source, { uniqueKeys: true }) as Record<string, unknown>;
+  const value = parse(source, { uniqueKeys: true, intAsBigInt: true }) as Record<string, unknown>;
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new InputError("Manifest must be a mapping");
   if (typeof value.name !== "string" || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(value.name)) {
@@ -23,6 +23,8 @@ export function decodeManifest(source: string, filename: string): Manifest {
   }
   if (value.architecture !== match[1])
     throw new InputError("Manifest architecture does not match filename");
+  if (typeof value.revision !== "string" && typeof value.revision !== "bigint")
+    throw new InputError("Revision must be a positive decimal");
   const revision = String(value.revision);
   if (!/^[1-9][0-9]*$/.test(revision)) throw new InputError("Revision must be a positive decimal");
   const version = value.version;

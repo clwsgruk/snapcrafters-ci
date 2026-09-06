@@ -95,16 +95,16 @@ async function downloadRevisionDigest(
   const scratch = await ownedTemp(tmpdir(), "snapcrafters-readback-", owner);
   try {
     const result = await run({
-      file: "snapcraft",
+      file: "snap",
       args: ["download", snap, `--revision=${revision}`],
       cwd: scratch,
-      env,
+      env: { PATH: env.PATH ?? "" },
       timeoutMs: 10 * 60_000,
       signal,
       redact: [token],
     });
     if (result.exitCode !== 0)
-      throw new Error(`Snapcraft revision download failed (${result.exitCode})`);
+      throw new Error(`Snap revision download failed (${result.exitCode})`);
     const candidates = (await readdir(scratch, { withFileTypes: true })).filter(
       (entry) => entry.isFile() && entry.name.endsWith(".snap"),
     );
