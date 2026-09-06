@@ -96,13 +96,15 @@ async function runWrapper(action: string, apiOrigin: string): Promise<string> {
     publish: { revision: "44" },
   };
   let bundleSteps = 0;
+  let runSteps = 0;
   for (const step of metadata.runs.steps) {
     if (step.uses) {
       expect(permittedUses.has(step.uses), `${action}: ${step.uses}`).toBe(true);
       continue;
     }
-    if (!step.run?.includes("dist/index.cjs")) continue;
-    bundleSteps++;
+    if (!step.run) continue;
+    runSteps++;
+    if (step.run.includes("dist/index.cjs")) bundleSteps++;
     await writeFile(output, "");
     const env: Record<string, string> = {
       PATH: `${bin}:${dirname(node)}:${process.env.PATH ?? ""}`,
@@ -137,6 +139,7 @@ async function runWrapper(action: string, apiOrigin: string): Promise<string> {
     );
     expect(result.code, `${action}: ${result.stdout}\n${result.stderr}`).toBe(0);
   }
+  expect(runSteps, `${action} executable wrapper steps`).toBeGreaterThanOrEqual(bundleSteps);
   expect(bundleSteps, action).toBe(action === "release-to-candidate" ? 2 : 1);
   return `${await readFile(log, "utf8").catch(() => "")}\n${await readFile(output, "utf8")}`;
 }
