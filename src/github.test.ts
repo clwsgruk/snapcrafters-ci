@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 
 import { expect, test } from "vitest";
 
-import { request, marked } from "../src/github.ts";
+import { request, marked } from "./github.ts";
 test("explicit tokens and disconnect recovery create exactly one marked comment", async () => {
   const comments: { id: number; body: string }[] = [];
   let writes = 0;
@@ -61,7 +61,7 @@ test("an existing deterministic marker with different content cannot impersonate
 });
 
 test("HTTP deadlines are fresh per request and bodies/pagination are bounded", async () => {
-  const { bounded, pages } = await import("../src/github.ts");
+  const { bounded, pages } = await import("./github.ts");
   let requests = 0;
   const server = createServer((req, res) => {
     requests++;

@@ -19,9 +19,9 @@ run = "bun scripts/build.ts"
 [tasks."test:coverage"]
 run = 'PATH="{{ tools.node.path }}/bin:$PATH" "{{ tools.node.path }}/bin/node" node_modules/vite-plus/bin/vp test run --coverage'
 [tasks."test:smoke"]
-run = 'PATH="{{ tools.node.path }}/bin:$PATH" "{{ tools.node.path }}/bin/node" node_modules/vite-plus/bin/vp test run test/smoke.test.ts'
+run = 'PATH="{{ tools.node.path }}/bin:$PATH" "{{ tools.node.path }}/bin/node" node_modules/vite-plus/bin/vp test run src/smoke.test.ts'
 [tasks."test:contract"]
-run = 'PATH="{{ tools.node.path }}/bin:$PATH" "{{ tools.node.path }}/bin/node" node_modules/vite-plus/bin/vp test run test/contracts.test.ts test/wrappers.test.ts'
+run = 'PATH="{{ tools.node.path }}/bin:$PATH" "{{ tools.node.path }}/bin/node" node_modules/vite-plus/bin/vp test run src/contracts.test.ts src/wrappers.test.ts'
 [tasks.actionlint]
 run = "actionlint"
 [tasks.shellcheck]

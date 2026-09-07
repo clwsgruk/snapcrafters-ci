@@ -22,7 +22,8 @@ TypeScript feature modules; action-local adapters have committed Node 24 bundles
 Public names, defaults, required flags and output expressions are frozen from upstream
 `cb43fba979fbb7388ec44f37b1e70d6cdb8edb8c`. `action.yaml` is the authoritative interface.
 Use github.com-hosted Ubuntu 22.04 or 24.04. Wrappers require Node 24 before privileged work;
-`setup-ghvmctl` validates as its first step, so its caller must already have Node 24 on PATH.
+`setup-ghvmctl` performs shell-only host validation first, installs Node 24, then validates the
+runtime before any privileged setup.
 
 Use mise for development:
 
@@ -34,12 +35,14 @@ mise run ci
 
 `mise run fmt`, `mise run test`, `mise run build` and `mise run size` are the focused entry points.
 Bun manages the frozen dependency lock. Vite+ supplies formatting, linting, type checks and tests.
+Feature tests are colocated as `src/<feature>.test.ts`; the size-gate test sits beside its script.
+Shared harnesses and immutable fixture data live under `test-support/`.
 CI also runs actionlint, ShellCheck for every inline script, source budgets, and two independent
 frozen builds compared with committed bundles and licenses. Generated `*/dist/*` files must be
 rebuilt and committed with source changes. The final comparison intentionally fails until the
 matching generated files have been committed.
 
-The fresh [inventory](test/fixtures/inventory.md) records 87 active repositories and 80 immutable
+The fresh [inventory](test-support/fixtures/inventory.md) records 87 active repositories and 80 immutable
 recipes using 38 compact schema shapes. Omitted architectures, unknown bases and ambiguous
 platform semantics fail clearly. Project paths are resolved internally while public path spelling
 is preserved. `ci-repo` overrides are deprecated: pin the forked action itself.

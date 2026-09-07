@@ -19,7 +19,7 @@ export function measure(texts: string[], lines: number, files: number) {
 }
 
 export function productionSources(paths: string[]) {
-  const source = paths.filter((path) => path.startsWith("src/"));
+  const source = paths.filter((path) => path.startsWith("src/") && !path.endsWith(".test.ts"));
   const unsupported = source.filter((path) => !path.endsWith(".ts"));
   if (unsupported.length) {
     throw Error(`Unsupported production source: ${unsupported.join(", ")}`);
@@ -34,22 +34,34 @@ if (resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
     .filter(
       (p) => !p.startsWith("node_modules/") && !p.startsWith(".git/") && !p.includes("/dist/"),
     );
-  const source = productionSources(paths.filter((p) => !p.endsWith("/")));
+  const files = paths.filter((p) => statSync(p).isFile());
+  const source = productionSources(files);
   const adapters = paths.filter((p) => /^[^/]+\/main\.ts$/.test(p));
-  const sourceFiles = paths.filter((p) => p.startsWith("src/") && statSync(p).isFile());
-  if (sourceFiles.length > 15 || adapters.length !== 12) {
+  if (source.length > 15 || adapters.length !== 12) {
     throw Error(
-      `Expected <=15 source files and 12 adapters; found ${sourceFiles.length}, ${adapters.length}`,
+      `Expected <=15 source files and 12 adapters; found ${source.length}, ${adapters.length}`,
     );
   }
 
   const categories: [string, string[], number, number][] = [
     ["production", [...source, ...adapters], 2500, 27],
-    ["tooling", paths.filter((p) => /^scripts\/.*\.[cm]?[jt]s$/.test(p)), 400, Infinity],
-    ["tests", paths.filter((p) => /^test\/.*\.ts$/.test(p)), 2500, Infinity],
+    [
+      "tooling",
+      paths.filter((p) => /^scripts\/.*\.[cm]?[jt]s$/.test(p) && !p.endsWith(".test.ts")),
+      400,
+      Infinity,
+    ],
+    [
+      "tests",
+      paths.filter(
+        (p) => /^(src|scripts)\/.*\.test\.ts$/.test(p) || /^test-support\/.*\.ts$/.test(p),
+      ),
+      2500,
+      Infinity,
+    ],
     [
       "fixtures",
-      paths.filter((p) => p.startsWith("test/fixtures/") && /\.[^/]+$/.test(p)),
+      paths.filter((p) => p.startsWith("test-support/fixtures/") && /\.[^/]+$/.test(p)),
       1500,
       Infinity,
     ],

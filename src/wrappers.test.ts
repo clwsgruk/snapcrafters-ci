@@ -1,6 +1,6 @@
 import { test, expect } from "vitest";
 
-import { action, pins, expectedUses } from "./wrappers.ts";
+import { action, pins, expectedUses } from "../test-support/wrappers.ts";
 test.each(Object.keys(expectedUses))(
   "%s pins each required dependency and routes every public input/output",
   (name) => {
@@ -70,7 +70,7 @@ test("setup validates host capability before setup-node, then validates Node 24 
 });
 
 test("every action keeps the reviewed step input routes, output routes and conditions", async () => {
-  const { default: routes } = await import("./fixtures/wrapper-routes.json");
+  const { default: routes } = await import("../test-support/fixtures/wrapper-routes.json");
   for (const name of Object.keys(expectedUses)) {
     const value = action(name);
     expect({

@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { expect, test } from "vitest";
 
-import { script } from "../src/execution.ts";
+import { script } from "./execution.ts";
 test("one trusted Bash script preserves both streams, failure status, private logs and safe workflow env", async () => {
   const cwd = mkdtempSync(join(tmpdir(), "script-"));
   try {
@@ -29,7 +29,7 @@ test("one trusted Bash script preserves both streams, failure status, private lo
 });
 
 test("sync rejects every untracked path before commit, and derives version after the script", async () => {
-  const { syncVersion } = await import("../src/execution.ts");
+  const { syncVersion } = await import("./execution.ts");
   const { execFileSync } = await import("node:child_process");
   const { writeFileSync, mkdirSync, chmodSync, unlinkSync } = await import("node:fs");
   const dir = mkdtempSync(join(tmpdir(), "sync-"));

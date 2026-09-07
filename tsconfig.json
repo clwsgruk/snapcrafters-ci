@@ -9,5 +9,5 @@
     "types": ["node"],
     "skipLibCheck": true
   },
-  "include": ["src", "scripts", "test", "*/main.ts", "vite.config.ts"]
+  "include": ["src", "scripts", "test-support", "*/main.ts", "vite.config.ts"]
 }

@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { testingBody, testingIssue } from "../src/testing.ts";
+import { testingBody, testingIssue } from "./testing.ts";
 test("testing issue binds exact snap/repository/channels and revisions with legacy HTML table", () => {
   const context = {
     repository: "owner/repo",

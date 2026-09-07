@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { validateRunner } from "../src/runtime.ts";
+import { validateRunner } from "./runtime.ts";
 test("only github.com-hosted Ubuntu 22/24 with Node 24 passes the publishing boundary", () => {
   const good = {
     GITHUB_SERVER_URL: "https://github.com",

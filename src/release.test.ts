@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { revisions } from "../src/release.ts";
+import { revisions } from "./release.ts";
 test("real four/five-column Snapcraft revisions keep exact strings and channel activity", () => {
   expect(
     revisions(
@@ -38,7 +38,7 @@ test.each([
   "core24",
   "symlink-source",
 ])("release publication boundary: %s", async (mode) => {
-  const { publish } = await import("../src/release.ts");
+  const { publish } = await import("./release.ts");
   const { mkdtempSync, writeFileSync, mkdirSync, readFileSync, rmSync, existsSync, symlinkSync } =
     await import("node:fs");
   const { tmpdir } = await import("node:os");
@@ -161,7 +161,7 @@ else {console.error('unsupported',tool,a);process.exit(90);}`;
 });
 
 test("tag creation recovers a lost ref response and verifies the exact annotated target", async () => {
-  const { tagRelease } = await import("../src/release.ts");
+  const { tagRelease } = await import("./release.ts");
   const { createServer } = await import("node:http");
   let ref = false,
     writes = 0;
@@ -215,8 +215,8 @@ test("tag creation recovers a lost ref response and verifies the exact annotated
 });
 
 test("published manifest artifact must read back exactly before tagging, including a replay", async () => {
-  const { verifyManifest } = await import("../src/release.ts");
-  const { zip } = await import("./zip.ts");
+  const { verifyManifest } = await import("./release.ts");
+  const { zip } = await import("../test-support/zip.ts");
   const { createServer } = await import("node:http");
   let value = "12",
     present = true;

@@ -4,8 +4,8 @@ import { join } from "node:path";
 
 import { expect, test } from "vitest";
 
-import { png } from "../src/screenshots.ts";
-import { pngBytes } from "./png.ts";
+import { pngBytes } from "../test-support/png.ts";
+import { png } from "./screenshots.ts";
 test("timestamp screenshot alias resolves only to same-directory owned regular PNG", () => {
   const dir = mkdtempSync(join(tmpdir(), "png-"));
   try {
@@ -33,7 +33,7 @@ test.each([
   "invalid-moved",
   "exhausted",
 ])("atomic screenshot upload: %s", async (mode) => {
-  const { uploadScreenshots } = await import("../src/screenshots.ts");
+  const { uploadScreenshots } = await import("./screenshots.ts");
   const { createServer } = await import("node:http");
   let head = "a".repeat(40),
     commits = 0,
@@ -119,7 +119,7 @@ test.each([
 });
 
 test("VM capture uses ghvmctl timestamp aliases and cleans its owned VM/HOME on failure", async () => {
-  const { capture } = await import("../src/screenshots.ts");
+  const { capture } = await import("./screenshots.ts");
   const dir = mkdtempSync(join(tmpdir(), "vm-")),
     log = join(dir, "calls");
   const fs = await import("node:fs");
@@ -144,7 +144,7 @@ test("VM capture uses ghvmctl timestamp aliases and cleans its owned VM/HOME on 
 });
 
 test("comment retry recovers immutable screenshots from reachable commit history without upload", async () => {
-  const { recoverScreenshots } = await import("../src/screenshots.ts");
+  const { recoverScreenshots } = await import("./screenshots.ts");
   const { createServer } = await import("node:http");
   let writes = 0;
   const server = createServer((req, res) => {

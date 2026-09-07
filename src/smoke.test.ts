@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 
-import { smoke } from "./smoke.ts";
-import { expectedUses } from "./wrappers.ts";
+import { smoke } from "../test-support/smoke.ts";
+import { expectedUses } from "../test-support/wrappers.ts";
 test.each(
   Object.keys(expectedUses).flatMap((name) => ["ubuntu22", "ubuntu24"].map((os) => [name, os])),
 )("copied %s wrapper on %s runs with Node 24 and observable effects", async (name, os) => {

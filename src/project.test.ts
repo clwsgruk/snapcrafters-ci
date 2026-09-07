@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { expect, test } from "vitest";
 
-import { project } from "../src/project.ts";
+import { project } from "./project.ts";
 test("nested roots retain public spelling but resolve internal paths and last-match precedence", () => {
   const cwd = mkdtempSync(join(tmpdir(), "project-"));
   try {
@@ -58,8 +58,8 @@ test("project paths stay inside the checkout and recipes cannot be symlinks", ()
 });
 
 test("architectures cover the fresh inventory and normalize lists without empty or nested matrices", async () => {
-  const { architectures } = await import("../src/project.ts");
-  const { default: shapes } = await import("./fixtures/shapes.json");
+  const { architectures } = await import("./project.ts");
+  const { default: shapes } = await import("../test-support/fixtures/shapes.json");
   for (const shape of Object.values(shapes)) {
     if (!("architectures" in shape) && !("platforms" in shape))
       expect(() => architectures(shape)).toThrow(/declare/);
@@ -94,7 +94,7 @@ test("architectures cover the fresh inventory and normalize lists without empty 
 });
 
 test("unobserved architecture fields and non-scalar metadata fail clearly", async () => {
-  const { architectures, scalar, yaml } = await import("../src/project.ts");
+  const { architectures, scalar, yaml } = await import("./project.ts");
   for (const data of [
     { base: "core24", platforms: { amd64: { typo: "amd64" } } },
     { architectures: "amd64" },
@@ -114,7 +114,7 @@ test("unobserved architecture fields and non-scalar metadata fail clearly", asyn
 });
 
 test("legacy run-on cannot silently turn a build host into a different target", async () => {
-  const { architectures } = await import("../src/project.ts");
+  const { architectures } = await import("./project.ts");
   expect(() =>
     architectures({ base: "core22", architectures: [{ "build-on": "amd64", "run-on": "arm64" }] }),
   ).toThrow(/ambiguous/i);

@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { promoteCommand } from "../src/promotion.ts";
+import { promoteCommand } from "./promotion.ts";
 test("promotion accepts only the whole exact command", () => {
   expect(promoteCommand("/promote 12,9007199254740993 latest/stable done")).toEqual({
     revisions: ["12", "9007199254740993"],
@@ -20,8 +20,8 @@ test("promotion accepts only the whole exact command", () => {
 });
 
 test("promotion rejects any unrelated revision before all writes, then releases and closes with replay", async () => {
-  const { promote } = await import("../src/promotion.ts");
-  const { testingBody } = await import("../src/testing.ts");
+  const { promote } = await import("./promotion.ts");
+  const { testingBody } = await import("./testing.ts");
   const { createServer } = await import("node:http");
   const fs = await import("node:fs"),
     os = await import("node:os"),

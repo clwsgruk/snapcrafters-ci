@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 
-import { unpack } from "../src/manifests.ts";
-import { zip } from "./zip.ts";
+import { zip } from "../test-support/zip.ts";
+import { unpack } from "./manifests.ts";
 
 test("manifest ZIP binds label, filename, snap and exact decimal revision before extraction", async () => {
   const text = "name: sample\narchitecture: amd64\nrevision: 9007199254740993\n";
@@ -32,7 +32,7 @@ test("manifest ZIP binds label, filename, snap and exact decimal revision before
 });
 
 test("artifact collection paginates and validates the complete expected set before filesystem writes", async () => {
-  const { fetchManifests } = await import("../src/manifests.ts");
+  const { fetchManifests } = await import("./manifests.ts");
   const { createServer } = await import("node:http");
   const { mkdtempSync, readdirSync, rmSync, writeFileSync } = await import("node:fs");
   const { tmpdir } = await import("node:os");
