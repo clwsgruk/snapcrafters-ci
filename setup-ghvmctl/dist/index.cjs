@@ -7345,13 +7345,16 @@ function command(file, args, cwd = process.cwd(), env = safeEnv(), timeout = 6e5
 
 // src/runtime.ts
 function validateRunner(env = process.env, node = process.version) {
-  if (env.GITHUB_SERVER_URL !== "https://github.com" || env.RUNNER_ENVIRONMENT !== "github-hosted" || env.RUNNER_OS !== "Linux" || !["ubuntu22", "ubuntu24"].includes(env.ImageOS || "") || !node.startsWith("v24."))
+  if (env.GITHUB_SERVER_URL !== "https://github.com" || env.RUNNER_ENVIRONMENT !== "github-hosted" || env.RUNNER_OS !== "Linux" || !["ubuntu22", "ubuntu24"].includes(env.ImageOS || "") || !node.startsWith("v24.")) {
     throw Error("Requires github.com-hosted Ubuntu 22.04/24.04 and Node 24");
+  }
 }
 async function main(action) {
   try {
     validateRunner();
-    if (process.env.CI_PHASE !== "validate") await action();
+    if (process.env.CI_PHASE !== "validate") {
+      await action();
+    }
   } catch (error) {
     console.error(error instanceof Error ? error.message : "Action failed");
     process.exitCode = 1;
@@ -7360,6 +7363,7 @@ async function main(action) {
 
 // setup-ghvmctl/main.ts
 void main(() => {
-  if (!/^ghvmctl\s+0\.4\.1\s+16\s/m.test(command("snap", ["list", "ghvmctl"])))
+  if (!/^ghvmctl\s+0\.4\.1\s+16\s/m.test(command("snap", ["list", "ghvmctl"]))) {
     throw Error("Expected ghvmctl 0.4.1 revision 16");
+  }
 });

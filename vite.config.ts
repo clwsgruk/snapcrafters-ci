@@ -11,5 +11,12 @@ export default defineConfig({
       thresholds: { "src/project.ts": { branches: 90 }, "src/validation.ts": { branches: 90 } },
     },
   },
-  fmt: { ignorePatterns: ["**/dist/**", "test/fixtures/**", "bun.lock"] },
+  fmt: {
+    ignorePatterns: ["**/dist/**", "test/fixtures/**", "bun.lock"],
+    printWidth: 100,
+    experimentalSortImports: {
+      groups: ["builtin", "external", "internal", ["parent", "sibling", "index"]],
+      newlinesBetween: true,
+    },
+  },
 });

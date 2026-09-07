@@ -8699,8 +8699,9 @@ var import_node_fs = require("node:fs");
 var import_node_path = require("node:path");
 var import_yaml = __toESM(require_dist(), 1);
 function mapping(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value))
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw Error("Expected a mapping");
+  }
   return value;
 }
 function yaml(source) {
@@ -8708,12 +8709,15 @@ function yaml(source) {
 }
 function project(input2 = "", cwd = process.cwd()) {
   const publicRoot = input2 || ".";
-  const checkout = (0, import_node_fs.realpathSync)(cwd), requested = (0, import_node_path.resolve)(checkout, publicRoot);
-  if (requested !== checkout && !requested.startsWith(`${checkout}${import_node_path.sep}`))
+  const checkout = (0, import_node_fs.realpathSync)(cwd);
+  const requested = (0, import_node_path.resolve)(checkout, publicRoot);
+  if (requested !== checkout && !requested.startsWith(`${checkout}${import_node_path.sep}`)) {
     throw Error("Project root must stay inside the checkout");
+  }
   const root = (0, import_node_fs.realpathSync)(requested);
-  if (root !== requested || !(0, import_node_fs.lstatSync)(root).isDirectory())
+  if (root !== requested || !(0, import_node_fs.lstatSync)(root).isDirectory()) {
     throw Error("Project root must be a regular checkout directory");
+  }
   const candidates = [
     ".snapcraft.yaml",
     "build-aux/snap/snapcraft.yaml",
@@ -8721,13 +8725,19 @@ function project(input2 = "", cwd = process.cwd()) {
     "snapcraft.yaml"
   ];
   const file = candidates.filter((p) => (0, import_node_fs.existsSync)((0, import_node_path.resolve)(root, p))).at(-1);
-  if (!file) throw Error(`No snapcraft.yaml found in ${root}`);
+  if (!file) {
+    throw Error(`No snapcraft.yaml found in ${root}`);
+  }
   const absoluteYaml = (0, import_node_path.resolve)(root, file);
   const data = yaml(readProjectFile(absoluteYaml));
   const declaration = (kind) => [`${kind}-declaration.json`, `.github/${kind}-declaration.json`].filter((p) => (0, import_node_fs.existsSync)((0, import_node_path.resolve)(cwd, p))).at(-1) || "";
-  const plugs = declaration("plug"), slots = declaration("slot");
-  for (const declaration2 of [plugs, slots])
-    if (declaration2) readProjectFile((0, import_node_path.resolve)(checkout, declaration2), 65536);
+  const plugs = declaration("plug");
+  const slots = declaration("slot");
+  for (const declaration2 of [plugs, slots]) {
+    if (declaration2) {
+      readProjectFile((0, import_node_path.resolve)(checkout, declaration2), 65536);
+    }
+  }
   const components = data.components == null ? {} : mapping(data.components);
   return {
     root,
@@ -8748,12 +8758,15 @@ function project(input2 = "", cwd = process.cwd()) {
   };
 }
 function readProjectFile(file, limit = 1024 * 1024) {
-  if ((0, import_node_fs.realpathSync)(file) !== file) throw Error("Project input path contains a symlink");
+  if ((0, import_node_fs.realpathSync)(file) !== file) {
+    throw Error("Project input path contains a symlink");
+  }
   const fd = (0, import_node_fs.openSync)(file, import_node_fs.constants.O_RDONLY | import_node_fs.constants.O_NOFOLLOW);
   try {
     const stat = (0, import_node_fs.fstatSync)(fd);
-    if (!stat.isFile() || stat.size > limit)
+    if (!stat.isFile() || stat.size > limit) {
       throw Error("Project input must be a bounded regular file");
+    }
     return (0, import_node_fs.readFileSync)(fd, "utf8");
   } finally {
     (0, import_node_fs.closeSync)(fd);
@@ -8769,14 +8782,18 @@ var supportedArchitectures = [
   "s390x"
 ];
 function architecture(value) {
-  if (typeof value !== "string" || !supportedArchitectures.includes(value))
+  if (typeof value !== "string" || !supportedArchitectures.includes(value)) {
     throw Error(`Unsupported architecture: ${scalar(value)}`);
+  }
   return value;
 }
 function scalar(value) {
-  if (value == null) return "null";
-  if (!["string", "number", "bigint", "boolean"].includes(typeof value))
+  if (value == null) {
+    return "null";
+  }
+  if (!["string", "number", "bigint", "boolean"].includes(typeof value)) {
     throw Error("Expected a scalar");
+  }
   return String(value);
 }
 
@@ -8802,22 +8819,6 @@ function command(file, args, cwd = process.cwd(), env = safeEnv(), timeout = 6e5
   }
 }
 
-// src/runtime.ts
-function validateRunner(env = process.env, node = process.version) {
-  if (env.GITHUB_SERVER_URL !== "https://github.com" || env.RUNNER_ENVIRONMENT !== "github-hosted" || env.RUNNER_OS !== "Linux" || !["ubuntu22", "ubuntu24"].includes(env.ImageOS || "") || !node.startsWith("v24."))
-    throw Error("Requires github.com-hosted Ubuntu 22.04/24.04 and Node 24");
-}
-var input = (name) => process.env[`INPUT_${name.toUpperCase().replaceAll("-", "_")}`] || "";
-async function main(action) {
-  try {
-    validateRunner();
-    if (process.env.CI_PHASE !== "validate") await action();
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : "Action failed");
-    process.exitCode = 1;
-  }
-}
-
 // src/github.ts
 var import_node_crypto = require("node:crypto");
 var api = "https://api.github.com";
@@ -8831,21 +8832,32 @@ var ApiError = class extends Error {
 async function bounded(response, max = 8 * 1024 * 1024) {
   const chunks = [];
   let size = 0;
-  if (!response.body) throw Error("Missing response body");
+  if (!response.body) {
+    throw Error("Missing response body");
+  }
   for await (const chunk of response.body) {
     size += chunk.length;
-    if (size > max) throw Error("Response size limit exceeded");
+    if (size > max) {
+      throw Error("Response size limit exceeded");
+    }
     chunks.push(chunk);
   }
   return Buffer.concat(chunks);
 }
 async function request(method, path, token, body, base = api, deadline = Date.now() + 2e4) {
-  if (Date.now() >= deadline) throw Error("GitHub operation deadline exceeded");
-  if (!token) throw Error("Explicit GitHub token required");
-  if (!path.startsWith("/") || path.startsWith("//")) throw Error("Invalid API path");
+  if (Date.now() >= deadline) {
+    throw Error("GitHub operation deadline exceeded");
+  }
+  if (!token) {
+    throw Error("Explicit GitHub token required");
+  }
+  if (!path.startsWith("/") || path.startsWith("//")) {
+    throw Error("Invalid API path");
+  }
   const text = body === void 0 ? void 0 : JSON.stringify(body);
-  if (text && Buffer.byteLength(text) > 16 * 1024 * 1024)
+  if (text && Buffer.byteLength(text) > 16 * 1024 * 1024) {
     throw Error("Request size limit exceeded");
+  }
   const response = await fetch(`${base}${path}`, {
     method,
     headers: {
@@ -8881,15 +8893,20 @@ async function pages(path, token, field, base = api) {
       base
     );
     const rows = field ? data[field] : data;
-    if (!Array.isArray(rows)) throw Error("Invalid paginated response");
+    if (!Array.isArray(rows)) {
+      throw Error("Invalid paginated response");
+    }
     result.push(...rows);
-    if (rows.length < 100) return result;
+    if (rows.length < 100) {
+      return result;
+    }
   }
   throw Error("Pagination limit exceeded");
 }
 var marker = (value) => (0, import_node_crypto.createHash)("sha256").update(JSON.stringify(value)).digest("hex");
 async function marked(path, body, id, token, base = api) {
-  const stamp = `<!-- snapcrafters-ci:${id} -->`, expectedBody = `${body.body || ""}
+  const stamp = `<!-- snapcrafters-ci:${id} -->`;
+  const expectedBody = `${body.body || ""}
 ${stamp}`;
   const find = async () => {
     const rows = await pages(
@@ -8901,17 +8918,22 @@ ${stamp}`;
     const matches = rows.filter((item) => item.body?.includes(stamp));
     if (matches.length > 1 || matches.some(
       (item) => item.body !== expectedBody || body.title !== void 0 && item.title !== body.title
-    ))
+    )) {
       throw Error("Deterministic marker conflicts with existing content");
+    }
     return matches[0];
   };
   const existing = await find();
-  if (existing) return existing;
+  if (existing) {
+    return existing;
+  }
   try {
     return await request("POST", path, token, { ...body, body: expectedBody }, base);
   } catch (error) {
     const recovered = await find();
-    if (recovered) return recovered;
+    if (recovered) {
+      return recovered;
+    }
     throw error;
   }
 }
@@ -8919,40 +8941,67 @@ ${stamp}`;
 // src/manifests.ts
 var import_yauzl = __toESM(require_yauzl(), 1);
 function revision(value) {
-  if (typeof value !== "string" && typeof value !== "bigint")
+  if (typeof value !== "string" && typeof value !== "bigint") {
     throw Error("Revision must be an exact positive decimal string");
+  }
   const text = String(value);
-  if (!/^[1-9][0-9]{0,39}$/.test(text)) throw Error("Invalid revision");
+  if (!/^[1-9][0-9]{0,39}$/.test(text)) {
+    throw Error("Invalid revision");
+  }
   return text;
+}
+
+// src/runtime.ts
+function validateRunner(env = process.env, node = process.version) {
+  if (env.GITHUB_SERVER_URL !== "https://github.com" || env.RUNNER_ENVIRONMENT !== "github-hosted" || env.RUNNER_OS !== "Linux" || !["ubuntu22", "ubuntu24"].includes(env.ImageOS || "") || !node.startsWith("v24.")) {
+    throw Error("Requires github.com-hosted Ubuntu 22.04/24.04 and Node 24");
+  }
+}
+var input = (name) => process.env[`INPUT_${name.toUpperCase().replaceAll("-", "_")}`] || "";
+async function main(action) {
+  try {
+    validateRunner();
+    if (process.env.CI_PHASE !== "validate") {
+      await action();
+    }
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : "Action failed");
+    process.exitCode = 1;
+  }
 }
 
 // src/validation.ts
 function snapName(value) {
-  if (!/^(?=.{1,40}$)(?=.*[a-z])[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value))
+  if (!/^(?=.{1,40}$)(?=.*[a-z])[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)) {
     throw Error("Invalid snap name");
+  }
   return value;
 }
 function channel(value) {
   if (!/^[a-zA-Z0-9][a-zA-Z0-9.+-]*\/(stable|candidate|beta|edge)(\/[a-zA-Z0-9][a-zA-Z0-9.+-]*)?$/.test(
     value
-  ) || value.length > 100)
+  ) || value.length > 100) {
     throw Error("Invalid channel");
+  }
   return value;
 }
 function repository(value) {
-  if (!/^[A-Za-z0-9][\w.-]*\/[A-Za-z0-9][\w.-]*$/.test(value) || value.length > 200)
+  if (!/^[A-Za-z0-9][\w.-]*\/[A-Za-z0-9][\w.-]*$/.test(value) || value.length > 200) {
     throw Error("Invalid repository");
+  }
   return value;
 }
 function revisions(text) {
   const [header, ...lines] = text.trim().split(/\r?\n/);
-  if (!/^Rev\.\s+Uploaded\s+Arches\s+Version(\s+Channels)?$/.test(header))
+  if (!/^Rev\.\s+Uploaded\s+Arches\s+Version(\s+Channels)?$/.test(header)) {
     throw Error("Unrecognized Snapcraft revisions header");
+  }
   const width = header.endsWith("Channels") ? 5 : 4;
   return lines.filter(Boolean).map((line) => {
     const fields = line.trim().split(/\s+/);
-    if (fields.length !== width || !/^\d{4}-\d\d-\d\d(?:T[\d:.]+Z?)?$/.test(fields[1]))
+    if (fields.length !== width || !/^\d{4}-\d\d-\d\d(?:T[\d:.]+Z?)?$/.test(fields[1])) {
       throw Error("Unrecognized Snapcraft revision row");
+    }
     return {
       revision: revision(fields[0]),
       architectures: fields[2].split(",").map(architecture),
@@ -8963,19 +9012,29 @@ function revisions(text) {
 }
 
 // src/testing.ts
-var table = (rows) => `<table><thead><tr><th>CPU Architecture</th><th>Revision</th></tr></thead><tbody>${rows.map((r) => `<tr><td>${r.architecture}</td><td>${r.revision}</td></tr>`).join("")}</tbody></table>`;
+var table = (rows) => {
+  const body = rows.map((row) => `<tr><td>${row.architecture}</td><td>${row.revision}</td></tr>`).join("");
+  return `<table><thead><tr><th>CPU Architecture</th><th>Revision</th></tr></thead><tbody>${body}</tbody></table>`;
+};
 function testingIssue(body, repo, snap, destination) {
-  if (body.length > 1e5) throw Error("Testing issue too large");
+  if (body.length > 1e5) {
+    throw Error("Testing issue too large");
+  }
   const embedded = [...body.matchAll(/<!-- snapcrafters-testing:(.+) -->/g)];
-  if (embedded.length > 1) throw Error("Ambiguous testing context");
+  if (embedded.length > 1) {
+    throw Error("Ambiguous testing context");
+  }
   let data;
-  if (embedded.length) data = JSON.parse(embedded[0][1]);
-  else {
+  if (embedded.length) {
+    data = JSON.parse(embedded[0][1]);
+  } else {
     const intro = body.match(
       /A new version \(([^\n]+)\) of `([a-z0-9-]+)` was just pushed to the `([^`]+)` channel/
     );
     const target = body.match(/^\/promote ([1-9][0-9,]*) ([\w./+-]+) done$/m);
-    if (!intro || !target) throw Error("Unrecognized legacy testing issue");
+    if (!intro || !target) {
+      throw Error("Unrecognized legacy testing issue");
+    }
     data = {
       repository: repo,
       snap: intro[2],
@@ -8983,46 +9042,64 @@ function testingIssue(body, repo, snap, destination) {
       channel: intro[3],
       destination: target[2],
       rows: [...body.matchAll(/<tr><td>([a-z0-9]+)<\/td><td>([1-9][0-9]*)<\/td><\/tr>/g)].map(
-        (m) => ({ name: intro[2], architecture: m[1], revision: m[2] })
+        (m) => ({
+          name: intro[2],
+          architecture: m[1],
+          revision: m[2]
+        })
       )
     };
-    if (target[1] !== data.rows.map((r) => r.revision).join(","))
+    if (target[1] !== data.rows.map((r) => r.revision).join(",")) {
       throw Error("Legacy revision set mismatch");
+    }
   }
-  if (repository(data.repository) !== repo || snapName(data.snap) !== snap || channel(data.destination) !== destination || typeof data.version !== "string")
+  if (repository(data.repository) !== repo || snapName(data.snap) !== snap || channel(data.destination) !== destination || typeof data.version !== "string") {
     throw Error("Testing issue identity mismatch");
+  }
   channel(data.channel);
   if (!body.trimStart().startsWith(
     `A new version (${data.version}) of \`${data.snap}\` was just pushed to the \`${data.channel}\` channel`
-  ))
+  )) {
     throw Error("Testing prose differs from bound context");
-  if (!Array.isArray(data.rows) || !data.rows.length || data.rows.length > 7 || new Set(data.rows.map((r) => r.architecture)).size !== data.rows.length)
+  }
+  if (!Array.isArray(data.rows) || !data.rows.length || data.rows.length > 7 || new Set(data.rows.map((r) => r.architecture)).size !== data.rows.length) {
     throw Error("Invalid testing table");
+  }
   for (const row of data.rows) {
     architecture(row.architecture);
     revision(row.revision);
-    if (row.name !== snap) throw Error("Testing table snap mismatch");
+    if (row.name !== snap) {
+      throw Error("Testing table snap mismatch");
+    }
   }
-  if (!body.includes(table(data.rows))) throw Error("Testing table differs from bound context");
+  if (!body.includes(table(data.rows))) {
+    throw Error("Testing table differs from bound context");
+  }
   return data;
 }
 
 // src/promotion.ts
 function promoteCommand(body) {
   const match = body.match(/^\/promote ([1-9][0-9]*(?:,[1-9][0-9]*)*) ([A-Za-z0-9./+-]+)( done)?$/);
-  if (!match || match[0] !== body) throw Error("Expected /promote REV[,REV] TRACK/RISK [done]");
+  if (!match || match[0] !== body) {
+    throw Error("Expected /promote REV[,REV] TRACK/RISK [done]");
+  }
   const list = match[1].split(",").map(revision);
-  if (list.length > 7 || new Set(list).size !== list.length)
+  if (list.length > 7 || new Set(list).size !== list.length) {
     throw Error("Duplicate or excessive revisions");
+  }
   return { revisions: list, channel: channel(match[2]), done: Boolean(match[3]) };
 }
 async function promote(event, repo, snap, destination, token, storeToken, base = api) {
   repository(repo);
   snapName(snap);
   channel(destination);
-  if (event.action !== "created" || event.repository.full_name !== repo)
+  if (event.action !== "created" || event.repository.full_name !== repo) {
     throw Error("Requires a newly created repository issue comment");
-  const issueId = revision(String(event.issue.number)), commentId = revision(String(event.comment.id)), issuePath = `/repos/${repo}/issues/${issueId}`;
+  }
+  const issueId = revision(String(event.issue.number));
+  const commentId = revision(String(event.comment.id));
+  const issuePath = `/repos/${repo}/issues/${issueId}`;
   const current = await request(
     "GET",
     `/repos/${repo}/issues/comments/${commentId}`,
@@ -9030,8 +9107,9 @@ async function promote(event, repo, snap, destination, token, storeToken, base =
     void 0,
     base
   );
-  if (current.id !== event.comment.id || current.body !== event.comment.body || current.user.login !== event.sender.login || current.created_at !== current.updated_at || current.created_at !== event.comment.created_at)
+  if (current.id !== event.comment.id || current.body !== event.comment.body || current.user.login !== event.sender.login || current.created_at !== current.updated_at || current.created_at !== event.comment.created_at) {
     throw Error("Requires an unedited original comment");
+  }
   const parsed = promoteCommand(current.body);
   const permission = await request(
     "GET",
@@ -9040,24 +9118,36 @@ async function promote(event, repo, snap, destination, token, storeToken, base =
     void 0,
     base
   );
-  if (!["admin", "maintain", "write"].includes(permission.permission))
+  if (!["admin", "maintain", "write"].includes(permission.permission)) {
     throw Error("Current write permission required");
+  }
   const issue = await request("GET", issuePath, token, void 0, base);
-  if (issue.state !== "open" || issue.pull_request || !issue.labels.some((l) => l.name === "testing"))
+  if (issue.state !== "open" || issue.pull_request || !issue.labels.some((l) => l.name === "testing")) {
     throw Error("Requires an open non-PR testing issue");
+  }
   const context = testingIssue(issue.body, repo, snap, destination);
-  if (parsed.channel !== destination) throw Error("Unrelated destination channel");
+  if (parsed.channel !== destination) {
+    throw Error("Unrelated destination channel");
+  }
   const selected = context.rows.filter((r) => parsed.revisions.includes(r.revision));
-  if (parsed.revisions.some((r) => !selected.some((row) => row.revision === r)))
+  if (parsed.revisions.some((r) => !selected.some((row) => row.revision === r))) {
     throw Error("Unrelated revision: no Store writes performed");
-  if (!storeToken) throw Error("Store credentials required");
+  }
+  if (!storeToken) {
+    throw Error("Store credentials required");
+  }
   const env = { ...safeEnv(), SNAPCRAFT_STORE_CREDENTIALS: storeToken };
-  const active = (arch, rev, target) => revisions(command("snapcraft", ["revisions", snap, "--arch", arch], process.cwd(), env)).some(
-    (r) => r.revision === rev && r.architectures.includes(arch) && r.channels.includes(`${target}*`)
-  );
-  for (const row of selected)
-    if (!active(row.architecture, row.revision, context.channel) && !active(row.architecture, row.revision, destination))
+  const active = (arch, rev, target) => {
+    const output = command("snapcraft", ["revisions", snap, "--arch", arch], process.cwd(), env);
+    return revisions(output).some(
+      (r) => r.revision === rev && r.architectures.includes(arch) && r.channels.includes(`${target}*`)
+    );
+  };
+  for (const row of selected) {
+    if (!active(row.architecture, row.revision, context.channel) && !active(row.architecture, row.revision, destination)) {
       throw Error("Unrelated Store revision/channel: no writes performed");
+    }
+  }
   const succeeded = [];
   let failed;
   for (const rev of parsed.revisions) {
@@ -9068,8 +9158,9 @@ async function promote(event, repo, snap, destination, token, storeToken, base =
           command("snapcraft", ["release", snap, rev, destination], process.cwd(), env);
         } catch {
         }
-        if (!rows.every((r) => active(r.architecture, rev, destination)))
+        if (!rows.every((r) => active(r.architecture, rev, destination))) {
           throw Error("Release not confirmed");
+        }
       }
       succeeded.push(rev);
     } catch {
@@ -9091,21 +9182,26 @@ async function promote(event, repo, snap, destination, token, storeToken, base =
       `${outcome} GitHub reporting failed; replay will verify Store state before writing.`
     );
   }
-  if (failed) throw Error(outcome);
+  if (failed) {
+    throw Error(outcome);
+  }
   const reactionsPath = `/repos/${repo}/issues/comments/${commentId}/reactions`;
   await request("POST", reactionsPath, token, { content: "+1" }, base);
   if (parsed.done) {
     try {
       await request("PATCH", issuePath, token, { state: "closed" }, base);
     } catch (error) {
-      if ((await request("GET", issuePath, token, void 0, base)).state !== "closed")
+      if ((await request("GET", issuePath, token, void 0, base)).state !== "closed") {
         throw error;
+      }
     }
   }
 }
 async function promotionAction() {
   const eventFile = process.env.GITHUB_EVENT_PATH;
-  if ((0, import_node_fs2.statSync)(eventFile).size > 1024 * 1024) throw Error("Event too large");
+  if ((0, import_node_fs2.statSync)(eventFile).size > 1024 * 1024) {
+    throw Error("Event too large");
+  }
   return promote(
     JSON.parse((0, import_node_fs2.readFileSync)(eventFile, "utf8")),
     process.env.GITHUB_REPOSITORY,

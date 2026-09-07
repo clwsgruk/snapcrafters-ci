@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
+
 export const api = "https://api.github.com";
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -8,17 +10,23 @@ export class ApiError extends Error {
     super(`GitHub request failed (${status})`);
   }
 }
+
 export async function bounded(response: Response, max = 8 * 1024 * 1024): Promise<Buffer> {
   const chunks: Uint8Array[] = [];
   let size = 0;
-  if (!response.body) throw Error("Missing response body");
+  if (!response.body) {
+    throw Error("Missing response body");
+  }
   for await (const chunk of response.body) {
     size += chunk.length;
-    if (size > max) throw Error("Response size limit exceeded");
+    if (size > max) {
+      throw Error("Response size limit exceeded");
+    }
     chunks.push(chunk);
   }
   return Buffer.concat(chunks);
 }
+
 export async function request<T = Record<string, unknown>>(
   method: string,
   path: string,
@@ -27,12 +35,21 @@ export async function request<T = Record<string, unknown>>(
   base = api,
   deadline = Date.now() + 20000,
 ): Promise<T> {
-  if (Date.now() >= deadline) throw Error("GitHub operation deadline exceeded");
-  if (!token) throw Error("Explicit GitHub token required");
-  if (!path.startsWith("/") || path.startsWith("//")) throw Error("Invalid API path");
+  if (Date.now() >= deadline) {
+    throw Error("GitHub operation deadline exceeded");
+  }
+  if (!token) {
+    throw Error("Explicit GitHub token required");
+  }
+  if (!path.startsWith("/") || path.startsWith("//")) {
+    throw Error("Invalid API path");
+  }
+
   const text = body === undefined ? undefined : JSON.stringify(body);
-  if (text && Buffer.byteLength(text) > 16 * 1024 * 1024)
+  if (text && Buffer.byteLength(text) > 16 * 1024 * 1024) {
     throw Error("Request size limit exceeded");
+  }
+
   const response = await fetch(`${base}${path}`, {
     method,
     headers: {
@@ -45,6 +62,7 @@ export async function request<T = Record<string, unknown>>(
     signal: AbortSignal.timeout(Math.max(1, Math.min(20000, deadline - Date.now()))),
     redirect: "error",
   });
+
   const bytes = await bounded(response);
   if (!response.ok) {
     let conflict = false;
@@ -56,8 +74,10 @@ export async function request<T = Record<string, unknown>>(
     }
     throw new ApiError(response.status, conflict);
   }
+
   return (bytes.length ? JSON.parse(bytes.toString("utf8")) : {}) as T;
 }
+
 export async function pages<T>(
   path: string,
   token: string,
@@ -74,20 +94,28 @@ export async function pages<T>(
       base,
     );
     const rows = field ? (data as Record<string, T[]>)[field] : data;
-    if (!Array.isArray(rows)) throw Error("Invalid paginated response");
+    if (!Array.isArray(rows)) {
+      throw Error("Invalid paginated response");
+    }
     result.push(...rows);
-    if (rows.length < 100) return result;
+    if (rows.length < 100) {
+      return result;
+    }
   }
+
   throw Error("Pagination limit exceeded");
 }
+
 export const marker = (value: unknown) =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex");
+
 export interface Message {
   id: number;
   number?: number;
   title?: string;
   body: string;
 }
+
 export async function marked(
   path: string,
   body: Record<string, unknown> & { body?: string },
@@ -95,8 +123,9 @@ export async function marked(
   token: string,
   base = api,
 ): Promise<Message> {
-  const stamp = `<!-- snapcrafters-ci:${id} -->`,
-    expectedBody = `${body.body || ""}\n${stamp}`;
+  const stamp = `<!-- snapcrafters-ci:${id} -->`;
+  const expectedBody = `${body.body || ""}\n${stamp}`;
+
   const find = async () => {
     const rows = await pages<Message>(
       path.endsWith("/issues") ? `${path}?state=all` : path,
@@ -104,6 +133,7 @@ export async function marked(
       undefined,
       base,
     );
+
     const matches = rows.filter((item) => item.body?.includes(stamp));
     if (
       matches.length > 1 ||
@@ -111,17 +141,24 @@ export async function marked(
         (item) =>
           item.body !== expectedBody || (body.title !== undefined && item.title !== body.title),
       )
-    )
+    ) {
       throw Error("Deterministic marker conflicts with existing content");
+    }
     return matches[0];
   };
+
   const existing = await find();
-  if (existing) return existing;
+  if (existing) {
+    return existing;
+  }
+
   try {
     return await request<Message>("POST", path, token, { ...body, body: expectedBody }, base);
   } catch (error) {
     const recovered = await find();
-    if (recovered) return recovered;
+    if (recovered) {
+      return recovered;
+    }
     throw error;
   }
 }

@@ -1,7 +1,9 @@
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import { expect, test } from "vitest";
+
 import { project } from "../src/project.ts";
 test("nested roots retain public spelling but resolve internal paths and last-match precedence", () => {
   const cwd = mkdtempSync(join(tmpdir(), "project-"));

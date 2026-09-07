@@ -13,8 +13,9 @@ import {
 } from "node:fs";
 import { tmpdir, constants as osConstants } from "node:os";
 import { join } from "node:path";
-import { project } from "./project.ts";
 import { StringDecoder } from "node:string_decoder";
+
+import { project } from "./project.ts";
 
 export function safeEnv(env = process.env): NodeJS.ProcessEnv {
   const keys =
@@ -23,6 +24,7 @@ export function safeEnv(env = process.env): NodeJS.ProcessEnv {
     Object.entries(env).filter(([k, v]) => keys.test(k) && v !== undefined),
   );
 }
+
 export function command(
   file: string,
   args: string[],
@@ -43,6 +45,7 @@ export function command(
     throw Error(`${file} ${args[0] || ""} failed`);
   }
 }
+
 export async function script(
   source: string,
   directory: string,
@@ -50,12 +53,15 @@ export async function script(
   storage = tmpdir(),
 ) {
   const dir = mkdtempSync(join(storage, "script-"));
-  const file = join(dir, "caller.sh"),
-    stdout = join(dir, "stdout.log"),
-    stderr = join(dir, "stderr.log"),
-    callerSummary = join(dir, "caller-summary.md");
+  const file = join(dir, "caller.sh");
+  const stdout = join(dir, "stdout.log");
+  const stderr = join(dir, "stderr.log");
+  const callerSummary = join(dir, "caller-summary.md");
   writeFileSync(file, source, { mode: 0o600 });
-  if (env.GITHUB_STEP_SUMMARY) writeFileSync(callerSummary, "", { mode: 0o600, flag: "wx" });
+  if (env.GITHUB_STEP_SUMMARY) {
+    writeFileSync(callerSummary, "", { mode: 0o600, flag: "wx" });
+  }
+
   const secrets = Object.entries(env)
     .filter(([k, v]) => /token|secret|password|credential/i.test(k) && v)
     .flatMap(([, v]) => [v!, ...v!.split(/\r?\n/)].filter(Boolean))
@@ -63,28 +69,38 @@ export async function script(
   const redact = (s: string) =>
     secrets.reduce((v, secret) => v.replaceAll(secret, "***"), s).replaceAll("\u001b", "");
   const hold = secrets.reduce((n, secret) => Math.max(n, secret.length), 0);
-  const first: string[] = [],
-    last: string[] = [];
+
+  const first: string[] = [];
+  const last: string[] = [];
   let live = 128 * 1024;
+
   const childEnv = safeEnv(env);
-  if (env.GITHUB_STEP_SUMMARY) childEnv.GITHUB_STEP_SUMMARY = callerSummary;
+  if (env.GITHUB_STEP_SUMMARY) {
+    childEnv.GITHUB_STEP_SUMMARY = callerSummary;
+  }
   const child = spawn("bash", ["--noprofile", "--norc", "-e", "-o", "pipefail", file], {
     cwd: directory,
     env: childEnv,
     detached: true,
     stdio: ["ignore", "pipe", "pipe"],
   });
+
   const streams = [child.stdout, child.stderr].map((stream, index) => {
-    const fd = openSync(index ? stderr : stdout, "wx", 0o600),
-      decoder = new StringDecoder("utf8");
+    const fd = openSync(index ? stderr : stdout, "wx", 0o600);
+    const decoder = new StringDecoder("utf8");
     let pending = "";
+
     const emit = (line: string) => {
       const text = redact(line).slice(0, 2000);
-      if (first.length < 100) first.push(text);
-      else {
+      if (first.length < 100) {
+        first.push(text);
+      } else {
         last.push(text);
-        if (last.length > 100) last.shift();
+        if (last.length > 100) {
+          last.shift();
+        }
       }
+
       if (live > 0) {
         const bytes = Buffer.from(redact(line));
         const part = bytes.subarray(0, live);
@@ -92,6 +108,7 @@ export async function script(
         live -= part.length;
       }
     };
+
     stream.on("data", (chunk: Buffer) => {
       writeSync(fd, chunk);
       pending += decoder.write(chunk);
@@ -100,12 +117,15 @@ export async function script(
         emit(pending.slice(0, end + 1));
         pending = pending.slice(end + 1);
       }
+
       // Bound long unterminated lines while retaining any secret crossing the cut.
       if (pending.length > 65536 + hold) {
         let cut = 32768;
         for (const secret of secrets) {
           const pos = pending.lastIndexOf(secret, cut);
-          if (pos >= 0 && pos + secret.length > cut) cut = pos;
+          if (pos >= 0 && pos + secret.length > cut) {
+            cut = pos;
+          }
         }
         if (cut > 0) {
           emit(pending.slice(0, cut));
@@ -113,12 +133,16 @@ export async function script(
         }
       }
     });
+
     return () => {
       pending += decoder.end();
-      if (pending) emit(pending);
+      if (pending) {
+        emit(pending);
+      }
       closeSync(fd);
     };
   });
+
   const timer = setTimeout(
     () => {
       try {
@@ -129,6 +153,7 @@ export async function script(
     },
     60 * 60 * 1000,
   );
+
   const code = await new Promise<number>((resolve) => {
     child.once("error", () => resolve(127));
     child.once("close", (status, signal) =>
@@ -137,12 +162,14 @@ export async function script(
   });
   clearTimeout(timer);
   streams.forEach((finish) => finish());
+
   const short = (text: string, tail = false) => {
     const bytes = Buffer.from(text);
     return (tail ? bytes.subarray(-20000) : bytes.subarray(0, 20000))
       .toString("utf8")
       .replace(/^\uFFFD|\uFFFD$/g, "");
   };
+
   let extra = "";
   if (env.GITHUB_STEP_SUMMARY) {
     try {
@@ -153,10 +180,13 @@ export async function script(
         const bytes = Buffer.from(secret);
         let at = source.indexOf(bytes, Math.max(0, 16000 - bytes.length + 1));
         while (at >= 0 && at < 16000) {
-          if (at + bytes.length > 16000) boundary = Math.max(boundary, at + bytes.length);
+          if (at + bytes.length > 16000) {
+            boundary = Math.max(boundary, at + bytes.length);
+          }
           at = source.indexOf(bytes, at + 1);
         }
       }
+
       const sanitized = redact(source.subarray(0, boundary).toString("utf8"));
       extra =
         "\nWorkflow summary:\n" +
@@ -171,6 +201,7 @@ export async function script(
       /* reporting cannot change the test result */
     }
   }
+
   const summary =
     short(first.join("")) + (last.length ? "\n…\n" + short(last.join(""), true) : "") + extra;
   try {
@@ -178,6 +209,7 @@ export async function script(
   } catch {
     console.warn("Could not save private test summary");
   }
+
   if (env.GITHUB_STEP_SUMMARY) {
     try {
       appendFileSync(env.GITHUB_STEP_SUMMARY, summary);
@@ -185,6 +217,7 @@ export async function script(
       console.warn("Could not append test summary");
     }
   }
+
   return {
     code,
     script: file,
@@ -199,15 +232,20 @@ export function readBounded(file: string, limit: number, truncate = false): Buff
   const fd = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW);
   try {
     const stat = fstatSync(fd);
-    if (!stat.isFile() || (!truncate && stat.size > limit))
+    if (!stat.isFile() || (!truncate && stat.size > limit)) {
       throw Error("Invalid file type or size");
+    }
+
     const bytes = Buffer.alloc(Math.min(stat.size, limit));
     let size = 0;
     while (size < bytes.length) {
       const count = readSync(fd, bytes, size, bytes.length - size, null);
-      if (!count) break;
+      if (!count) {
+        break;
+      }
       size += count;
     }
+
     return bytes.subarray(0, size);
   } finally {
     closeSync(fd);
@@ -228,20 +266,26 @@ export async function syncVersion(
   } catch {
     console.warn("Could not remove private update logs");
   }
-  if (result.code) throw Error(`Update script failed with status ${result.code}`);
+  if (result.code) {
+    throw Error(`Update script failed with status ${result.code}`);
+  }
+
   const untracked = (
     command("git", ["ls-files", "--others", "-z"], cwd) +
     command("git", ["diff", "--name-only", "--no-renames", "--diff-filter=A", "HEAD", "-z"], cwd)
   )
     .split("\0")
     .filter(Boolean);
-  if (untracked.length)
+  if (untracked.length) {
     throw Error(`New paths must be resolved before committing:\n${untracked.join("\n")}`);
+  }
   if (!command("git", ["status", "--porcelain", "--untracked-files=no"], cwd).trim()) {
-    if (command("git", ["rev-list", "--count", "@{upstream}..HEAD"], cwd).trim() !== "0")
+    if (command("git", ["rev-list", "--count", "@{upstream}..HEAD"], cwd).trim() !== "0") {
       command("git", ["push"], cwd);
+    }
     return;
   }
+
   const after = project(root, cwd);
   const detail =
     before.outputs.version === after.outputs.version

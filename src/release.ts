@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   cpSync,
   mkdtempSync,
@@ -12,16 +13,19 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve, basename, sep } from "node:path";
-import { createHash } from "node:crypto";
+
 import { stringify } from "yaml";
+
 import { command, safeEnv, readBounded } from "./execution.ts";
-import { architecture, architectures, project, yaml, scalar, mapping } from "./project.ts";
-import { channel, snapName, revisions } from "./validation.ts";
-import { input, outputs } from "./runtime.ts";
 import { api, request, ApiError, marker } from "./github.ts";
-import { repository } from "./validation.ts";
 import { revision, fetchManifests, type Manifest } from "./manifests.ts";
+import { architecture, architectures, project, yaml, scalar, mapping } from "./project.ts";
+import { input, outputs } from "./runtime.ts";
+import { channel, snapName, revisions } from "./validation.ts";
+import { repository } from "./validation.ts";
+
 export { revisions } from "./validation.ts";
+
 export interface Published {
   snap: string;
   root: string;
@@ -32,6 +36,7 @@ export interface Published {
   digest: string;
   sourceSha: string;
 }
+
 export interface ReleaseOptions {
   cwd: string;
   root: string;
@@ -40,16 +45,24 @@ export interface ReleaseOptions {
   storeToken: string;
   launchpadToken: string;
 }
+
 export const statePath = (cwd: string, arch: string) =>
   join(cwd, `.ci-release-${architecture(arch)}.json`);
+
 async function digest(file: string) {
   const stat = lstatSync(file);
-  if (!stat.isFile() || stat.size < 1 || stat.size > 16 * 1024 ** 3)
+  if (!stat.isFile() || stat.size < 1 || stat.size > 16 * 1024 ** 3) {
     throw Error("Invalid snap/component file");
+  }
+
   const hash = createHash("sha384");
-  for await (const chunk of createReadStream(file)) hash.update(chunk);
+  for await (const chunk of createReadStream(file)) {
+    hash.update(chunk);
+  }
+
   return hash.digest("hex");
 }
+
 function readState(file: string): Published {
   const value = JSON.parse(readBounded(file, 4096).toString("utf8")) as Published;
   snapName(value.snap);
@@ -61,26 +74,34 @@ function readState(file: string): Published {
     !/^[a-f0-9]{40}$/.test(value.sourceSha) ||
     typeof value.root !== "string" ||
     !/^[A-Za-z0-9.+:~_-]{1,32}$/.test(value.version)
-  )
+  ) {
     throw Error("Invalid release state");
+  }
   return value;
 }
 
 export async function publish(options: ReleaseOptions): Promise<Published> {
-  const p = project(options.root, options.cwd),
-    snap = snapName(p.outputs["snap-name"]),
-    arch = architecture(options.architecture),
-    destination = channel(options.channel);
-  if (!architectures(p.data).includes(arch))
+  const p = project(options.root, options.cwd);
+  const snap = snapName(p.outputs["snap-name"]);
+  const arch = architecture(options.architecture);
+  const destination = channel(options.channel);
+  if (!architectures(p.data).includes(arch)) {
     throw Error("Architecture is not selected by the recipe");
-  if (!options.storeToken || !options.launchpadToken)
+  }
+  if (!options.storeToken || !options.launchpadToken) {
     throw Error("Store and Launchpad credentials required");
-  const sourceSha = command("git", ["rev-parse", "HEAD"], options.cwd).trim(),
-    selectedRoot = relative(options.cwd, p.root) || ".";
-  const file = statePath(options.cwd, arch),
-    env = { ...safeEnv(), SNAPCRAFT_STORE_CREDENTIALS: options.storeToken };
-  const readback = () =>
-    revisions(command("snapcraft", ["revisions", snap, "--arch", arch], options.cwd, env));
+  }
+
+  const sourceSha = command("git", ["rev-parse", "HEAD"], options.cwd).trim();
+  const selectedRoot = relative(options.cwd, p.root) || ".";
+  const file = statePath(options.cwd, arch);
+  const env = { ...safeEnv(), SNAPCRAFT_STORE_CREDENTIALS: options.storeToken };
+
+  const readback = () => {
+    const output = command("snapcraft", ["revisions", snap, "--arch", arch], options.cwd, env);
+    return revisions(output);
+  };
+
   const verify = async (state: Published) => {
     const row = readback().find(
       (r) =>
@@ -89,21 +110,28 @@ export async function publish(options: ReleaseOptions): Promise<Published> {
         r.architectures.includes(arch) &&
         r.channels.includes(`${destination}*`),
     );
-    if (!row) throw Error("Exact release state not active in Store");
+    if (!row) {
+      throw Error("Exact release state not active in Store");
+    }
+
     const dir = mkdtempSync(join(tmpdir(), "snap-download-"));
     try {
       command("snap", ["download", snap, `--revision=${state.revision}`], dir, safeEnv());
-      if ((await digest(join(dir, `${snap}_${state.revision}.snap`))) !== state.digest)
+      if ((await digest(join(dir, `${snap}_${state.revision}.snap`))) !== state.digest) {
         throw Error("Store snap digest differs from release state");
+      }
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   };
+
   let saved: Published | undefined;
   try {
     saved = readState(file);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw error;
+    }
   }
   if (saved) {
     if (
@@ -113,19 +141,23 @@ export async function publish(options: ReleaseOptions): Promise<Published> {
       saved.channel !== destination ||
       saved.architecture !== arch ||
       (p.data.version != null && saved.version !== scalar(p.data.version))
-    )
+    ) {
       throw Error("Release state does not match the selected project/source/channel");
+    }
     await verify(saved);
     return saved;
   }
-  if (Number(process.env.GITHUB_RUN_ATTEMPT || "1") > 1)
+
+  if (Number(process.env.GITHUB_RUN_ATTEMPT || "1") > 1) {
     throw Error("Rerun requires the exact saved release state before build/upload");
+  }
+
   const baseline = new Set(readback().map((r) => r.revision));
-  let attempted = false,
-    confirmed: Published | undefined;
-  const temporary = mkdtempSync(join(tmpdir(), "snap-release-")),
-    stage = join(temporary, "project"),
-    home = join(temporary, "home");
+  let attempted = false;
+  let confirmed: Published | undefined;
+  const temporary = mkdtempSync(join(tmpdir(), "snap-release-"));
+  const stage = join(temporary, "project");
+  const home = join(temporary, "home");
   try {
     const sourceRoot = realpathSync(p.root);
     cpSync(p.root, stage, {
@@ -135,8 +167,9 @@ export async function publish(options: ReleaseOptions): Promise<Published> {
         const stat = lstatSync(path);
         if (stat.isSymbolicLink()) {
           const target = realpathSync(path);
-          if (!target.startsWith(`${sourceRoot}${sep}`) || !lstatSync(target).isFile())
+          if (!target.startsWith(`${sourceRoot}${sep}`) || !lstatSync(target).isFile()) {
             throw Error("Project symlink must target an in-project regular file");
+          }
           return true;
         }
         return (
@@ -145,19 +178,25 @@ export async function publish(options: ReleaseOptions): Promise<Published> {
         );
       },
     });
+
     mkdirSync(join(home, ".local/share/snapcraft/provider/launchpad"), {
       recursive: true,
       mode: 0o700,
     });
-    for (const suffix of ["provider/launchpad/credentials", "launchpad-credentials"])
+    for (const suffix of ["provider/launchpad/credentials", "launchpad-credentials"]) {
       writeFileSync(join(home, ".local/share/snapcraft", suffix), options.launchpadToken, {
         mode: 0o600,
       });
+    }
+
     const stagedYaml = resolve(stage, relative(p.root, p.yaml));
     const args = ["remote-build", "--launchpad-accept-public-upload"];
-    if (p.data.base !== "core24")
+    if (p.data.base !== "core24") {
       writeFileSync(stagedYaml, stringify({ ...p.data, architectures: [{ "build-on": arch }] }));
-    else args.push(`--build-for=${arch}`);
+    } else {
+      args.push(`--build-for=${arch}`);
+    }
+
     command("git", ["init", "-b", `build-${arch}`], stage);
     command("git", ["add", "."], stage);
     command(
@@ -175,12 +214,16 @@ export async function publish(options: ReleaseOptions): Promise<Published> {
       ],
       stage,
     );
+
     command("snapcraft", args, stage, { ...safeEnv(), HOME: home });
+
     const files = readdirSync(stage).filter((f) => f.endsWith(".snap"));
-    if (files.length !== 1) throw Error("Expected exactly one fresh snap");
-    const snapFile = join(stage, files[0]),
-      snapDigest = await digest(snapFile),
-      metadata = yaml(command("unsquashfs", ["-cat", snapFile, "meta/snap.yaml"], stage));
+    if (files.length !== 1) {
+      throw Error("Expected exactly one fresh snap");
+    }
+    const snapFile = join(stage, files[0]);
+    const snapDigest = await digest(snapFile);
+    const metadata = yaml(command("unsquashfs", ["-cat", snapFile, "meta/snap.yaml"], stage));
     const version = scalar(metadata.version);
     if (
       metadata.name !== snap ||
@@ -188,25 +231,33 @@ export async function publish(options: ReleaseOptions): Promise<Published> {
       !metadata.architectures.includes(arch) ||
       !/^[A-Za-z0-9.+:~_-]{1,32}$/.test(version) ||
       (p.data.version != null && scalar(p.data.version) !== version)
-    )
+    ) {
       throw Error("Fresh snap metadata mismatch");
-    const components = p.data.components == null ? {} : mapping(p.data.components),
-      componentArgs: string[] = [];
+    }
+
+    const components = p.data.components == null ? {} : mapping(p.data.components);
+    const componentArgs: string[] = [];
     for (const [name, value] of Object.entries(components)) {
       snapName(name);
       const v = mapping(value).version;
       const path = join(stage, `${snap}+${name}${v == null ? "" : `_${scalar(v)}`}.comp`);
       await digest(path);
       const meta = yaml(command("unsquashfs", ["-cat", path, "meta/component.yaml"], stage));
-      if (meta.component !== `${snap}+${name}` || (v != null && scalar(meta.version) !== scalar(v)))
+      if (
+        meta.component !== `${snap}+${name}` ||
+        (v != null && scalar(meta.version) !== scalar(v))
+      ) {
         throw Error("Fresh component metadata mismatch");
+      }
       componentArgs.push("--component", `${name}=${path}`);
     }
     if (
       readdirSync(stage).filter((f) => f.endsWith(".comp")).length !==
       Object.keys(components).length
-    )
+    ) {
       throw Error("Unexpected fresh component set");
+    }
+
     command(
       "review-tools.snap-review",
       [
@@ -217,6 +268,7 @@ export async function publish(options: ReleaseOptions): Promise<Published> {
       ],
       stage,
     );
+
     attempted = true;
     let output = "";
     try {
@@ -229,6 +281,7 @@ export async function publish(options: ReleaseOptions): Promise<Published> {
     } catch {
       /* An ambiguous upload is reconciled by exact Store readback, never retried. */
     }
+
     const reported = [...output.matchAll(/Revision ['"]?([1-9][0-9]*)['"]? created for/g)].map(
       (m) => m[1],
     );
@@ -258,20 +311,24 @@ export async function publish(options: ReleaseOptions): Promise<Published> {
         renameSync(`${file}.tmp`, file);
         return state;
       }
-      if (attempt < 2) await new Promise((r) => setTimeout(r, 1000));
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 1000));
+      }
     }
     throw Error(
       "Upload attempted once; publication is unconfirmed. Reconcile Store state before any retry",
     );
   } catch (error) {
-    if (confirmed)
+    if (confirmed) {
       throw Error(
         `Published ${snap} revision ${confirmed.revision} to ${destination}; state persistence failed. Recovery state: ${JSON.stringify(confirmed)}`,
       );
-    if (attempted)
+    }
+    if (attempted) {
       throw Error(
         `Upload attempted once for ${snap} to ${destination}; publication is unconfirmed. ${error instanceof Error ? error.message : "Readback failed"}. Reconcile before retrying.`,
       );
+    }
     throw error;
   } finally {
     rmSync(temporary, { recursive: true, force: true });
@@ -288,10 +345,11 @@ export async function tagRelease(
   base = api,
 ) {
   repository(repo);
-  const tag = `${multi ? `${state.snap}-` : ""}${state.version}/rev${state.revision}/${state.architecture}`,
-    message = `Revision ${state.revision}, released for ${state.architecture}`;
-  const path = `/repos/${repo}/git`,
-    refPath = `${path}/ref/tags/${encodeURIComponent(tag)}`;
+  const tag = `${multi ? `${state.snap}-` : ""}${state.version}/rev${state.revision}/${state.architecture}`;
+  const message = `Revision ${state.revision}, released for ${state.architecture}`;
+  const path = `/repos/${repo}/git`;
+  const refPath = `${path}/ref/tags/${encodeURIComponent(tag)}`;
+
   const verify = async () => {
     try {
       const ref = await request<{ object: { sha: string; type: string } }>(
@@ -301,7 +359,9 @@ export async function tagRelease(
         undefined,
         base,
       );
-      if (ref.object.type !== "tag") throw Error("Existing tag is not annotated");
+      if (ref.object.type !== "tag") {
+        throw Error("Existing tag is not annotated");
+      }
       const data = await request<{
         tag: string;
         message: string;
@@ -312,16 +372,22 @@ export async function tagRelease(
         data.message.trim() !== message ||
         data.object.sha !== state.sourceSha ||
         data.object.type !== "commit"
-      )
+      ) {
         throw Error("Existing tag differs from exact release state");
+      }
       return true;
     } catch (error) {
-      if (error instanceof ApiError && error.status === 404) return false;
+      if (error instanceof ApiError && error.status === 404) {
+        return false;
+      }
       throw error;
     }
   };
+
   try {
-    if (await verify()) return;
+    if (await verify()) {
+      return;
+    }
     const object = await request<{ sha: string }>(
       "POST",
       `${path}/tags`,
@@ -344,9 +410,13 @@ export async function tagRelease(
         base,
       );
     } catch (error) {
-      if (!(await verify())) throw error;
+      if (!(await verify())) {
+        throw error;
+      }
     }
-    if (!(await verify())) throw Error("Tag not visible after creation");
+    if (!(await verify())) {
+      throw Error("Tag not visible after creation");
+    }
   } catch {
     throw Error(
       `Published ${state.snap} revision ${state.revision} to ${state.channel}; tag ${tag} is unconfirmed. Resume from saved state`,
@@ -365,18 +435,20 @@ export async function verifyManifest(
   try {
     const rows: Manifest[] = await fetchManifests(token, repo, run, dir, undefined, base);
     const row = rows.find((m) => m.architecture === state.architecture);
-    if (!row || row.name !== state.snap || row.revision !== state.revision)
+    if (!row || row.name !== state.snap || row.revision !== state.revision) {
       throw Error("Stored manifest differs from confirmed publication");
+    }
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 }
 
 export async function releaseAction() {
-  const cwd = process.cwd(),
-    arch = architecture(input("architecture")),
-    p = project(input("snapcraft-project-root"));
+  const cwd = process.cwd();
+  const arch = architecture(input("architecture"));
+  const p = project(input("snapcraft-project-root"));
   const file = statePath(cwd, arch);
+
   if (process.env.CI_PHASE === "prepare") {
     outputs({
       "state-name": `release-state-${snapName(p.outputs["snap-name"])}-${marker(relative(cwd, p.root) || ".").slice(0, 12)}-${arch}`,
@@ -384,6 +456,7 @@ export async function releaseAction() {
     });
     return;
   }
+
   if (process.env.CI_PHASE === "artifact") {
     await verifyManifest(
       readState(file),
@@ -393,6 +466,7 @@ export async function releaseAction() {
     );
     return;
   }
+
   if (process.env.CI_PHASE === "tag") {
     await tagRelease(
       readState(file),
@@ -404,12 +478,14 @@ export async function releaseAction() {
     );
     return;
   }
+
   if (process.env.CI_PHASE === "report") {
     const s = readState(file);
     throw Error(
       `Published ${s.snap} revision ${s.revision} to ${s.channel}; artifact/tag phase failed. Exact state: ${file}`,
     );
   }
+
   const state = await publish({
     cwd,
     root: input("snapcraft-project-root"),

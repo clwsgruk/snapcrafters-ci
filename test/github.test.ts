@@ -1,5 +1,7 @@
 import { createServer } from "node:http";
+
 import { expect, test } from "vitest";
+
 import { request, marked } from "../src/github.ts";
 test("explicit tokens and disconnect recovery create exactly one marked comment", async () => {
   const comments: { id: number; body: string }[] = [];

@@ -8689,41 +8689,10 @@ var require_dist = __commonJS({
 });
 
 // src/manifests.ts
-var import_yauzl = __toESM(require_yauzl(), 1);
-var import_node_zlib = require("node:zlib");
 var import_node_fs = require("node:fs");
 var import_node_path = require("node:path");
-
-// src/project.ts
-var import_yaml = __toESM(require_dist(), 1);
-function mapping(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw Error("Expected a mapping");
-  return value;
-}
-function yaml(source) {
-  return mapping((0, import_yaml.parse)(source, { intAsBigInt: true, uniqueKeys: true, maxAliasCount: 50 }));
-}
-var supportedArchitectures = [
-  "amd64",
-  "arm64",
-  "armhf",
-  "i386",
-  "ppc64el",
-  "riscv64",
-  "s390x"
-];
-function architecture(value) {
-  if (typeof value !== "string" || !supportedArchitectures.includes(value))
-    throw Error(`Unsupported architecture: ${scalar(value)}`);
-  return value;
-}
-function scalar(value) {
-  if (value == null) return "null";
-  if (!["string", "number", "bigint", "boolean"].includes(typeof value))
-    throw Error("Expected a scalar");
-  return String(value);
-}
+var import_node_zlib = require("node:zlib");
+var import_yauzl = __toESM(require_yauzl(), 1);
 
 // src/github.ts
 var api = "https://api.github.com";
@@ -8737,21 +8706,32 @@ var ApiError = class extends Error {
 async function bounded(response, max = 8 * 1024 * 1024) {
   const chunks = [];
   let size = 0;
-  if (!response.body) throw Error("Missing response body");
+  if (!response.body) {
+    throw Error("Missing response body");
+  }
   for await (const chunk of response.body) {
     size += chunk.length;
-    if (size > max) throw Error("Response size limit exceeded");
+    if (size > max) {
+      throw Error("Response size limit exceeded");
+    }
     chunks.push(chunk);
   }
   return Buffer.concat(chunks);
 }
 async function request(method, path, token, body, base = api, deadline = Date.now() + 2e4) {
-  if (Date.now() >= deadline) throw Error("GitHub operation deadline exceeded");
-  if (!token) throw Error("Explicit GitHub token required");
-  if (!path.startsWith("/") || path.startsWith("//")) throw Error("Invalid API path");
+  if (Date.now() >= deadline) {
+    throw Error("GitHub operation deadline exceeded");
+  }
+  if (!token) {
+    throw Error("Explicit GitHub token required");
+  }
+  if (!path.startsWith("/") || path.startsWith("//")) {
+    throw Error("Invalid API path");
+  }
   const text = body === void 0 ? void 0 : JSON.stringify(body);
-  if (text && Buffer.byteLength(text) > 16 * 1024 * 1024)
+  if (text && Buffer.byteLength(text) > 16 * 1024 * 1024) {
     throw Error("Request size limit exceeded");
+  }
   const response = await fetch(`${base}${path}`, {
     method,
     headers: {
@@ -8787,29 +8767,77 @@ async function pages(path, token, field, base = api) {
       base
     );
     const rows = field ? data[field] : data;
-    if (!Array.isArray(rows)) throw Error("Invalid paginated response");
+    if (!Array.isArray(rows)) {
+      throw Error("Invalid paginated response");
+    }
     result.push(...rows);
-    if (rows.length < 100) return result;
+    if (rows.length < 100) {
+      return result;
+    }
   }
   throw Error("Pagination limit exceeded");
 }
 
+// src/project.ts
+var import_yaml = __toESM(require_dist(), 1);
+function mapping(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw Error("Expected a mapping");
+  }
+  return value;
+}
+function yaml(source) {
+  return mapping((0, import_yaml.parse)(source, { intAsBigInt: true, uniqueKeys: true, maxAliasCount: 50 }));
+}
+var supportedArchitectures = [
+  "amd64",
+  "arm64",
+  "armhf",
+  "i386",
+  "ppc64el",
+  "riscv64",
+  "s390x"
+];
+function architecture(value) {
+  if (typeof value !== "string" || !supportedArchitectures.includes(value)) {
+    throw Error(`Unsupported architecture: ${scalar(value)}`);
+  }
+  return value;
+}
+function scalar(value) {
+  if (value == null) {
+    return "null";
+  }
+  if (!["string", "number", "bigint", "boolean"].includes(typeof value)) {
+    throw Error("Expected a scalar");
+  }
+  return String(value);
+}
+
 // src/manifests.ts
 function revision(value) {
-  if (typeof value !== "string" && typeof value !== "bigint")
+  if (typeof value !== "string" && typeof value !== "bigint") {
     throw Error("Revision must be an exact positive decimal string");
+  }
   const text = String(value);
-  if (!/^[1-9][0-9]{0,39}$/.test(text)) throw Error("Invalid revision");
+  if (!/^[1-9][0-9]{0,39}$/.test(text)) {
+    throw Error("Invalid revision");
+  }
   return text;
 }
 function manifest(source, label, snap) {
-  const data = yaml(source), name = scalar(data.name), arch = architecture(data.architecture);
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name) || name.length > 40 || label !== `manifest-${arch}` || snap && snap !== name)
+  const data = yaml(source);
+  const name = scalar(data.name);
+  const arch = architecture(data.architecture);
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name) || name.length > 40 || label !== `manifest-${arch}` || snap && snap !== name) {
     throw Error("Manifest identity mismatch");
+  }
   return { name, architecture: arch, revision: revision(data.revision) };
 }
 async function unpack(bytes, label, snap) {
-  if (bytes.length > 1024 * 1024) throw Error("Archive size limit");
+  if (bytes.length > 1024 * 1024) {
+    throw Error("Archive size limit");
+  }
   return new Promise(
     (resolve2, reject) => (0, import_yauzl.fromBuffer)(bytes, { lazyEntries: true, validateEntrySizes: true }, (error, zip) => {
       if (error || !zip) {
@@ -8840,12 +8868,16 @@ async function unpack(bytes, label, snap) {
             if (size > 65536) {
               stream.destroy();
               fail(Error("Decompression limit"));
-            } else chunks.push(chunk);
+            } else {
+              chunks.push(chunk);
+            }
           });
           stream.on("end", () => {
             try {
               const data = Buffer.concat(chunks);
-              if ((0, import_node_zlib.crc32)(data) !== entry.crc32) throw Error("ZIP checksum mismatch");
+              if ((0, import_node_zlib.crc32)(data) !== entry.crc32) {
+                throw Error("ZIP checksum mismatch");
+              }
               result = manifest(data.toString("utf8"), label, snap);
               zip.readEntry();
             } catch (error3) {
@@ -8856,26 +8888,32 @@ async function unpack(bytes, label, snap) {
       });
       zip.on("end", () => {
         zip.close();
-        if (!result) reject(Error("Empty archive"));
-        else resolve2(result);
+        if (!result) {
+          reject(Error("Empty archive"));
+        } else {
+          resolve2(result);
+        }
       });
       zip.readEntry();
     })
   );
 }
 async function fetchManifests(token, repository, run, directory = process.cwd(), expected, base = api) {
-  if (!/^[\w.-]+\/[\w.-]+$/.test(repository) || !/^[1-9]\d*$/.test(run))
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repository) || !/^[1-9]\d*$/.test(run)) {
     throw Error("Invalid repository/run");
+  }
   const artifacts = await pages(
     `/repos/${repository}/actions/runs/${run}/artifacts`,
     token,
     "artifacts",
     base
   );
-  const manifests = [], names = /* @__PURE__ */ new Set();
+  const manifests = [];
+  const names = /* @__PURE__ */ new Set();
   for (const artifact of artifacts.filter((a) => a.name.startsWith("manifest-"))) {
-    if (artifact.expired || names.has(artifact.name) || !Number.isSafeInteger(artifact.id))
+    if (artifact.expired || names.has(artifact.name) || !Number.isSafeInteger(artifact.id)) {
       throw Error("Expired or duplicate artifact");
+    }
     names.add(artifact.name);
     const response = await fetch(
       `${base}/repos/${repository}/actions/artifacts/${artifact.id}/zip`,
@@ -8888,32 +8926,43 @@ async function fetchManifests(token, repository, run, directory = process.cwd(),
     let download = response;
     if (response.status === 302) {
       const location = new URL(response.headers.get("location") || "");
-      if (location.protocol !== "https:") throw Error("Unsafe artifact redirect");
+      if (location.protocol !== "https:") {
+        throw Error("Unsafe artifact redirect");
+      }
       download = await fetch(location, { redirect: "error", signal: AbortSignal.timeout(2e4) });
     }
-    if (!download.ok) throw Error(`Artifact download failed (${download.status})`);
+    if (!download.ok) {
+      throw Error(`Artifact download failed (${download.status})`);
+    }
     manifests.push(
       await unpack(await bounded(download, 1024 * 1024), artifact.name, expected?.snap)
     );
   }
-  if (new Set(manifests.map((m) => m.name)).size > 1) throw Error("Multiple snaps in manifest set");
-  if (expected && expected.architectures && manifests.length && JSON.stringify(manifests.map((m) => m.architecture).sort()) !== JSON.stringify([...expected.architectures].sort()))
+  if (new Set(manifests.map((m) => m.name)).size > 1) {
+    throw Error("Multiple snaps in manifest set");
+  }
+  if (expected && expected.architectures && manifests.length && JSON.stringify(manifests.map((m) => m.architecture).sort()) !== JSON.stringify([...expected.architectures].sort())) {
     throw Error("Manifest architecture set mismatch");
-  if ((0, import_node_fs.readdirSync)(directory).some((p) => /^manifest-.*\.yaml$/.test(p) && !names.has(p.slice(0, -5))))
+  }
+  if ((0, import_node_fs.readdirSync)(directory).some((p) => /^manifest-.*\.yaml$/.test(p) && !names.has(p.slice(0, -5)))) {
     throw Error("Unexpected stale manifest outside this run's artifact set");
+  }
   for (const m of manifests) {
     const file = (0, import_node_path.resolve)(directory, `manifest-${m.architecture}.yaml`);
     try {
       const stat = (0, import_node_fs.lstatSync)(file);
       if (!stat.isFile() || stat.isSymbolicLink() || JSON.stringify(
         manifest((0, import_node_fs.readFileSync)(file, "utf8"), `manifest-${m.architecture}`, m.name)
-      ) !== JSON.stringify(m))
+      ) !== JSON.stringify(m)) {
         throw Error("Existing manifest differs");
+      }
     } catch (error) {
-      if (error.code !== "ENOENT") throw error;
+      if (error.code !== "ENOENT") {
+        throw error;
+      }
     }
   }
-  for (const m of manifests)
+  for (const m of manifests) {
     (0, import_node_fs.writeFileSync)(
       (0, import_node_path.resolve)(directory, `manifest-${m.architecture}.yaml`),
       `name: ${m.name}
@@ -8922,19 +8971,23 @@ revision: '${m.revision}'
 `,
       { mode: 384 }
     );
+  }
   return manifests;
 }
 
 // src/runtime.ts
 function validateRunner(env = process.env, node = process.version) {
-  if (env.GITHUB_SERVER_URL !== "https://github.com" || env.RUNNER_ENVIRONMENT !== "github-hosted" || env.RUNNER_OS !== "Linux" || !["ubuntu22", "ubuntu24"].includes(env.ImageOS || "") || !node.startsWith("v24."))
+  if (env.GITHUB_SERVER_URL !== "https://github.com" || env.RUNNER_ENVIRONMENT !== "github-hosted" || env.RUNNER_OS !== "Linux" || !["ubuntu22", "ubuntu24"].includes(env.ImageOS || "") || !node.startsWith("v24.")) {
     throw Error("Requires github.com-hosted Ubuntu 22.04/24.04 and Node 24");
+  }
 }
 var input = (name) => process.env[`INPUT_${name.toUpperCase().replaceAll("-", "_")}`] || "";
 async function main(action) {
   try {
     validateRunner();
-    if (process.env.CI_PHASE !== "validate") await action();
+    if (process.env.CI_PHASE !== "validate") {
+      await action();
+    }
   } catch (error) {
     console.error(error instanceof Error ? error.message : "Action failed");
     process.exitCode = 1;

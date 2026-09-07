@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+
 import { promoteCommand } from "../src/promotion.ts";
 test("promotion accepts only the whole exact command", () => {
   expect(promoteCommand("/promote 12,9007199254740993 latest/stable done")).toEqual({

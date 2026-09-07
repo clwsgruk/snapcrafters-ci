@@ -8688,13 +8688,47 @@ var require_yauzl = __commonJS({
   }
 });
 
-// src/project.ts
+// src/runtime.ts
+var import_node_crypto = require("node:crypto");
 var import_node_fs = require("node:fs");
+function validateRunner(env = process.env, node = process.version) {
+  if (env.GITHUB_SERVER_URL !== "https://github.com" || env.RUNNER_ENVIRONMENT !== "github-hosted" || env.RUNNER_OS !== "Linux" || !["ubuntu22", "ubuntu24"].includes(env.ImageOS || "") || !node.startsWith("v24.")) {
+    throw Error("Requires github.com-hosted Ubuntu 22.04/24.04 and Node 24");
+  }
+}
+var input = (name) => process.env[`INPUT_${name.toUpperCase().replaceAll("-", "_")}`] || "";
+function outputs(values) {
+  for (const [key, value] of Object.entries(values)) {
+    const delimiter = (0, import_node_crypto.randomUUID)();
+    (0, import_node_fs.appendFileSync)(process.env.GITHUB_OUTPUT, `${key}<<${delimiter}
+${value}
+${delimiter}
+`);
+  }
+}
+async function main(action) {
+  try {
+    validateRunner();
+    if (process.env.CI_PHASE !== "validate") {
+      await action();
+    }
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : "Action failed");
+    process.exitCode = 1;
+  }
+}
+
+// src/execution.ts
+var import_node_child_process = require("node:child_process");
+
+// src/project.ts
+var import_node_fs2 = require("node:fs");
 var import_node_path = require("node:path");
 var import_yaml = __toESM(require_dist(), 1);
 function mapping(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value))
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw Error("Expected a mapping");
+  }
   return value;
 }
 function yaml(source) {
@@ -8702,26 +8736,35 @@ function yaml(source) {
 }
 function project(input2 = "", cwd = process.cwd()) {
   const publicRoot = input2 || ".";
-  const checkout = (0, import_node_fs.realpathSync)(cwd), requested = (0, import_node_path.resolve)(checkout, publicRoot);
-  if (requested !== checkout && !requested.startsWith(`${checkout}${import_node_path.sep}`))
+  const checkout = (0, import_node_fs2.realpathSync)(cwd);
+  const requested = (0, import_node_path.resolve)(checkout, publicRoot);
+  if (requested !== checkout && !requested.startsWith(`${checkout}${import_node_path.sep}`)) {
     throw Error("Project root must stay inside the checkout");
-  const root = (0, import_node_fs.realpathSync)(requested);
-  if (root !== requested || !(0, import_node_fs.lstatSync)(root).isDirectory())
+  }
+  const root = (0, import_node_fs2.realpathSync)(requested);
+  if (root !== requested || !(0, import_node_fs2.lstatSync)(root).isDirectory()) {
     throw Error("Project root must be a regular checkout directory");
+  }
   const candidates = [
     ".snapcraft.yaml",
     "build-aux/snap/snapcraft.yaml",
     "snap/snapcraft.yaml",
     "snapcraft.yaml"
   ];
-  const file = candidates.filter((p) => (0, import_node_fs.existsSync)((0, import_node_path.resolve)(root, p))).at(-1);
-  if (!file) throw Error(`No snapcraft.yaml found in ${root}`);
+  const file = candidates.filter((p) => (0, import_node_fs2.existsSync)((0, import_node_path.resolve)(root, p))).at(-1);
+  if (!file) {
+    throw Error(`No snapcraft.yaml found in ${root}`);
+  }
   const absoluteYaml = (0, import_node_path.resolve)(root, file);
   const data = yaml(readProjectFile(absoluteYaml));
-  const declaration = (kind) => [`${kind}-declaration.json`, `.github/${kind}-declaration.json`].filter((p) => (0, import_node_fs.existsSync)((0, import_node_path.resolve)(cwd, p))).at(-1) || "";
-  const plugs = declaration("plug"), slots = declaration("slot");
-  for (const declaration2 of [plugs, slots])
-    if (declaration2) readProjectFile((0, import_node_path.resolve)(checkout, declaration2), 65536);
+  const declaration = (kind) => [`${kind}-declaration.json`, `.github/${kind}-declaration.json`].filter((p) => (0, import_node_fs2.existsSync)((0, import_node_path.resolve)(cwd, p))).at(-1) || "";
+  const plugs = declaration("plug");
+  const slots = declaration("slot");
+  for (const declaration2 of [plugs, slots]) {
+    if (declaration2) {
+      readProjectFile((0, import_node_path.resolve)(checkout, declaration2), 65536);
+    }
+  }
   const components = data.components == null ? {} : mapping(data.components);
   return {
     root,
@@ -8742,15 +8785,18 @@ function project(input2 = "", cwd = process.cwd()) {
   };
 }
 function readProjectFile(file, limit = 1024 * 1024) {
-  if ((0, import_node_fs.realpathSync)(file) !== file) throw Error("Project input path contains a symlink");
-  const fd = (0, import_node_fs.openSync)(file, import_node_fs.constants.O_RDONLY | import_node_fs.constants.O_NOFOLLOW);
+  if ((0, import_node_fs2.realpathSync)(file) !== file) {
+    throw Error("Project input path contains a symlink");
+  }
+  const fd = (0, import_node_fs2.openSync)(file, import_node_fs2.constants.O_RDONLY | import_node_fs2.constants.O_NOFOLLOW);
   try {
-    const stat = (0, import_node_fs.fstatSync)(fd);
-    if (!stat.isFile() || stat.size > limit)
+    const stat = (0, import_node_fs2.fstatSync)(fd);
+    if (!stat.isFile() || stat.size > limit) {
       throw Error("Project input must be a bounded regular file");
-    return (0, import_node_fs.readFileSync)(fd, "utf8");
+    }
+    return (0, import_node_fs2.readFileSync)(fd, "utf8");
   } finally {
-    (0, import_node_fs.closeSync)(fd);
+    (0, import_node_fs2.closeSync)(fd);
   }
 }
 var supportedArchitectures = [
@@ -8763,25 +8809,45 @@ var supportedArchitectures = [
   "s390x"
 ];
 function architecture(value) {
-  if (typeof value !== "string" || !supportedArchitectures.includes(value))
+  if (typeof value !== "string" || !supportedArchitectures.includes(value)) {
     throw Error(`Unsupported architecture: ${scalar(value)}`);
+  }
   return value;
 }
 function scalar(value) {
-  if (value == null) return "null";
-  if (!["string", "number", "bigint", "boolean"].includes(typeof value))
+  if (value == null) {
+    return "null";
+  }
+  if (!["string", "number", "bigint", "boolean"].includes(typeof value)) {
     throw Error("Expected a scalar");
+  }
   return String(value);
 }
 
-// src/manifests.ts
-var import_yauzl = __toESM(require_yauzl(), 1);
-var import_node_zlib = require("node:zlib");
-var import_node_fs2 = require("node:fs");
-var import_node_path2 = require("node:path");
+// src/execution.ts
+function safeEnv(env = process.env) {
+  const keys = /^(PATH|HOME|LANG|LC_ALL|TZ|CI|DISPLAY|XDG_RUNTIME_DIR|GITHUB_(WORKSPACE|SHA|REF|REF_NAME|REF_TYPE|REPOSITORY|REPOSITORY_OWNER|RUN_ID|RUN_NUMBER|RUN_ATTEMPT|JOB|ACTOR|EVENT_NAME|SERVER_URL|STEP_SUMMARY)|RUNNER_(OS|ARCH|TEMP))$/;
+  return Object.fromEntries(
+    Object.entries(env).filter(([k, v]) => keys.test(k) && v !== void 0)
+  );
+}
+function command(file, args, cwd = process.cwd(), env = safeEnv(), timeout = 6e5) {
+  try {
+    return (0, import_node_child_process.execFileSync)(file, args, {
+      cwd,
+      env,
+      encoding: "utf8",
+      timeout,
+      maxBuffer: 8 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+  } catch {
+    throw Error(`${file} ${args[0] || ""} failed`);
+  }
+}
 
 // src/github.ts
-var import_node_crypto = require("node:crypto");
+var import_node_crypto2 = require("node:crypto");
 var api = "https://api.github.com";
 var ApiError = class extends Error {
   constructor(status, conflict = false) {
@@ -8793,21 +8859,32 @@ var ApiError = class extends Error {
 async function bounded(response, max = 8 * 1024 * 1024) {
   const chunks = [];
   let size = 0;
-  if (!response.body) throw Error("Missing response body");
+  if (!response.body) {
+    throw Error("Missing response body");
+  }
   for await (const chunk of response.body) {
     size += chunk.length;
-    if (size > max) throw Error("Response size limit exceeded");
+    if (size > max) {
+      throw Error("Response size limit exceeded");
+    }
     chunks.push(chunk);
   }
   return Buffer.concat(chunks);
 }
 async function request(method, path, token, body, base = api, deadline = Date.now() + 2e4) {
-  if (Date.now() >= deadline) throw Error("GitHub operation deadline exceeded");
-  if (!token) throw Error("Explicit GitHub token required");
-  if (!path.startsWith("/") || path.startsWith("//")) throw Error("Invalid API path");
+  if (Date.now() >= deadline) {
+    throw Error("GitHub operation deadline exceeded");
+  }
+  if (!token) {
+    throw Error("Explicit GitHub token required");
+  }
+  if (!path.startsWith("/") || path.startsWith("//")) {
+    throw Error("Invalid API path");
+  }
   const text = body === void 0 ? void 0 : JSON.stringify(body);
-  if (text && Buffer.byteLength(text) > 16 * 1024 * 1024)
+  if (text && Buffer.byteLength(text) > 16 * 1024 * 1024) {
     throw Error("Request size limit exceeded");
+  }
   const response = await fetch(`${base}${path}`, {
     method,
     headers: {
@@ -8843,15 +8920,20 @@ async function pages(path, token, field, base = api) {
       base
     );
     const rows = field ? data[field] : data;
-    if (!Array.isArray(rows)) throw Error("Invalid paginated response");
+    if (!Array.isArray(rows)) {
+      throw Error("Invalid paginated response");
+    }
     result.push(...rows);
-    if (rows.length < 100) return result;
+    if (rows.length < 100) {
+      return result;
+    }
   }
   throw Error("Pagination limit exceeded");
 }
-var marker = (value) => (0, import_node_crypto.createHash)("sha256").update(JSON.stringify(value)).digest("hex");
+var marker = (value) => (0, import_node_crypto2.createHash)("sha256").update(JSON.stringify(value)).digest("hex");
 async function marked(path, body, id, token, base = api) {
-  const stamp = `<!-- snapcrafters-ci:${id} -->`, expectedBody = `${body.body || ""}
+  const stamp = `<!-- snapcrafters-ci:${id} -->`;
+  const expectedBody = `${body.body || ""}
 ${stamp}`;
   const find = async () => {
     const rows = await pages(
@@ -8863,37 +8945,54 @@ ${stamp}`;
     const matches = rows.filter((item) => item.body?.includes(stamp));
     if (matches.length > 1 || matches.some(
       (item) => item.body !== expectedBody || body.title !== void 0 && item.title !== body.title
-    ))
+    )) {
       throw Error("Deterministic marker conflicts with existing content");
+    }
     return matches[0];
   };
   const existing = await find();
-  if (existing) return existing;
+  if (existing) {
+    return existing;
+  }
   try {
     return await request("POST", path, token, { ...body, body: expectedBody }, base);
   } catch (error) {
     const recovered = await find();
-    if (recovered) return recovered;
+    if (recovered) {
+      return recovered;
+    }
     throw error;
   }
 }
 
 // src/manifests.ts
+var import_node_fs3 = require("node:fs");
+var import_node_path2 = require("node:path");
+var import_node_zlib = require("node:zlib");
+var import_yauzl = __toESM(require_yauzl(), 1);
 function revision(value) {
-  if (typeof value !== "string" && typeof value !== "bigint")
+  if (typeof value !== "string" && typeof value !== "bigint") {
     throw Error("Revision must be an exact positive decimal string");
+  }
   const text = String(value);
-  if (!/^[1-9][0-9]{0,39}$/.test(text)) throw Error("Invalid revision");
+  if (!/^[1-9][0-9]{0,39}$/.test(text)) {
+    throw Error("Invalid revision");
+  }
   return text;
 }
 function manifest(source, label, snap) {
-  const data = yaml(source), name = scalar(data.name), arch = architecture(data.architecture);
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name) || name.length > 40 || label !== `manifest-${arch}` || snap && snap !== name)
+  const data = yaml(source);
+  const name = scalar(data.name);
+  const arch = architecture(data.architecture);
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name) || name.length > 40 || label !== `manifest-${arch}` || snap && snap !== name) {
     throw Error("Manifest identity mismatch");
+  }
   return { name, architecture: arch, revision: revision(data.revision) };
 }
 async function unpack(bytes, label, snap) {
-  if (bytes.length > 1024 * 1024) throw Error("Archive size limit");
+  if (bytes.length > 1024 * 1024) {
+    throw Error("Archive size limit");
+  }
   return new Promise(
     (resolve3, reject) => (0, import_yauzl.fromBuffer)(bytes, { lazyEntries: true, validateEntrySizes: true }, (error, zip) => {
       if (error || !zip) {
@@ -8924,12 +9023,16 @@ async function unpack(bytes, label, snap) {
             if (size > 65536) {
               stream.destroy();
               fail(Error("Decompression limit"));
-            } else chunks.push(chunk);
+            } else {
+              chunks.push(chunk);
+            }
           });
           stream.on("end", () => {
             try {
               const data = Buffer.concat(chunks);
-              if ((0, import_node_zlib.crc32)(data) !== entry.crc32) throw Error("ZIP checksum mismatch");
+              if ((0, import_node_zlib.crc32)(data) !== entry.crc32) {
+                throw Error("ZIP checksum mismatch");
+              }
               result = manifest(data.toString("utf8"), label, snap);
               zip.readEntry();
             } catch (error3) {
@@ -8940,26 +9043,32 @@ async function unpack(bytes, label, snap) {
       });
       zip.on("end", () => {
         zip.close();
-        if (!result) reject(Error("Empty archive"));
-        else resolve3(result);
+        if (!result) {
+          reject(Error("Empty archive"));
+        } else {
+          resolve3(result);
+        }
       });
       zip.readEntry();
     })
   );
 }
 async function fetchManifests(token, repository2, run, directory = process.cwd(), expected, base = api) {
-  if (!/^[\w.-]+\/[\w.-]+$/.test(repository2) || !/^[1-9]\d*$/.test(run))
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repository2) || !/^[1-9]\d*$/.test(run)) {
     throw Error("Invalid repository/run");
+  }
   const artifacts = await pages(
     `/repos/${repository2}/actions/runs/${run}/artifacts`,
     token,
     "artifacts",
     base
   );
-  const manifests = [], names = /* @__PURE__ */ new Set();
+  const manifests = [];
+  const names = /* @__PURE__ */ new Set();
   for (const artifact of artifacts.filter((a) => a.name.startsWith("manifest-"))) {
-    if (artifact.expired || names.has(artifact.name) || !Number.isSafeInteger(artifact.id))
+    if (artifact.expired || names.has(artifact.name) || !Number.isSafeInteger(artifact.id)) {
       throw Error("Expired or duplicate artifact");
+    }
     names.add(artifact.name);
     const response = await fetch(
       `${base}/repos/${repository2}/actions/artifacts/${artifact.id}/zip`,
@@ -8972,33 +9081,44 @@ async function fetchManifests(token, repository2, run, directory = process.cwd()
     let download = response;
     if (response.status === 302) {
       const location = new URL(response.headers.get("location") || "");
-      if (location.protocol !== "https:") throw Error("Unsafe artifact redirect");
+      if (location.protocol !== "https:") {
+        throw Error("Unsafe artifact redirect");
+      }
       download = await fetch(location, { redirect: "error", signal: AbortSignal.timeout(2e4) });
     }
-    if (!download.ok) throw Error(`Artifact download failed (${download.status})`);
+    if (!download.ok) {
+      throw Error(`Artifact download failed (${download.status})`);
+    }
     manifests.push(
       await unpack(await bounded(download, 1024 * 1024), artifact.name, expected?.snap)
     );
   }
-  if (new Set(manifests.map((m) => m.name)).size > 1) throw Error("Multiple snaps in manifest set");
-  if (expected && expected.architectures && manifests.length && JSON.stringify(manifests.map((m) => m.architecture).sort()) !== JSON.stringify([...expected.architectures].sort()))
+  if (new Set(manifests.map((m) => m.name)).size > 1) {
+    throw Error("Multiple snaps in manifest set");
+  }
+  if (expected && expected.architectures && manifests.length && JSON.stringify(manifests.map((m) => m.architecture).sort()) !== JSON.stringify([...expected.architectures].sort())) {
     throw Error("Manifest architecture set mismatch");
-  if ((0, import_node_fs2.readdirSync)(directory).some((p) => /^manifest-.*\.yaml$/.test(p) && !names.has(p.slice(0, -5))))
+  }
+  if ((0, import_node_fs3.readdirSync)(directory).some((p) => /^manifest-.*\.yaml$/.test(p) && !names.has(p.slice(0, -5)))) {
     throw Error("Unexpected stale manifest outside this run's artifact set");
+  }
   for (const m of manifests) {
     const file = (0, import_node_path2.resolve)(directory, `manifest-${m.architecture}.yaml`);
     try {
-      const stat = (0, import_node_fs2.lstatSync)(file);
+      const stat = (0, import_node_fs3.lstatSync)(file);
       if (!stat.isFile() || stat.isSymbolicLink() || JSON.stringify(
-        manifest((0, import_node_fs2.readFileSync)(file, "utf8"), `manifest-${m.architecture}`, m.name)
-      ) !== JSON.stringify(m))
+        manifest((0, import_node_fs3.readFileSync)(file, "utf8"), `manifest-${m.architecture}`, m.name)
+      ) !== JSON.stringify(m)) {
         throw Error("Existing manifest differs");
+      }
     } catch (error) {
-      if (error.code !== "ENOENT") throw error;
+      if (error.code !== "ENOENT") {
+        throw error;
+      }
     }
   }
-  for (const m of manifests)
-    (0, import_node_fs2.writeFileSync)(
+  for (const m of manifests) {
+    (0, import_node_fs3.writeFileSync)(
       (0, import_node_path2.resolve)(directory, `manifest-${m.architecture}.yaml`),
       `name: ${m.name}
 architecture: ${m.architecture}
@@ -9006,36 +9126,42 @@ revision: '${m.revision}'
 `,
       { mode: 384 }
     );
+  }
   return manifests;
 }
 
 // src/validation.ts
 function snapName(value) {
-  if (!/^(?=.{1,40}$)(?=.*[a-z])[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value))
+  if (!/^(?=.{1,40}$)(?=.*[a-z])[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)) {
     throw Error("Invalid snap name");
+  }
   return value;
 }
 function channel(value) {
   if (!/^[a-zA-Z0-9][a-zA-Z0-9.+-]*\/(stable|candidate|beta|edge)(\/[a-zA-Z0-9][a-zA-Z0-9.+-]*)?$/.test(
     value
-  ) || value.length > 100)
+  ) || value.length > 100) {
     throw Error("Invalid channel");
+  }
   return value;
 }
 function repository(value) {
-  if (!/^[A-Za-z0-9][\w.-]*\/[A-Za-z0-9][\w.-]*$/.test(value) || value.length > 200)
+  if (!/^[A-Za-z0-9][\w.-]*\/[A-Za-z0-9][\w.-]*$/.test(value) || value.length > 200) {
     throw Error("Invalid repository");
+  }
   return value;
 }
 function revisions(text) {
   const [header, ...lines] = text.trim().split(/\r?\n/);
-  if (!/^Rev\.\s+Uploaded\s+Arches\s+Version(\s+Channels)?$/.test(header))
+  if (!/^Rev\.\s+Uploaded\s+Arches\s+Version(\s+Channels)?$/.test(header)) {
     throw Error("Unrecognized Snapcraft revisions header");
+  }
   const width = header.endsWith("Channels") ? 5 : 4;
   return lines.filter(Boolean).map((line) => {
     const fields = line.trim().split(/\s+/);
-    if (fields.length !== width || !/^\d{4}-\d\d-\d\d(?:T[\d:.]+Z?)?$/.test(fields[1]))
+    if (fields.length !== width || !/^\d{4}-\d\d-\d\d(?:T[\d:.]+Z?)?$/.test(fields[1])) {
       throw Error("Unrecognized Snapcraft revision row");
+    }
     return {
       revision: revision(fields[0]),
       architectures: fields[2].split(",").map(architecture),
@@ -9045,58 +9171,11 @@ function revisions(text) {
   });
 }
 
-// src/execution.ts
-var import_node_child_process = require("node:child_process");
-function safeEnv(env = process.env) {
-  const keys = /^(PATH|HOME|LANG|LC_ALL|TZ|CI|DISPLAY|XDG_RUNTIME_DIR|GITHUB_(WORKSPACE|SHA|REF|REF_NAME|REF_TYPE|REPOSITORY|REPOSITORY_OWNER|RUN_ID|RUN_NUMBER|RUN_ATTEMPT|JOB|ACTOR|EVENT_NAME|SERVER_URL|STEP_SUMMARY)|RUNNER_(OS|ARCH|TEMP))$/;
-  return Object.fromEntries(
-    Object.entries(env).filter(([k, v]) => keys.test(k) && v !== void 0)
-  );
-}
-function command(file, args, cwd = process.cwd(), env = safeEnv(), timeout = 6e5) {
-  try {
-    return (0, import_node_child_process.execFileSync)(file, args, {
-      cwd,
-      env,
-      encoding: "utf8",
-      timeout,
-      maxBuffer: 8 * 1024 * 1024,
-      stdio: ["ignore", "pipe", "pipe"]
-    });
-  } catch {
-    throw Error(`${file} ${args[0] || ""} failed`);
-  }
-}
-
-// src/runtime.ts
-var import_node_fs3 = require("node:fs");
-var import_node_crypto2 = require("node:crypto");
-function validateRunner(env = process.env, node = process.version) {
-  if (env.GITHUB_SERVER_URL !== "https://github.com" || env.RUNNER_ENVIRONMENT !== "github-hosted" || env.RUNNER_OS !== "Linux" || !["ubuntu22", "ubuntu24"].includes(env.ImageOS || "") || !node.startsWith("v24."))
-    throw Error("Requires github.com-hosted Ubuntu 22.04/24.04 and Node 24");
-}
-var input = (name) => process.env[`INPUT_${name.toUpperCase().replaceAll("-", "_")}`] || "";
-function outputs(values) {
-  for (const [key, value] of Object.entries(values)) {
-    const delimiter = (0, import_node_crypto2.randomUUID)();
-    (0, import_node_fs3.appendFileSync)(process.env.GITHUB_OUTPUT, `${key}<<${delimiter}
-${value}
-${delimiter}
-`);
-  }
-}
-async function main(action) {
-  try {
-    validateRunner();
-    if (process.env.CI_PHASE !== "validate") await action();
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : "Action failed");
-    process.exitCode = 1;
-  }
-}
-
 // src/testing.ts
-var table = (rows) => `<table><thead><tr><th>CPU Architecture</th><th>Revision</th></tr></thead><tbody>${rows.map((r) => `<tr><td>${r.architecture}</td><td>${r.revision}</td></tr>`).join("")}</tbody></table>`;
+var table = (rows) => {
+  const body = rows.map((row) => `<tr><td>${row.architecture}</td><td>${row.revision}</td></tr>`).join("");
+  return `<table><thead><tr><th>CPU Architecture</th><th>Revision</th></tr></thead><tbody>${body}</tbody></table>`;
+};
 function testingBody(context, instructions) {
   const fields = {
     snap_name: context.snap,
@@ -9126,15 +9205,21 @@ Maintainers can promote these revisions with:
 <!-- snapcrafters-testing:${JSON.stringify(context)} -->`;
 }
 async function callForTesting() {
-  if (input("ci-repo") !== "snapcrafters/ci")
+  if (input("ci-repo") !== "snapcrafters/ci") {
     throw Error("ci-repo overrides are deprecated; pin a forked action SHA");
-  const p = project(input("snapcraft-project-root")), snap = snapName(p.outputs["snap-name"]), repo = repository(process.env.GITHUB_REPOSITORY), token = input("github-token"), destination = channel(input("promotion-channel")), candidate = channel(input("channel"));
+  }
+  const p = project(input("snapcraft-project-root"));
+  const snap = snapName(p.outputs["snap-name"]);
+  const repo = repository(process.env.GITHUB_REPOSITORY);
+  const token = input("github-token");
+  const destination = channel(input("promotion-channel"));
+  const candidate = channel(input("channel"));
   const arches = [...new Set(input("architectures").trim().split(/\s+/).map(architecture))];
   let rows = await fetchManifests(token, repo, process.env.GITHUB_RUN_ID, process.cwd(), {
     snap,
     architectures: arches
   });
-  if (!rows.length)
+  if (!rows.length) {
     rows = arches.map((arch) => {
       const matches = revisions(
         command("snapcraft", ["revisions", snap, "--arch", arch], process.cwd(), {
@@ -9142,9 +9227,12 @@ async function callForTesting() {
           SNAPCRAFT_STORE_CREDENTIALS: input("store-token")
         })
       ).filter((r) => r.architectures.includes(arch) && r.channels.includes(`${candidate}*`));
-      if (matches.length !== 1) throw Error(`No exact active revision for ${arch}`);
+      if (matches.length !== 1) {
+        throw Error(`No exact active revision for ${arch}`);
+      }
       return { name: snap, architecture: arch, revision: matches[0].revision };
     });
+  }
   let version = p.outputs.version;
   if (p.data.version == null) {
     const versions = rows.map((row) => {
@@ -9156,10 +9244,14 @@ async function callForTesting() {
       ).filter(
         (r) => r.revision === row.revision && r.architectures.includes(row.architecture) && r.channels.includes(`${candidate}*`)
       );
-      if (matches.length !== 1) throw Error("Adopted version requires exact active Store revision");
+      if (matches.length !== 1) {
+        throw Error("Adopted version requires exact active Store revision");
+      }
       return matches[0].version;
     });
-    if (new Set(versions).size !== 1) throw Error("Adopted versions differ across architectures");
+    if (new Set(versions).size !== 1) {
+      throw Error("Adopted versions differ across architectures");
+    }
     version = versions[0];
   }
   const context = {

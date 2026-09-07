@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+
 import { revisions } from "../src/release.ts";
 test("real four/five-column Snapcraft revisions keep exact strings and channel activity", () => {
   expect(

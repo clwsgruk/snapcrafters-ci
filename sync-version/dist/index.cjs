@@ -7320,14 +7320,16 @@ var import_node_child_process = require("node:child_process");
 var import_node_fs2 = require("node:fs");
 var import_node_os = require("node:os");
 var import_node_path2 = require("node:path");
+var import_node_string_decoder = require("node:string_decoder");
 
 // src/project.ts
 var import_node_fs = require("node:fs");
 var import_node_path = require("node:path");
 var import_yaml = __toESM(require_dist(), 1);
 function mapping(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value))
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw Error("Expected a mapping");
+  }
   return value;
 }
 function yaml(source) {
@@ -7335,12 +7337,15 @@ function yaml(source) {
 }
 function project(input2 = "", cwd = process.cwd()) {
   const publicRoot = input2 || ".";
-  const checkout = (0, import_node_fs.realpathSync)(cwd), requested = (0, import_node_path.resolve)(checkout, publicRoot);
-  if (requested !== checkout && !requested.startsWith(`${checkout}${import_node_path.sep}`))
+  const checkout = (0, import_node_fs.realpathSync)(cwd);
+  const requested = (0, import_node_path.resolve)(checkout, publicRoot);
+  if (requested !== checkout && !requested.startsWith(`${checkout}${import_node_path.sep}`)) {
     throw Error("Project root must stay inside the checkout");
+  }
   const root = (0, import_node_fs.realpathSync)(requested);
-  if (root !== requested || !(0, import_node_fs.lstatSync)(root).isDirectory())
+  if (root !== requested || !(0, import_node_fs.lstatSync)(root).isDirectory()) {
     throw Error("Project root must be a regular checkout directory");
+  }
   const candidates = [
     ".snapcraft.yaml",
     "build-aux/snap/snapcraft.yaml",
@@ -7348,13 +7353,19 @@ function project(input2 = "", cwd = process.cwd()) {
     "snapcraft.yaml"
   ];
   const file = candidates.filter((p) => (0, import_node_fs.existsSync)((0, import_node_path.resolve)(root, p))).at(-1);
-  if (!file) throw Error(`No snapcraft.yaml found in ${root}`);
+  if (!file) {
+    throw Error(`No snapcraft.yaml found in ${root}`);
+  }
   const absoluteYaml = (0, import_node_path.resolve)(root, file);
   const data = yaml(readProjectFile(absoluteYaml));
   const declaration = (kind) => [`${kind}-declaration.json`, `.github/${kind}-declaration.json`].filter((p) => (0, import_node_fs.existsSync)((0, import_node_path.resolve)(cwd, p))).at(-1) || "";
-  const plugs = declaration("plug"), slots = declaration("slot");
-  for (const declaration2 of [plugs, slots])
-    if (declaration2) readProjectFile((0, import_node_path.resolve)(checkout, declaration2), 65536);
+  const plugs = declaration("plug");
+  const slots = declaration("slot");
+  for (const declaration2 of [plugs, slots]) {
+    if (declaration2) {
+      readProjectFile((0, import_node_path.resolve)(checkout, declaration2), 65536);
+    }
+  }
   const components = data.components == null ? {} : mapping(data.components);
   return {
     root,
@@ -7375,26 +7386,31 @@ function project(input2 = "", cwd = process.cwd()) {
   };
 }
 function readProjectFile(file, limit = 1024 * 1024) {
-  if ((0, import_node_fs.realpathSync)(file) !== file) throw Error("Project input path contains a symlink");
+  if ((0, import_node_fs.realpathSync)(file) !== file) {
+    throw Error("Project input path contains a symlink");
+  }
   const fd = (0, import_node_fs.openSync)(file, import_node_fs.constants.O_RDONLY | import_node_fs.constants.O_NOFOLLOW);
   try {
     const stat = (0, import_node_fs.fstatSync)(fd);
-    if (!stat.isFile() || stat.size > limit)
+    if (!stat.isFile() || stat.size > limit) {
       throw Error("Project input must be a bounded regular file");
+    }
     return (0, import_node_fs.readFileSync)(fd, "utf8");
   } finally {
     (0, import_node_fs.closeSync)(fd);
   }
 }
 function scalar(value) {
-  if (value == null) return "null";
-  if (!["string", "number", "bigint", "boolean"].includes(typeof value))
+  if (value == null) {
+    return "null";
+  }
+  if (!["string", "number", "bigint", "boolean"].includes(typeof value)) {
     throw Error("Expected a scalar");
+  }
   return String(value);
 }
 
 // src/execution.ts
-var import_node_string_decoder = require("node:string_decoder");
 function safeEnv(env = process.env) {
   const keys = /^(PATH|HOME|LANG|LC_ALL|TZ|CI|DISPLAY|XDG_RUNTIME_DIR|GITHUB_(WORKSPACE|SHA|REF|REF_NAME|REF_TYPE|REPOSITORY|REPOSITORY_OWNER|RUN_ID|RUN_NUMBER|RUN_ATTEMPT|JOB|ACTOR|EVENT_NAME|SERVER_URL|STEP_SUMMARY)|RUNNER_(OS|ARCH|TEMP))$/;
   return Object.fromEntries(
@@ -7417,16 +7433,24 @@ function command(file, args, cwd = process.cwd(), env = safeEnv(), timeout = 6e5
 }
 async function script(source, directory, env = process.env, storage = (0, import_node_os.tmpdir)()) {
   const dir = (0, import_node_fs2.mkdtempSync)((0, import_node_path2.join)(storage, "script-"));
-  const file = (0, import_node_path2.join)(dir, "caller.sh"), stdout = (0, import_node_path2.join)(dir, "stdout.log"), stderr = (0, import_node_path2.join)(dir, "stderr.log"), callerSummary = (0, import_node_path2.join)(dir, "caller-summary.md");
+  const file = (0, import_node_path2.join)(dir, "caller.sh");
+  const stdout = (0, import_node_path2.join)(dir, "stdout.log");
+  const stderr = (0, import_node_path2.join)(dir, "stderr.log");
+  const callerSummary = (0, import_node_path2.join)(dir, "caller-summary.md");
   (0, import_node_fs2.writeFileSync)(file, source, { mode: 384 });
-  if (env.GITHUB_STEP_SUMMARY) (0, import_node_fs2.writeFileSync)(callerSummary, "", { mode: 384, flag: "wx" });
+  if (env.GITHUB_STEP_SUMMARY) {
+    (0, import_node_fs2.writeFileSync)(callerSummary, "", { mode: 384, flag: "wx" });
+  }
   const secrets = Object.entries(env).filter(([k, v]) => /token|secret|password|credential/i.test(k) && v).flatMap(([, v]) => [v, ...v.split(/\r?\n/)].filter(Boolean)).sort((a, b) => b.length - a.length);
   const redact = (s) => secrets.reduce((v, secret) => v.replaceAll(secret, "***"), s).replaceAll("\x1B", "");
   const hold = secrets.reduce((n, secret) => Math.max(n, secret.length), 0);
-  const first = [], last = [];
+  const first = [];
+  const last = [];
   let live = 128 * 1024;
   const childEnv = safeEnv(env);
-  if (env.GITHUB_STEP_SUMMARY) childEnv.GITHUB_STEP_SUMMARY = callerSummary;
+  if (env.GITHUB_STEP_SUMMARY) {
+    childEnv.GITHUB_STEP_SUMMARY = callerSummary;
+  }
   const child = (0, import_node_child_process.spawn)("bash", ["--noprofile", "--norc", "-e", "-o", "pipefail", file], {
     cwd: directory,
     env: childEnv,
@@ -7434,14 +7458,18 @@ async function script(source, directory, env = process.env, storage = (0, import
     stdio: ["ignore", "pipe", "pipe"]
   });
   const streams = [child.stdout, child.stderr].map((stream, index) => {
-    const fd = (0, import_node_fs2.openSync)(index ? stderr : stdout, "wx", 384), decoder = new import_node_string_decoder.StringDecoder("utf8");
+    const fd = (0, import_node_fs2.openSync)(index ? stderr : stdout, "wx", 384);
+    const decoder = new import_node_string_decoder.StringDecoder("utf8");
     let pending = "";
     const emit = (line) => {
       const text = redact(line).slice(0, 2e3);
-      if (first.length < 100) first.push(text);
-      else {
+      if (first.length < 100) {
+        first.push(text);
+      } else {
         last.push(text);
-        if (last.length > 100) last.shift();
+        if (last.length > 100) {
+          last.shift();
+        }
       }
       if (live > 0) {
         const bytes = Buffer.from(redact(line));
@@ -7462,7 +7490,9 @@ async function script(source, directory, env = process.env, storage = (0, import
         let cut = 32768;
         for (const secret of secrets) {
           const pos = pending.lastIndexOf(secret, cut);
-          if (pos >= 0 && pos + secret.length > cut) cut = pos;
+          if (pos >= 0 && pos + secret.length > cut) {
+            cut = pos;
+          }
         }
         if (cut > 0) {
           emit(pending.slice(0, cut));
@@ -7472,7 +7502,9 @@ async function script(source, directory, env = process.env, storage = (0, import
     });
     return () => {
       pending += decoder.end();
-      if (pending) emit(pending);
+      if (pending) {
+        emit(pending);
+      }
       (0, import_node_fs2.closeSync)(fd);
     };
   });
@@ -7508,7 +7540,9 @@ async function script(source, directory, env = process.env, storage = (0, import
         const bytes = Buffer.from(secret);
         let at = source2.indexOf(bytes, Math.max(0, 16e3 - bytes.length + 1));
         while (at >= 0 && at < 16e3) {
-          if (at + bytes.length > 16e3) boundary = Math.max(boundary, at + bytes.length);
+          if (at + bytes.length > 16e3) {
+            boundary = Math.max(boundary, at + bytes.length);
+          }
           at = source2.indexOf(bytes, at + 1);
         }
       }
@@ -7543,13 +7577,16 @@ function readBounded(file, limit, truncate = false) {
   const fd = (0, import_node_fs2.openSync)(file, import_node_fs2.constants.O_RDONLY | import_node_fs2.constants.O_NOFOLLOW);
   try {
     const stat = (0, import_node_fs2.fstatSync)(fd);
-    if (!stat.isFile() || !truncate && stat.size > limit)
+    if (!stat.isFile() || !truncate && stat.size > limit) {
       throw Error("Invalid file type or size");
+    }
     const bytes = Buffer.alloc(Math.min(stat.size, limit));
     let size = 0;
     while (size < bytes.length) {
       const count = (0, import_node_fs2.readSync)(fd, bytes, size, bytes.length - size, null);
-      if (!count) break;
+      if (!count) {
+        break;
+      }
       size += count;
     }
     return bytes.subarray(0, size);
@@ -7565,14 +7602,18 @@ async function syncVersion(source, root, name, email, cwd = process.cwd()) {
   } catch {
     console.warn("Could not remove private update logs");
   }
-  if (result.code) throw Error(`Update script failed with status ${result.code}`);
+  if (result.code) {
+    throw Error(`Update script failed with status ${result.code}`);
+  }
   const untracked = (command("git", ["ls-files", "--others", "-z"], cwd) + command("git", ["diff", "--name-only", "--no-renames", "--diff-filter=A", "HEAD", "-z"], cwd)).split("\0").filter(Boolean);
-  if (untracked.length)
+  if (untracked.length) {
     throw Error(`New paths must be resolved before committing:
 ${untracked.join("\n")}`);
+  }
   if (!command("git", ["status", "--porcelain", "--untracked-files=no"], cwd).trim()) {
-    if (command("git", ["rev-list", "--count", "@{upstream}..HEAD"], cwd).trim() !== "0")
+    if (command("git", ["rev-list", "--count", "@{upstream}..HEAD"], cwd).trim() !== "0") {
       command("git", ["push"], cwd);
+    }
     return;
   }
   const after = project(root, cwd);
@@ -7597,14 +7638,17 @@ ${untracked.join("\n")}`);
 
 // src/runtime.ts
 function validateRunner(env = process.env, node = process.version) {
-  if (env.GITHUB_SERVER_URL !== "https://github.com" || env.RUNNER_ENVIRONMENT !== "github-hosted" || env.RUNNER_OS !== "Linux" || !["ubuntu22", "ubuntu24"].includes(env.ImageOS || "") || !node.startsWith("v24."))
+  if (env.GITHUB_SERVER_URL !== "https://github.com" || env.RUNNER_ENVIRONMENT !== "github-hosted" || env.RUNNER_OS !== "Linux" || !["ubuntu22", "ubuntu24"].includes(env.ImageOS || "") || !node.startsWith("v24.")) {
     throw Error("Requires github.com-hosted Ubuntu 22.04/24.04 and Node 24");
+  }
 }
 var input = (name) => process.env[`INPUT_${name.toUpperCase().replaceAll("-", "_")}`] || "";
 async function main(action) {
   try {
     validateRunner();
-    if (process.env.CI_PHASE !== "validate") await action();
+    if (process.env.CI_PHASE !== "validate") {
+      await action();
+    }
   } catch (error) {
     console.error(error instanceof Error ? error.message : "Action failed");
     process.exitCode = 1;

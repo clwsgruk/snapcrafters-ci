@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
-import { zip } from "./zip.ts";
+
 import { unpack } from "../src/manifests.ts";
+import { zip } from "./zip.ts";
 
 test("manifest ZIP binds label, filename, snap and exact decimal revision before extraction", async () => {
   const text = "name: sample\narchitecture: amd64\nrevision: 9007199254740993\n";

@@ -1,4 +1,5 @@
 import { readdirSync, readFileSync } from "node:fs";
+
 import { expect, test } from "vitest";
 const contracts = readdirSync("test/fixtures/contracts");
 test("all twelve public metadata blocks are byte-for-byte preserved", () => {

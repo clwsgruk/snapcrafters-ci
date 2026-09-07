@@ -1,7 +1,9 @@
-import { expect, test } from "vitest";
 import { mkdtempSync, readFileSync, statSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+import { expect, test } from "vitest";
+
 import { script } from "../src/execution.ts";
 test("one trusted Bash script preserves both streams, failure status, private logs and safe workflow env", async () => {
   const cwd = mkdtempSync(join(tmpdir(), "script-"));

@@ -1,7 +1,9 @@
-import { expect, test } from "vitest";
 import { mkdtempSync, writeFileSync, symlinkSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+import { expect, test } from "vitest";
+
 import { png } from "../src/screenshots.ts";
 import { pngBytes } from "./png.ts";
 test("timestamp screenshot alias resolves only to same-directory owned regular PNG", () => {

@@ -1,5 +1,6 @@
-import { parse } from "yaml";
 import { readFileSync } from "node:fs";
+
+import { parse } from "yaml";
 export const pins = {
   "actions/setup-node": "249970729cb0ef3589644e2896645e5dc5ba9c38",
   "actions/checkout": "d23441a48e516b6c34aea4fa41551a30e30af803",

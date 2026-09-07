@@ -1,4 +1,5 @@
 import { test, expect } from "vitest";
+
 import { action, pins, expectedUses } from "./wrappers.ts";
 test.each(Object.keys(expectedUses))(
   "%s pins each required dependency and routes every public input/output",

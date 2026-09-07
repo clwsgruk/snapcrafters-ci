@@ -1,4 +1,5 @@
 import { test, expect } from "vitest";
+
 import { measure, productionSources } from "../scripts/size.ts";
 test("size gate counts nonblank lines and rejects source/file excess", () => {
   expect(measure(["a\n\n b\n", "c\n"], 3, 2)).toEqual({ lines: 3, files: 2 });

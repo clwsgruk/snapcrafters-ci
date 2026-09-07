@@ -7320,8 +7320,9 @@ var import_node_fs = require("node:fs");
 var import_node_path = require("node:path");
 var import_yaml = __toESM(require_dist(), 1);
 function mapping(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value))
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw Error("Expected a mapping");
+  }
   return value;
 }
 function yaml(source) {
@@ -7329,12 +7330,15 @@ function yaml(source) {
 }
 function project(input2 = "", cwd = process.cwd()) {
   const publicRoot = input2 || ".";
-  const checkout = (0, import_node_fs.realpathSync)(cwd), requested = (0, import_node_path.resolve)(checkout, publicRoot);
-  if (requested !== checkout && !requested.startsWith(`${checkout}${import_node_path.sep}`))
+  const checkout = (0, import_node_fs.realpathSync)(cwd);
+  const requested = (0, import_node_path.resolve)(checkout, publicRoot);
+  if (requested !== checkout && !requested.startsWith(`${checkout}${import_node_path.sep}`)) {
     throw Error("Project root must stay inside the checkout");
+  }
   const root = (0, import_node_fs.realpathSync)(requested);
-  if (root !== requested || !(0, import_node_fs.lstatSync)(root).isDirectory())
+  if (root !== requested || !(0, import_node_fs.lstatSync)(root).isDirectory()) {
     throw Error("Project root must be a regular checkout directory");
+  }
   const candidates = [
     ".snapcraft.yaml",
     "build-aux/snap/snapcraft.yaml",
@@ -7342,13 +7346,19 @@ function project(input2 = "", cwd = process.cwd()) {
     "snapcraft.yaml"
   ];
   const file = candidates.filter((p) => (0, import_node_fs.existsSync)((0, import_node_path.resolve)(root, p))).at(-1);
-  if (!file) throw Error(`No snapcraft.yaml found in ${root}`);
+  if (!file) {
+    throw Error(`No snapcraft.yaml found in ${root}`);
+  }
   const absoluteYaml = (0, import_node_path.resolve)(root, file);
   const data = yaml(readProjectFile(absoluteYaml));
   const declaration = (kind) => [`${kind}-declaration.json`, `.github/${kind}-declaration.json`].filter((p) => (0, import_node_fs.existsSync)((0, import_node_path.resolve)(cwd, p))).at(-1) || "";
-  const plugs = declaration("plug"), slots = declaration("slot");
-  for (const declaration2 of [plugs, slots])
-    if (declaration2) readProjectFile((0, import_node_path.resolve)(checkout, declaration2), 65536);
+  const plugs = declaration("plug");
+  const slots = declaration("slot");
+  for (const declaration2 of [plugs, slots]) {
+    if (declaration2) {
+      readProjectFile((0, import_node_path.resolve)(checkout, declaration2), 65536);
+    }
+  }
   const components = data.components == null ? {} : mapping(data.components);
   return {
     root,
@@ -7369,12 +7379,15 @@ function project(input2 = "", cwd = process.cwd()) {
   };
 }
 function readProjectFile(file, limit = 1024 * 1024) {
-  if ((0, import_node_fs.realpathSync)(file) !== file) throw Error("Project input path contains a symlink");
+  if ((0, import_node_fs.realpathSync)(file) !== file) {
+    throw Error("Project input path contains a symlink");
+  }
   const fd = (0, import_node_fs.openSync)(file, import_node_fs.constants.O_RDONLY | import_node_fs.constants.O_NOFOLLOW);
   try {
     const stat = (0, import_node_fs.fstatSync)(fd);
-    if (!stat.isFile() || stat.size > limit)
+    if (!stat.isFile() || stat.size > limit) {
       throw Error("Project input must be a bounded regular file");
+    }
     return (0, import_node_fs.readFileSync)(fd, "utf8");
   } finally {
     (0, import_node_fs.closeSync)(fd);
@@ -7390,65 +7403,89 @@ var supportedArchitectures = [
   "s390x"
 ];
 function architecture(value) {
-  if (typeof value !== "string" || !supportedArchitectures.includes(value))
+  if (typeof value !== "string" || !supportedArchitectures.includes(value)) {
     throw Error(`Unsupported architecture: ${scalar(value)}`);
+  }
   return value;
 }
 function archList(value) {
   const list = Array.isArray(value) ? value : [value];
-  if (!list.length) throw Error("Empty architecture declaration");
+  if (!list.length) {
+    throw Error("Empty architecture declaration");
+  }
   return list.map(architecture);
 }
 function architectures(data) {
-  if (data.base !== void 0 && !["core18", "core20", "core22", "core24"].includes(scalar(data.base)))
+  if (data.base !== void 0 && !["core18", "core20", "core22", "core24"].includes(scalar(data.base))) {
     throw Error("Unsupported base");
-  if (!data.architectures && !data.platforms)
+  }
+  if (!data.architectures && !data.platforms) {
     throw Error("Explicitly declare architectures or platforms");
-  if (data.architectures && data.platforms) throw Error("Ambiguous architectures and platforms");
+  }
+  if (data.architectures && data.platforms) {
+    throw Error("Ambiguous architectures and platforms");
+  }
   let result;
   if (data.base === "core24") {
     result = Object.entries(mapping(data.platforms)).flatMap(([label, value]) => {
-      if (value === null) return [architecture(label)];
+      if (value === null) {
+        return [architecture(label)];
+      }
       const fields = mapping(value);
-      if (Object.keys(fields).some((k) => !["build-on", "build-for"].includes(k)))
+      if (Object.keys(fields).some((k) => !["build-on", "build-for"].includes(k))) {
         throw Error("Unknown platform field");
+      }
       archList(fields["build-on"] ?? label);
       const targets = archList(fields["build-for"] ?? label);
-      if (targets.length !== 1) throw Error("Ambiguous platform targets");
+      if (targets.length !== 1) {
+        throw Error("Ambiguous platform targets");
+      }
       return targets;
     });
   } else {
-    if (!Array.isArray(data.architectures)) throw Error("Expected architectures list");
+    if (!Array.isArray(data.architectures)) {
+      throw Error("Expected architectures list");
+    }
     result = data.architectures.flatMap((value) => {
-      if (typeof value === "string") return [architecture(value)];
+      if (typeof value === "string") {
+        return [architecture(value)];
+      }
       const fields = mapping(value);
-      if (Object.keys(fields).some((k) => !["build-on", "run-on"].includes(k)))
+      if (Object.keys(fields).some((k) => !["build-on", "run-on"].includes(k))) {
         throw Error("Unknown architecture field");
+      }
       const builders = archList(fields["build-on"]);
       if (fields["run-on"] !== void 0) {
         const targets = archList(fields["run-on"]);
-        if (!builders.every((builder) => targets.includes(builder)))
+        if (!builders.every((builder) => targets.includes(builder))) {
           throw Error("Ambiguous legacy cross-architecture run-on");
+        }
       }
       return builders;
     });
   }
-  if (!result.length) throw Error("Empty architecture matrix");
+  if (!result.length) {
+    throw Error("Empty architecture matrix");
+  }
   return [...new Set(result)];
 }
 function scalar(value) {
-  if (value == null) return "null";
-  if (!["string", "number", "bigint", "boolean"].includes(typeof value))
+  if (value == null) {
+    return "null";
+  }
+  if (!["string", "number", "bigint", "boolean"].includes(typeof value)) {
     throw Error("Expected a scalar");
+  }
   return String(value);
 }
 
 // src/runtime.ts
-var import_node_fs2 = require("node:fs");
 var import_node_crypto = require("node:crypto");
+var import_node_fs2 = require("node:fs");
 function validateRunner(env = process.env, node = process.version) {
-  if (env.GITHUB_SERVER_URL !== "https://github.com" || env.RUNNER_ENVIRONMENT !== "github-hosted" || env.RUNNER_OS !== "Linux" || !["ubuntu22", "ubuntu24"].includes(env.ImageOS || "") || !node.startsWith("v24."))
+  if (env.GITHUB_SERVER_URL !== "https://github.com" || env.RUNNER_ENVIRONMENT !== "github-hosted" || env.RUNNER_OS !== "Linux" || !["ubuntu22", "ubuntu24"].includes(env.ImageOS || "") || !node.startsWith("v24.")) {
     throw Error("Requires github.com-hosted Ubuntu 22.04/24.04 and Node 24");
+  }
 }
 var input = (name) => process.env[`INPUT_${name.toUpperCase().replaceAll("-", "_")}`] || "";
 function outputs(values) {
@@ -7463,7 +7500,9 @@ ${delimiter}
 async function main(action) {
   try {
     validateRunner();
-    if (process.env.CI_PHASE !== "validate") await action();
+    if (process.env.CI_PHASE !== "validate") {
+      await action();
+    }
   } catch (error) {
     console.error(error instanceof Error ? error.message : "Action failed");
     process.exitCode = 1;

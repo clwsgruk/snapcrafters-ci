@@ -1,3 +1,5 @@
+import { execFile, execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   mkdtempSync,
   mkdirSync,
@@ -8,17 +10,17 @@ import {
   rmSync,
   existsSync,
 } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
-import { execFile, execFileSync } from "node:child_process";
-import { promisify } from "node:util";
 import { createServer } from "node:http";
-import { createHash } from "node:crypto";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { promisify } from "node:util";
+
 import { parse } from "yaml";
+
+import { testingBody } from "../src/testing.ts";
+import { pngBytes } from "./png.ts";
 import { expectedUses, pins, type Action } from "./wrappers.ts";
 import { zip } from "./zip.ts";
-import { pngBytes } from "./png.ts";
-import { testingBody } from "../src/testing.ts";
 const exec = promisify(execFile);
 export async function smoke(
   name: string,
