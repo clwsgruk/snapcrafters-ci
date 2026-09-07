@@ -1,0 +1,27 @@
+repos:
+  - repo: local
+    hooks:
+      - id: format
+        name: Format TypeScript and repository files
+        entry: mise run fmt
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: regenerate-action-bundles
+        name: Regenerate committed action bundles
+        entry: mise run build
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: check
+        name: Check formatting, lint, and types
+        entry: mise run check
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: size
+        name: Enforce source and test budgets
+        entry: mise run size
+        language: system
+        pass_filenames: false
+        always_run: true

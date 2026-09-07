@@ -4,6 +4,7 @@ bun = "1.4.0"
 vp = "0.3.0"
 actionlint = "1.7.12"
 shellcheck = "0.11.0"
+prek = "0.5.2"
 [tasks.install]
 run = "bun install --frozen-lockfile"
 [tasks.fmt]
@@ -28,6 +29,10 @@ run = "actionlint"
 run = '"{{ tools.node.path }}/bin/node" scripts/shellcheck.ts'
 [tasks."check-dist"]
 run = 'PATH="{{ tools.node.path }}/bin:$PATH" "{{ tools.node.path }}/bin/node" scripts/check-dist.ts'
+[tasks."hooks:install"]
+run = "prek install"
+[tasks."hooks:run"]
+run = "prek run --all-files"
 [tasks.ci]
 run = [
   '"{{ mise_bin }}" run check',
